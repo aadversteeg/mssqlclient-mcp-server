@@ -1,0 +1,27 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Infrastructure.McpServer", "Core.Infrastructure.McpServer\Core.Infrastructure.McpServer.csproj", "{D63AB00C-3AD7-49A1-A1C9-C8F3D4723D7C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests.Infrastructure.McpServer", "UnitTests.Infrastructure.McpServer\UnitTests.Infrastructure.McpServer.csproj", "{FEBF9B1F-A3E5-4AA3-AC74-3CFD233D7FCE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D63AB00C-3AD7-49A1-A1C9-C8F3D4723D7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D63AB00C-3AD7-49A1-A1C9-C8F3D4723D7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D63AB00C-3AD7-49A1-A1C9-C8F3D4723D7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D63AB00C-3AD7-49A1-A1C9-C8F3D4723D7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FEBF9B1F-A3E5-4AA3-AC74-3CFD233D7FCE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FEBF9B1F-A3E5-4AA3-AC74-3CFD233D7FCE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FEBF9B1F-A3E5-4AA3-AC74-3CFD233D7FCE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FEBF9B1F-A3E5-4AA3-AC74-3CFD233D7FCE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

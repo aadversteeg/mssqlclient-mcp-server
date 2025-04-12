@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Ave.McpServer.Chronos": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
