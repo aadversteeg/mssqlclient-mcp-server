@@ -3,7 +3,6 @@ name: Run Tests and Build Docker Image
 on:
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch:
 
 jobs:
   test:
@@ -58,6 +57,7 @@ jobs:
         
         # Check logs for expected startup messages
         if docker logs test-container 2>&1 | grep -q "Starting MCP MSSQLClient Server" && \
+           docker logs test-container 2>&1 | grep -q "MSSQL_CONNECTIONSTRING is not set in appsettings.json or environment variables."; then
           echo "✅ Container started successfully with expected log messages"
         else
           echo "❌ Container did not show expected startup messages"
