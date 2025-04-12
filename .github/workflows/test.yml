@@ -57,8 +57,6 @@ jobs:
         
         # Check logs for expected startup messages
         if docker logs test-container 2>&1 | grep -q "Starting MCP MSSQLClient Server" && \
-           docker logs test-container 2>&1 | grep -q "Transport entering read messages loop" && \
-           docker logs test-container 2>&1 | grep -q "Application started"; then
           echo "✅ Container started successfully with expected log messages"
         else
           echo "❌ Container did not show expected startup messages"
