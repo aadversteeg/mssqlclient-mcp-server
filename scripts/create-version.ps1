@@ -5,20 +5,20 @@ param (
 
 Write-Host "Creating version $Version..."
 
-# Check if we are on master branch, if not switch to it
+# Check if we are on main branch, if not switch to it
 $currentBranch = git rev-parse --abbrev-ref HEAD
-if ($currentBranch -ne "master") {
-    Write-Host "Switching to master branch..."
-    git checkout master
+if ($currentBranch -ne "main") {
+    Write-Host "Switching to main branch..."
+    git checkout main
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to switch to master branch. Aborting."
+        Write-Error "Failed to switch to main branch. Aborting."
         exit 1
     }
 }
 
-# Pull latest changes from master
-Write-Host "Pulling latest changes from master..."
-git pull origin master
+# Pull latest changes from main
+Write-Host "Pulling latest changes from main..."
+git pull origin main
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to pull latest changes. Aborting."
     exit 1
