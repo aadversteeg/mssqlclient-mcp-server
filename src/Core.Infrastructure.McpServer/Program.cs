@@ -1,4 +1,6 @@
-﻿using Core.Infrastructure.McpServer.Configuration;
+using Core.Infrastructure.McpServer.Configuration;
+using Core.Infrastructure.McpServer.Tools;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,6 +21,32 @@ namespace Core.Infrastructure.McpServer
             return Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
                 .InformationalVersion ?? "0.0.0";
+        }
+        
+        /// <summary>
+        /// Determines if the database connection is to the master database
+        /// </summary>
+        /// <param name="connectionString">SQL Server connection string</param>
+        /// <returns>True if connected to master, false otherwise</returns>
+        public static bool IsMasterDb(string connectionString)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+                    using (var command = new SqlCommand("SELECT DB_NAME()", connection))
+                    {
+                        string? dbName = (string?)command.ExecuteScalar();
+                        return string.Equals(dbName, "master", StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error checking database connection: {ex.Message}");
+                return false; // Default to false if there's an error
+            }
         }
         
         static async Task Main(string[] args)
@@ -57,12 +85,19 @@ namespace Core.Infrastructure.McpServer
                 return;
             }
 
+            // Check if we're connected to master database
+            bool isConnectedToMaster = IsMasterDb(connectionString);
+            Console.Error.WriteLine($"Connected to master database: {isConnectedToMaster}");
+
             // Register the database configuration
             var dbConfig = new DatabaseConfiguration { ConnectionString = connectionString };
             builder.Services.AddSingleton(dbConfig);
+            
+            // Register connection context information
+            builder.Services.AddSingleton(new SqlConnectionContext { IsConnectedToMaster = isConnectedToMaster });
 
             // Register MCP server and reference the ChronosTools
-            builder.Services
+            var mcpServerBuilder = builder.Services
                 .AddMcpServer(options =>
                 {
                     options.ServerInfo = new()
@@ -71,10 +106,26 @@ namespace Core.Infrastructure.McpServer
                         Version = GetServerVersion()
                     };
                 })
-                .WithStdioServerTransport()
-                .WithToolsFromAssembly(Assembly.GetExecutingAssembly());
+                .WithStdioServerTransport();
+
+            if (isConnectedToMaster)
+            {
+                mcpServerBuilder.WithTools<ListDatabasesTool>();
+            }
+            else
+            {
+                mcpServerBuilder.WithTools<ListTablesTool>();
+            } 
 
             await builder.Build().RunAsync();
         }
+    }
+
+    /// <summary>
+    /// Holds information about the SQL Server connection context
+    /// </summary>
+    public class SqlConnectionContext
+    {
+        public bool IsConnectedToMaster { get; set; }
     }
 }

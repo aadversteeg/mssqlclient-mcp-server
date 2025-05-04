@@ -4,7 +4,7 @@ using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text;
 
-namespace Ave.McpServer.MSSQL.Tools
+namespace Core.Infrastructure.McpServer.Tools
 {
     [McpServerToolType]
     public class ListTablesTool
