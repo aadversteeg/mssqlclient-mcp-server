@@ -1,0 +1,23 @@
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+EXPOSE 5000
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+COPY ["src/Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj", "Core.Infrastructure.McpServer/"]
+COPY ["src/Core.Infrastructure.SqlClient/Core.Infrastructure.SqlClient.csproj", "Core.Infrastructure.SqlClient/"]
+COPY ["src/Core.Application/Core.Application.csproj", "Core.Application/"]
+RUN dotnet restore "Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj"
+COPY ["src/Core.Infrastructure.McpServer/", "Core.Infrastructure.McpServer/"]
+COPY ["src/Core.Infrastructure.SqlClient/", "Core.Infrastructure.SqlClient/"]
+COPY ["src/Core.Application/", "Core.Application/"]
+WORKDIR "/src/Core.Infrastructure.McpServer"
+RUN dotnet build "Core.Infrastructure.McpServer.csproj" -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "Core.Infrastructure.McpServer.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "Core.Infrastructure.McpServer.dll"]

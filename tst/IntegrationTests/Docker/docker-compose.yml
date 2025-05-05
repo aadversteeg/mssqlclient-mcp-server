@@ -1,0 +1,36 @@
+services:
+  sql-server:
+    image: ${SQL_SERVER_IMAGE:-mcr.microsoft.com/mssql/server:2022-latest}
+    container_name: ${CONTAINER_PREFIX:-mssql-test-}sql-server
+    ports:
+      - "${SQL_SERVER_PORT:-14330}:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${SQL_SERVER_PASSWORD:-IntegrationTest!123}
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$$SA_PASSWORD" -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - integration-test-network
+
+  mcp-server:
+    build:
+      context: ../../../
+      dockerfile: ./tst/IntegrationTests/Docker/Dockerfile.mcp
+    container_name: ${CONTAINER_PREFIX:-mssql-test-}mcp-server
+    ports:
+      - "${MCP_SERVER_PORT:-5100}:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Database__ConnectionString=Server=sql-server;Database=${SQL_SERVER_DATABASE:-TestDb};User Id=sa;Password=${SQL_SERVER_PASSWORD:-IntegrationTest!123};TrustServerCertificate=True;
+    depends_on:
+      sql-server:
+        condition: service_healthy
+    networks:
+      - integration-test-network
+
+networks:
+  integration-test-network:
+    name: ${NETWORK_NAME:-mssql-test-network}
