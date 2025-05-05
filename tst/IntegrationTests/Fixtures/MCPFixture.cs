@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using IntegrationTests.Helpers;
+using BuildArtifactHelper = Ave.Testing.ModelContextProtocol.Helpers.BuildArtifactHelper;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -8,14 +8,14 @@ namespace IntegrationTests.Fixtures
     /// <summary>
     /// Fixture for MCP integration tests that manages MCP server process
     /// </summary>
-    public class MCPFixture : IAsyncLifetime
+    public class McpFixture : IAsyncLifetime
     {
-        private readonly ILogger<MCPFixture> _logger;
+        private readonly ILogger<McpFixture> _logger;
         private readonly List<Process> _processesToCleanUp = new();
         
         public string McpServerExecutablePath { get; private set; }
         
-        public MCPFixture()
+        public McpFixture()
         {
             // Create logger
             var loggerFactory = LoggerFactory.Create(builder =>
@@ -24,7 +24,7 @@ namespace IntegrationTests.Fixtures
                 builder.SetMinimumLevel(LogLevel.Debug);
             });
             
-            _logger = loggerFactory.CreateLogger<MCPFixture>();
+            _logger = loggerFactory.CreateLogger<McpFixture>();
             
             // Initialize with default path that will be resolved during initialization
             McpServerExecutablePath = string.Empty;
@@ -125,7 +125,7 @@ namespace IntegrationTests.Fixtures
     }
     
     [CollectionDefinition("MCP Tests")]
-    public class MCPTestCollection : ICollectionFixture<MCPFixture>
+    public class McpTestCollection : ICollectionFixture<McpFixture>
     {
         // This class has no code, and is never created.
         // Its purpose is to be the place to apply [CollectionDefinition] and

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace IntegrationTests.Models
 {
-    public abstract class MCPMessage
+    public abstract class McpMessage
     {
         [JsonPropertyName("jsonrpc")]
         public string JsonRpc { get; set; } = "2.0";
@@ -11,7 +11,7 @@ namespace IntegrationTests.Models
         [JsonPropertyName("id")]
         public string? Id { get; set; }
 
-        public static T? Deserialize<T>(string json) where T : MCPMessage
+        public static T? Deserialize<T>(string json) where T : McpMessage
         {
             var options = new JsonSerializerOptions
             {

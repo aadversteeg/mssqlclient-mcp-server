@@ -1,10 +1,12 @@
 using System.Data.SqlClient;
 using System.Text.Json;
+using Ave.Testing.ModelContextProtocol;
+using Ave.Testing.ModelContextProtocol.Factory;
+using Ave.Testing.ModelContextProtocol.Helpers;
+using Ave.Testing.ModelContextProtocol.Models;
 using FluentAssertions;
-using IntegrationTests.Factory;
 using IntegrationTests.Fixtures;
 using IntegrationTests.Helpers;
-using IntegrationTests.Models;
 using Microsoft.Extensions.Logging;
 
 namespace IntegrationTests.Tests
@@ -12,10 +14,10 @@ namespace IntegrationTests.Tests
     [Collection("MCP Tests")]
     [Trait("Category", "MCP")]
     [Trait("TestType", "Integration")]
-    public class MCPIntegrationTests
+    public class McpIntegrationTests
     {
-        private readonly MCPFixture _fixture;
-        private readonly ILogger<MCPIntegrationTests> _logger;
+        private readonly McpFixture _fixture;
+        private readonly ILogger<McpIntegrationTests> _logger;
         
         // Store discovered methods for later tests - discovered from the DRY test
         private static readonly List<string> DiscoveredMethods = new()
@@ -53,7 +55,7 @@ namespace IntegrationTests.Tests
                 
             // Act - Create client and start it
             _logger.LogInformation("Starting MCP client for ping test");
-            using var client = MCPClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
+            using var client = McpClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
             client.Start();
             _logger.LogInformation("MCP client started");
             
@@ -64,7 +66,7 @@ namespace IntegrationTests.Tests
             
             // Send a ping request using the standard MCP "ping" method
             _logger.LogInformation("Sending ping request");
-            var request = new MCPRequest("ping");
+            var request = new McpRequest("ping");
             
             // Use a longer timeout for this first test (10 seconds instead of default 5)
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -97,7 +99,7 @@ namespace IntegrationTests.Tests
                     
                     // Try server_info instead to see if server is responsive at all
                     _logger.LogInformation("Trying 'server_info' method instead to check if server is responsive");
-                    var serverInfoRequest = new MCPRequest("server_info");
+                    var serverInfoRequest = new McpRequest("server_info");
                     var serverInfoResponse = await client.SendRequestAsync(serverInfoRequest);
                     
                     if (serverInfoResponse?.IsSuccess == true)
@@ -144,7 +146,7 @@ namespace IntegrationTests.Tests
                 
             // Act - Create client and start it
             _logger.LogInformation("Starting MCP client without SQL connection");
-            using var client = MCPClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
+            using var client = McpClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
             client.Start();
             _logger.LogInformation("MCP client started");
             
@@ -158,7 +160,7 @@ namespace IntegrationTests.Tests
             foreach (var method in coreMethods)
             {
                 _logger.LogInformation("Trying method: {Method}", method);
-                var request = new MCPRequest(method);
+                var request = new McpRequest(method);
                 
                 try
                 {
@@ -199,7 +201,7 @@ namespace IntegrationTests.Tests
             foreach (var method in sqlMethods)
             {
                 _logger.LogInformation("Trying method: {Method}", method);
-                var request = new MCPRequest(method);
+                var request = new McpRequest(method);
                 
                 try
                 {
@@ -224,7 +226,7 @@ namespace IntegrationTests.Tests
             _logger.LogInformation("Disposing MCP client");
         }
         
-        public MCPIntegrationTests(MCPFixture fixture)
+        public McpIntegrationTests(McpFixture fixture)
         {
             _fixture = fixture;
             
@@ -235,7 +237,7 @@ namespace IntegrationTests.Tests
                 builder.SetMinimumLevel(LogLevel.Debug);
             });
             
-            _logger = loggerFactory.CreateLogger<MCPIntegrationTests>();
+            _logger = loggerFactory.CreateLogger<McpIntegrationTests>();
         }
         
         [Fact(DisplayName = "MCP-INT-001: Discover available MCP methods")]
@@ -269,7 +271,7 @@ namespace IntegrationTests.Tests
                 connectionInfo.DatabaseName, connectionInfo.IsMasterDatabase);
             
             _logger.LogInformation("Starting MCP client");
-            using var client = MCPClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
+            using var client = McpClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
             client.Start();
             _logger.LogInformation("MCP client started");
             client.IsRunning.Should().BeTrue();
@@ -280,7 +282,7 @@ namespace IntegrationTests.Tests
             
             // First, test the built-in ping method to confirm basic communication works
             _logger.LogInformation("Testing ping method to verify basic JSON-RPC communication");
-            var pingRequest = new MCPRequest("ping");
+            var pingRequest = new McpRequest("ping");
             var pingResponse = await client.SendRequestAsync(pingRequest);
             
             if (pingResponse?.IsSuccess == true)
@@ -295,7 +297,7 @@ namespace IntegrationTests.Tests
             
             // Get the server info to check available methods
             _logger.LogInformation("Getting server info to check available methods");
-            var serverInfoRequest = new MCPRequest("server_info");
+            var serverInfoRequest = new McpRequest("server_info");
             var serverInfoResponse = await client.SendRequestAsync(serverInfoRequest);
             
             // Log the complete JSON response for server_info
@@ -306,7 +308,7 @@ namespace IntegrationTests.Tests
             
             // Use list_methods if available
             _logger.LogInformation("Trying list_methods to check registered methods");
-            var listMethodsRequest = new MCPRequest("list_methods");
+            var listMethodsRequest = new McpRequest("list_methods");
             var listMethodsResponse = await client.SendRequestAsync(listMethodsRequest);
             
             // Log the complete response for list_methods
@@ -350,7 +352,7 @@ namespace IntegrationTests.Tests
             {
                 _logger.LogInformation("──────────────────────────────────────────────");
                 _logger.LogInformation("Testing method: {Method}", methodName);
-                var request = new MCPRequest(methodName);
+                var request = new McpRequest(methodName);
                 
                 // Log the complete request JSON
                 _logger.LogInformation("Request JSON: {RequestJson}", JsonSerializer.Serialize(request));
@@ -416,7 +418,7 @@ namespace IntegrationTests.Tests
                 connectionInfo.DatabaseName, connectionInfo.IsMasterDatabase);
             
             // Act
-            using var client = MCPClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
+            using var client = McpClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
             client.Start();
             
             // Wait a bit for the server to fully initialize
@@ -454,7 +456,7 @@ namespace IntegrationTests.Tests
             }
             
             // Try each method until we find one that works
-            MCPResponse? response = null;
+            McpResponse? response = null;
             string methodName = "";
             object? methodParams = null;
             
@@ -473,7 +475,7 @@ namespace IntegrationTests.Tests
                 _logger.LogInformation("Trying method: {Method} with params: {Params}", 
                     method, methodParams != null ? methodParams.ToString() : "null");
                 
-                var request = new MCPRequest(method, methodParams);
+                var request = new McpRequest(method, methodParams);
                 response = await client.SendRequestAsync(request);
                 
                 if (response?.IsSuccess == true)
@@ -535,7 +537,7 @@ namespace IntegrationTests.Tests
                 connectionInfo.DatabaseName, connectionInfo.IsMasterDatabase);
             
             // Act
-            using var client = MCPClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
+            using var client = McpClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
             client.Start();
             
             // Wait a bit for the server to fully initialize
@@ -579,7 +581,7 @@ namespace IntegrationTests.Tests
             }
             
             // Try each method until we find one that works
-            MCPResponse? response = null;
+            McpResponse? response = null;
             string successMethod = "";
             object? successParams = null;
             
@@ -588,7 +590,7 @@ namespace IntegrationTests.Tests
                 _logger.LogInformation("Trying method: {Method} with params type: {ParamsType}", 
                     method, parameters?.GetType().Name ?? "null");
                 
-                var request = new MCPRequest(method, parameters);
+                var request = new McpRequest(method, parameters);
                 response = await client.SendRequestAsync(request);
                 
                 if (response?.IsSuccess == true)
@@ -644,7 +646,7 @@ namespace IntegrationTests.Tests
             }
             
             // Act
-            using var client = MCPClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
+            using var client = McpClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
             client.Start();
             
             var query = "SELECT * FROM non_existent_table";
@@ -666,7 +668,7 @@ namespace IntegrationTests.Tests
                 methodParams = query;
             }
             
-            var request = new MCPRequest(methodName, methodParams);
+            var request = new McpRequest(methodName, methodParams);
             var response = await client.SendRequestAsync(request);
             
             // Assert
@@ -711,11 +713,11 @@ namespace IntegrationTests.Tests
             }
             
             // Act
-            using var client = MCPClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
+            using var client = McpClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
             client.Start();
             client.IsRunning.Should().BeTrue();
             
-            var request = new MCPRequest("list_databases");
+            var request = new McpRequest("list_databases");
             var response = await client.SendRequestAsync(request);
             
             // Assert
@@ -755,7 +757,7 @@ namespace IntegrationTests.Tests
             }
             
             // Act
-            using var client = MCPClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
+            using var client = McpClientFactory.Create(_fixture.McpServerExecutablePath, envVars, _logger);
             client.Start();
             client.IsRunning.Should().BeTrue();
             
@@ -774,7 +776,7 @@ namespace IntegrationTests.Tests
                 methodParams = null;
             }
             
-            var listTablesRequest = new MCPRequest(methodName, methodParams);
+            var listTablesRequest = new McpRequest(methodName, methodParams);
             var listTablesResponse = await client.SendRequestAsync(listTablesRequest);
             
             if (!listTablesResponse!.IsSuccess || listTablesResponse.Result == null)
@@ -812,7 +814,7 @@ namespace IntegrationTests.Tests
                 methodParams = tableName;
             }
             
-            var schemaRequest = new MCPRequest(methodName, methodParams);
+            var schemaRequest = new McpRequest(methodName, methodParams);
             var schemaResponse = await client.SendRequestAsync(schemaRequest);
             
             // Assert
@@ -856,10 +858,10 @@ namespace IntegrationTests.Tests
             }
             
             // Get the list of databases
-            using var masterClient = MCPClientFactory.Create(_fixture.McpServerExecutablePath, masterEnvVars, _logger);
+            using var masterClient = McpClientFactory.Create(_fixture.McpServerExecutablePath, masterEnvVars, _logger);
             masterClient.Start();
             
-            var listDbRequest = new MCPRequest("list_databases");
+            var listDbRequest = new McpRequest("list_databases");
             var listDbResponse = await masterClient.SendRequestAsync(listDbRequest);
             
             if (!listDbResponse!.IsSuccess || listDbResponse.Result == null)
@@ -915,12 +917,12 @@ namespace IntegrationTests.Tests
             _logger.LogInformation("Successfully connected to user database: {Database}", userConnectionInfo.DatabaseName);
             
             // Test the user database MCP client
-            using var userClient = MCPClientFactory.Create(_fixture.McpServerExecutablePath, userEnvVars, _logger);
+            using var userClient = McpClientFactory.Create(_fixture.McpServerExecutablePath, userEnvVars, _logger);
             userClient.Start();
             userClient.IsRunning.Should().BeTrue();
             
             // Try listing tables in the user database (should use list_tables method, not list_tables_in_database)
-            var listTablesRequest = new MCPRequest("list_tables");
+            var listTablesRequest = new McpRequest("list_tables");
             var listTablesResponse = await userClient.SendRequestAsync(listTablesRequest);
             
             // Assert
@@ -934,7 +936,7 @@ namespace IntegrationTests.Tests
             _logger.LogInformation("List tables result: {Result}", result);
             
             // Run a simple query on the user database
-            var queryRequest = new MCPRequest("execute_query", "SELECT @@VERSION AS Version");
+            var queryRequest = new McpRequest("execute_query", "SELECT @@VERSION AS Version");
             var queryResponse = await userClient.SendRequestAsync(queryRequest);
             
             // Assert the response is successful - fail the test if there's an error

@@ -2,18 +2,18 @@ using System.Text.Json.Serialization;
 
 namespace IntegrationTests.Models
 {
-    public class MCPResponse : MCPMessage
+    public class McpResponse : McpMessage
     {
         [JsonPropertyName("result")]
         public object? Result { get; set; }
 
         [JsonPropertyName("error")]
-        public MCPError? Error { get; set; }
+        public McpError? Error { get; set; }
 
         public bool IsSuccess => Error == null;
     }
 
-    public class MCPError
+    public class McpError
     {
         [JsonPropertyName("code")]
         public int Code { get; set; }
