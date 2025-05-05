@@ -92,6 +92,10 @@ namespace IntegrationTests.Implementation
                     {
                         _logger?.LogWarning("Process error output: {ErrorData}", line);
                     }
+                    else
+                    {
+                        _logger?.LogInformation("Received empty line from stderr");
+                    }
                 }
             }).Start();
         }

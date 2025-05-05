@@ -238,7 +238,7 @@ namespace IntegrationTests.Tests
             var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder.AddConsole();
-                builder.SetMinimumLevel(LogLevel.Information);
+                builder.SetMinimumLevel(LogLevel.Debug);
             });
             
             _logger = loggerFactory.CreateLogger<MCPIntegrationTests>();
@@ -264,7 +264,13 @@ namespace IntegrationTests.Tests
             // Arrange
             _logger.LogInformation("Using MCP executable: {Path}", _fixture.McpServerExecutablePath);
             
+            // Add additional debug info to environment variables
             var envVars = EnvironmentVariableHelper.CreateEnvironmentVariables();
+            envVars["DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE"] = "false";  // Disable config reload
+            envVars["Logging__LogLevel__Default"] = "Debug";                // Increase logging level
+            envVars["Logging__LogLevel__Microsoft"] = "Debug";
+            envVars["Logging__LogLevel__System"] = "Debug";
+            envVars["DOTNET_EnableDiagnostics"] = "1";
                 
             // Verify SQL Server connection
             SqlConnectionInfo? connectionInfo = TryGetSqlConnectionInfo(envVars["MSSQL_CONNECTIONSTRING"]);
@@ -282,52 +288,56 @@ namespace IntegrationTests.Tests
             _logger.LogInformation("MCP client started");
             client.IsRunning.Should().BeTrue();
             
-            // First, get the server info to see what methods are available
+            // Wait for server to fully start
+            _logger.LogInformation("Waiting 5 seconds for server to fully initialize...");
+            await Task.Delay(5000);
+            
+            // First, test the built-in ping method to confirm basic communication works
+            _logger.LogInformation("Testing ping method to verify basic JSON-RPC communication");
+            var pingRequest = new MCPRequest("ping");
+            var pingResponse = await client.SendRequestAsync(pingRequest);
+            
+            if (pingResponse?.IsSuccess == true)
+            {
+                _logger.LogInformation("Ping method succeeded - basic JSON-RPC communication is working");
+            }
+            else
+            {
+                _logger.LogWarning("Ping method failed: {Error}", pingResponse?.Error?.Message ?? "Unknown error");
+                _logger.LogWarning("Basic JSON-RPC communication may be broken - will continue with tests");
+            }
+            
+            // Get the server info to check available methods
+            _logger.LogInformation("Getting server info to check available methods");
             var serverInfoRequest = new MCPRequest("server_info");
             var serverInfoResponse = await client.SendRequestAsync(serverInfoRequest);
             
-            // Log server info response
-            if (serverInfoResponse?.IsSuccess == true)
+            // Log the complete JSON response for server_info
+            if (serverInfoResponse != null)
             {
-                _logger.LogInformation("Server info: {ServerInfo}", 
-                    JsonSerializer.Serialize(serverInfoResponse.Result));
-            }
-            else if (serverInfoResponse?.Error != null)
-            {
-                _logger.LogWarning("Error getting server info: {Error}", 
-                    serverInfoResponse.Error.Message);
+                _logger.LogInformation("Complete server_info response: {Response}", JsonSerializer.Serialize(serverInfoResponse));
             }
             
-            // Try general MCP discovery methods
-            string[] discoveryMethods = new[] {
+            // Use list_methods if available
+            _logger.LogInformation("Trying list_methods to check registered methods");
+            var listMethodsRequest = new MCPRequest("list_methods");
+            var listMethodsResponse = await client.SendRequestAsync(listMethodsRequest);
+            
+            // Log the complete response for list_methods
+            if (listMethodsResponse != null)
+            {
+                _logger.LogInformation("Complete list_methods response: {Response}", JsonSerializer.Serialize(listMethodsResponse));
+            }
+            
+            // Try all possible method names with detailed logging
+            _logger.LogInformation("Testing all possible method names with detailed logging");
+            string[] allMethods = new[] {
+                // Standard methods
+                "ping",
                 "server_info",
                 "model_info",
-                "ping",
-                "list_methods"
-            };
-            
-            foreach (var methodName in discoveryMethods)
-            {
-                _logger.LogInformation("Trying discovery method: {Method}", methodName);
-                var request = new MCPRequest(methodName);
-                var response = await client.SendRequestAsync(request);
+                "list_methods",
                 
-                if (response?.IsSuccess == true)
-                {
-                    _logger.LogInformation("Method {Method} succeeded. Result: {Result}", 
-                        methodName, JsonSerializer.Serialize(response.Result));
-                }
-                else if (response?.Error != null)
-                {
-                    _logger.LogWarning("Error in response: {Code} - {Message}", 
-                        response.Error.Code, response.Error.Message);
-                    _logger.LogInformation("Method {Method} failed: {Error}", 
-                        methodName, response.Error.Message);
-                }
-            }
-            
-            // Try SQL methods with both naming conventions
-            string[] sqlMethods = new[] {
                 // User database methods
                 "execute_query",
                 "list_tables",
@@ -339,7 +349,7 @@ namespace IntegrationTests.Tests
                 "get_table_schema_in_database",
                 "list_databases",
                 
-                // Additional methods to try (might be used in some implementations)
+                // Alternative names
                 "query",
                 "run_query",
                 "sql_query",
@@ -347,25 +357,50 @@ namespace IntegrationTests.Tests
                 "schema"
             };
             
-            foreach (var methodName in sqlMethods)
+            // Track which methods work
+            var workingMethods = new List<string>();
+            
+            foreach (var methodName in allMethods)
             {
-                _logger.LogInformation("Trying method: {Method}", methodName);
+                _logger.LogInformation("──────────────────────────────────────────────");
+                _logger.LogInformation("Testing method: {Method}", methodName);
                 var request = new MCPRequest(methodName);
+                
+                // Log the complete request JSON
+                _logger.LogInformation("Request JSON: {RequestJson}", JsonSerializer.Serialize(request));
+                
                 var response = await client.SendRequestAsync(request);
+                
+                // Log the complete response JSON
+                _logger.LogInformation("Response JSON: {ResponseJson}", 
+                    response != null ? JsonSerializer.Serialize(response) : "null");
                 
                 if (response?.IsSuccess == true)
                 {
-                    _logger.LogInformation("Method {Method} succeeded. Result: {Result}", 
-                        methodName, JsonSerializer.Serialize(response.Result));
+                    _logger.LogInformation("SUCCESS: Method {Method} works!", methodName);
+                    workingMethods.Add(methodName);
                 }
                 else if (response?.Error != null)
                 {
-                    _logger.LogWarning("Error in response: {Code} - {Message}", 
-                        response.Error.Code, response.Error.Message);
-                    _logger.LogInformation("Method {Method} failed: {Error}", 
-                        methodName, response.Error.Message);
+                    _logger.LogWarning("FAILED: Method {Method} error: {Code} - {Message}", 
+                        methodName, response.Error.Code, response.Error.Message);
+                }
+                else
+                {
+                    _logger.LogWarning("UNKNOWN: Method {Method} returned null response", methodName);
                 }
             }
+            
+            // Summarize results
+            _logger.LogInformation("──────────────────────────────────────────────");
+            _logger.LogInformation("Method testing summary:");
+            _logger.LogInformation("Working methods: {Methods}", 
+                workingMethods.Count > 0 ? string.Join(", ", workingMethods) : "None");
+            _logger.LogInformation("Non-working methods: {Methods}",
+                string.Join(", ", allMethods.Except(workingMethods)));
+            
+            // Assert that at least the built-in ping method works
+            workingMethods.Should().Contain("ping", "The basic ping method should work");
             
             _logger.LogInformation("Disposing MCP client");
         }
@@ -483,20 +518,10 @@ namespace IntegrationTests.Tests
             // We found a working method
             _logger.LogInformation("Successfully used method: {MethodName}", methodName);
             
-            // Check if any method succeeded
-            bool anyMethodSucceeded = response.IsSuccess;
-            
-            if (!anyMethodSucceeded)
-            {
-                _logger.LogWarning("All methods failed. Most recent error: {Error}", 
-                    response.Error?.Message ?? "Unknown error");
-                
-                // Skip the test if no method worked
-                _logger.LogInformation("Skipping assertions as no method succeeded");
-                return;
-            }
-            
-            response.IsSuccess.Should().BeTrue();
+            // Instead of skipping the test on error, assert that we should have a successful response
+            response.Should().NotBeNull("No method call response was found");
+            response.IsSuccess.Should().BeTrue($"MCP method call failed: {response?.Error?.Message ?? "Unknown error"}");
+            response.Error.Should().BeNull($"MCP method call resulted in error: {response?.Error?.Message ?? "Unknown error"}");
             response.Result.Should().NotBeNull();
             
             // For list_tables, we expect a string result with table names
@@ -617,20 +642,10 @@ namespace IntegrationTests.Tests
             // We found a working method
             _logger.LogInformation("Successfully used method: {MethodName}", successMethod);
             
-            // Check if any method succeeded
-            bool anyMethodSucceeded = response.IsSuccess;
-            
-            if (!anyMethodSucceeded)
-            {
-                _logger.LogWarning("All methods failed. Most recent error: {Error}", 
-                    response.Error?.Message ?? "Unknown error");
-                
-                // Skip the test if no method worked
-                _logger.LogInformation("Skipping assertions as no method succeeded");
-                return;
-            }
-            
-            response.IsSuccess.Should().BeTrue();
+            // Instead of skipping the test on error, assert that we should have a successful response
+            response.Should().NotBeNull("No method call response was found");
+            response.IsSuccess.Should().BeTrue($"MCP method call failed: {response?.Error?.Message ?? "Unknown error"}");
+            response.Error.Should().BeNull($"MCP method call resulted in error: {response?.Error?.Message ?? "Unknown error"}");
             
             // The result should be a string with the SQL Server version
             var result = response.Result?.ToString();
@@ -693,25 +708,19 @@ namespace IntegrationTests.Tests
             var response = await client.SendRequestAsync(request);
             
             // Assert
-            response.Should().NotBeNull();
+            // This test expects an error from SQL for the invalid query
+            // The MCP server should still return a successful response,
+            // but the result should contain an error message from SQL Server
+            response.Should().NotBeNull("Response should not be null");
+            response.IsSuccess.Should().BeTrue($"MCP method call failed: {response?.Error?.Message ?? "Unknown error"}");
+            response.Error.Should().BeNull($"MCP method call resulted in error: {response?.Error?.Message ?? "Unknown error"}");
+            response.Result.Should().NotBeNull();
             
-            // Log response information
-            if (response!.IsSuccess)
-            {
-                var result = response.Result?.ToString();
-                _logger.LogInformation("Response was successful with result: {Result}", result);
-                
-                // For SQL errors, the method returns a success but with an error message in the result
-                result.Should().NotBeNullOrEmpty();
-                result.Should().Contain("Error");
-            }
-            else if (response.Error != null)
-            {
-                _logger.LogInformation("Response has error: {Error}", response.Error.Message);
-                
-                // If we got an error, just log it and don't fail the test
-                return;
-            }
+            // For SQL errors, the method returns a success but with an error message in the result
+            var result = response.Result?.ToString();
+            _logger.LogInformation("Response result: {Result}", result);
+            result.Should().NotBeNullOrEmpty("Result should contain an error message");
+            result.Should().Contain("Error", "Result should contain an error message about the non-existent table");
         }
         
         [Fact(DisplayName = "MCP-INT-005: Should list databases when connected to master")]
@@ -756,17 +765,9 @@ namespace IntegrationTests.Tests
             var response = await client.SendRequestAsync(request);
             
             // Assert
-            response.Should().NotBeNull();
-            
-            // If we get an error, log it but don't fail the test
-            if (!response!.IsSuccess && response.Error != null)
-            {
-                _logger.LogInformation("Response error: {Code} - {Message}", 
-                    response.Error.Code, response.Error.Message);
-                return;
-            }
-            
-            response.IsSuccess.Should().BeTrue();
+            response.Should().NotBeNull("Response should not be null");
+            response.IsSuccess.Should().BeTrue($"MCP method call failed: {response?.Error?.Message ?? "Unknown error"}");
+            response.Error.Should().BeNull($"MCP method call resulted in error: {response?.Error?.Message ?? "Unknown error"}");
             response.Result.Should().NotBeNull();
             
             // For list_databases, we expect a string result with database names
@@ -869,20 +870,10 @@ namespace IntegrationTests.Tests
             var schemaResponse = await client.SendRequestAsync(schemaRequest);
             
             // Assert
-            schemaResponse.Should().NotBeNull();
-            
-            // If we get an error, log it but don't fail the test
-            if (!schemaResponse!.IsSuccess && schemaResponse.Error != null)
-            {
-                _logger.LogInformation("Response error: {Code} - {Message}", 
-                    schemaResponse.Error.Code, schemaResponse.Error.Message);
-                
-                _logger.LogInformation("Request method: {Method} with params: {Params}", 
-                    schemaRequest.Method, JsonSerializer.Serialize(schemaRequest.Params));
-                return;
-            }
-            
-            schemaResponse.IsSuccess.Should().BeTrue();
+            // Assert the response is successful - fail the test if there's an error
+            schemaResponse.Should().NotBeNull("Response should not be null");
+            schemaResponse.IsSuccess.Should().BeTrue($"MCP method call failed: {schemaResponse?.Error?.Message ?? "Unknown error"}");
+            schemaResponse.Error.Should().BeNull($"MCP method call resulted in error: {schemaResponse?.Error?.Message ?? "Unknown error"}");
             schemaResponse.Result.Should().NotBeNull();
             
             // For get_table_schema, we expect a string result with the schema
@@ -995,20 +986,10 @@ namespace IntegrationTests.Tests
             var listTablesResponse = await userClient.SendRequestAsync(listTablesRequest);
             
             // Assert
-            listTablesResponse.Should().NotBeNull();
-            
-            // If we get an error, log it but don't fail the test
-            if (!listTablesResponse!.IsSuccess && listTablesResponse.Error != null)
-            {
-                _logger.LogInformation("Response error: {Code} - {Message}", 
-                    listTablesResponse.Error.Code, listTablesResponse.Error.Message);
-                
-                // Log the request that was sent
-                _logger.LogInformation("Request method: {Method}", listTablesRequest.Method);
-                return;
-            }
-            
-            listTablesResponse.IsSuccess.Should().BeTrue();
+            // Assert the response is successful - fail the test if there's an error
+            listTablesResponse.Should().NotBeNull("Response should not be null");
+            listTablesResponse.IsSuccess.Should().BeTrue($"MCP method call failed: {listTablesResponse?.Error?.Message ?? "Unknown error"}");
+            listTablesResponse.Error.Should().BeNull($"MCP method call resulted in error: {listTablesResponse?.Error?.Message ?? "Unknown error"}");
             
             // The tables list could be empty if it's a new database, that's OK
             var result = listTablesResponse.Result?.ToString();
@@ -1018,16 +999,10 @@ namespace IntegrationTests.Tests
             var queryRequest = new MCPRequest("execute_query", "SELECT @@VERSION AS Version");
             var queryResponse = await userClient.SendRequestAsync(queryRequest);
             
-            queryResponse.Should().NotBeNull();
-            
-            if (!queryResponse!.IsSuccess && queryResponse.Error != null)
-            {
-                _logger.LogInformation("Query error: {Code} - {Message}", 
-                    queryResponse.Error.Code, queryResponse.Error.Message);
-                return;
-            }
-            
-            queryResponse.IsSuccess.Should().BeTrue();
+            // Assert the response is successful - fail the test if there's an error
+            queryResponse.Should().NotBeNull("Response should not be null");
+            queryResponse.IsSuccess.Should().BeTrue($"MCP method call failed: {queryResponse?.Error?.Message ?? "Unknown error"}");
+            queryResponse.Error.Should().BeNull($"MCP method call resulted in error: {queryResponse?.Error?.Message ?? "Unknown error"}");
             queryResponse.Result.Should().NotBeNull();
             
             var queryResult = queryResponse.Result?.ToString();
