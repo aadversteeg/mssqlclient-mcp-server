@@ -47,9 +47,9 @@ namespace IntegrationTests.Helpers
         /// <returns>Default connection string for the current platform</returns>
         public static string GetDefaultConnectionString()
         {
-            // Use Docker connection string for both Windows and Linux
-            // The "sql-server" hostname will resolve to the docker container through the docker network
-            string dockerConnectionString = "Server=sql-server;Database=master;User Id=sa;Password=IntegrationTest!123;TrustServerCertificate=true;";
+            // In MCP tests, we need to use localhost,14330 instead of "sql-server" hostname
+            // because the MCP server runs outside Docker network
+            string dockerConnectionString = "Server=localhost,14330;Database=master;User Id=sa;Password=IntegrationTest!123;TrustServerCertificate=true;";
             
             // Check for environment variable override
             if (Environment.GetEnvironmentVariable("USE_ENV_CONNECTION") == "true")

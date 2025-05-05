@@ -266,11 +266,11 @@ namespace IntegrationTests.Tests
             
             var envVars = EnvironmentVariableHelper.CreateEnvironmentVariables();
                 
-            // Skip if we don't have a valid SQL Server connection
+            // Verify SQL Server connection
             SqlConnectionInfo? connectionInfo = TryGetSqlConnectionInfo(envVars["MSSQL_CONNECTIONSTRING"]);
             if (connectionInfo == null)
             {
-                return;
+                throw new InvalidOperationException("Failed to connect to SQL Server. Make sure the SQL Server container is running on port 14330.");
             }
             
             _logger.LogInformation("Connected to database: {Database}, Is Master: {IsMaster}", 
@@ -392,11 +392,11 @@ namespace IntegrationTests.Tests
             
             var envVars = EnvironmentVariableHelper.CreateEnvironmentVariables();
                 
-            // Skip if we don't have a valid SQL Server connection
+            // Verify SQL Server connection
             SqlConnectionInfo? connectionInfo = TryGetSqlConnectionInfo(envVars["MSSQL_CONNECTIONSTRING"]);
             if (connectionInfo == null)
             {
-                return;
+                throw new InvalidOperationException("Failed to connect to SQL Server. Make sure the SQL Server container is running on port 14330.");
             }
             
             _logger.LogInformation("Connected to database: {Database}, Is Master: {IsMaster}", 
@@ -511,11 +511,11 @@ namespace IntegrationTests.Tests
             
             var envVars = EnvironmentVariableHelper.CreateEnvironmentVariables();
                 
-            // Skip if we don't have a valid SQL Server connection
+            // Verify SQL Server connection
             SqlConnectionInfo? connectionInfo = TryGetSqlConnectionInfo(envVars["MSSQL_CONNECTIONSTRING"]);
             if (connectionInfo == null)
             {
-                return;
+                throw new InvalidOperationException("Failed to connect to SQL Server. Make sure the SQL Server container is running on port 14330.");
             }
             
             _logger.LogInformation("Connected to database: {Database}, Is Master: {IsMaster}", 
@@ -624,11 +624,11 @@ namespace IntegrationTests.Tests
             // Arrange
             var envVars = EnvironmentVariableHelper.CreateEnvironmentVariables();
                 
-            // Skip if we don't have a valid SQL Server connection
+            // Verify SQL Server connection
             SqlConnectionInfo? connectionInfo = TryGetSqlConnectionInfo(envVars["MSSQL_CONNECTIONSTRING"]);
             if (connectionInfo == null)
             {
-                return;
+                throw new InvalidOperationException("Failed to connect to SQL Server. Make sure the SQL Server container is running on port 14330.");
             }
             
             // Act
@@ -699,18 +699,17 @@ namespace IntegrationTests.Tests
             // Arrange
             var envVars = EnvironmentVariableHelper.CreateEnvironmentVariables();
                 
-            // Skip if we don't have a valid SQL Server connection
+            // Verify SQL Server connection
             SqlConnectionInfo? connectionInfo = TryGetSqlConnectionInfo(envVars["MSSQL_CONNECTIONSTRING"]);
             if (connectionInfo == null)
             {
-                return;
+                throw new InvalidOperationException("Failed to connect to SQL Server. Make sure the SQL Server container is running on port 14330.");
             }
             
-            // Skip if not connected to master database
+            // This test requires the master database
             if (!connectionInfo.IsMasterDatabase)
             {
-                _logger.LogInformation("Test requires connection to master database, skipping.");
-                return;
+                throw new InvalidOperationException("This test requires connection to the master database, but we're connected to: " + connectionInfo.DatabaseName);
             }
             
             // Act
@@ -766,11 +765,11 @@ namespace IntegrationTests.Tests
             // Arrange - this will test with master database
             var envVars = EnvironmentVariableHelper.CreateEnvironmentVariables();
                 
-            // Skip if we don't have a valid SQL Server connection
+            // Verify SQL Server connection
             SqlConnectionInfo? connectionInfo = TryGetSqlConnectionInfo(envVars["MSSQL_CONNECTIONSTRING"]);
             if (connectionInfo == null)
             {
-                return;
+                throw new InvalidOperationException("Failed to connect to SQL Server. Make sure the SQL Server container is running on port 14330.");
             }
             
             // Act
@@ -1009,38 +1008,60 @@ namespace IntegrationTests.Tests
         /// <returns>Connection info or null if connection failed</returns>
         private SqlConnectionInfo? TryGetSqlConnectionInfo(string connectionString)
         {
-            try
+            const int maxRetries = 3;
+            Exception? lastException = null;
+            
+            for (int i = 0; i < maxRetries; i++)
             {
-                using (var sqlConnection = new SqlConnection(connectionString))
+                try
                 {
-                    sqlConnection.Open();
-                    
-                    // Get the database name
-                    using (var command = new SqlCommand("SELECT DB_NAME()", sqlConnection))
+                    _logger.LogInformation("Attempting to connect to SQL Server (attempt {Attempt}/{MaxRetries}): {ConnectionString}", 
+                        i + 1, maxRetries, connectionString.Replace("Password=", "Password=***"));
+                        
+                    using (var sqlConnection = new SqlConnection(connectionString))
                     {
-                        string? dbName = (string?)command.ExecuteScalar();
+                        sqlConnection.Open();
                         
-                        if (string.IsNullOrEmpty(dbName))
+                        // Get the database name
+                        using (var command = new SqlCommand("SELECT DB_NAME()", sqlConnection))
                         {
-                            _logger.LogWarning("Could not determine database name. Skipping test.");
-                            return null;
+                            string? dbName = (string?)command.ExecuteScalar();
+                            
+                            if (string.IsNullOrEmpty(dbName))
+                            {
+                                _logger.LogWarning("Could not determine database name.");
+                                return null;
+                            }
+                            
+                            bool isMaster = string.Equals(dbName, "master", StringComparison.OrdinalIgnoreCase);
+                            
+                            _logger.LogInformation("Successfully connected to SQL Server database: {DbName}", dbName);
+                            
+                            return new SqlConnectionInfo
+                            {
+                                DatabaseName = dbName,
+                                IsMasterDatabase = isMaster
+                            };
                         }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    _logger.LogWarning("SQL Server connection attempt {Attempt}/{MaxRetries} failed: {Error}", 
+                        i + 1, maxRetries, ex.Message);
                         
-                        bool isMaster = string.Equals(dbName, "master", StringComparison.OrdinalIgnoreCase);
-                        
-                        return new SqlConnectionInfo
-                        {
-                            DatabaseName = dbName,
-                            IsMasterDatabase = isMaster
-                        };
+                    // If not the last attempt, wait before retrying
+                    if (i < maxRetries - 1)
+                    {
+                        _logger.LogInformation("Waiting 3 seconds before retry...");
+                        Thread.Sleep(3000);
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("SQL Server connection test failed: {Error}. Skipping test.", ex.Message);
-                return null;
-            }
+            
+            _logger.LogError(lastException, "All attempts to connect to SQL Server failed after {MaxRetries} retries", maxRetries);
+            return null;
         }
         
         /// <summary>
