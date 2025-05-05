@@ -558,7 +558,7 @@ namespace IntegrationTests.Tests
                 if (connectionInfo.IsMasterDatabase)
                 {
                     // For master DB, try with database parameter first, then just the query
-                    methodsToTry.Add(("execute_query", new { database = connectionInfo.DatabaseName, query }));
+                    methodsToTry.Add(("execute_query", new { databaseName = connectionInfo.DatabaseName, query }));
                     methodsToTry.Add(("execute_query", query));
                 }
                 else
@@ -572,7 +572,7 @@ namespace IntegrationTests.Tests
             if (connectionInfo.IsMasterDatabase)
             {
                 // Master database method options
-                methodsToTry.Add(("execute_query_in_database", new { database = connectionInfo.DatabaseName, query }));
+                methodsToTry.Add(("execute_query_in_database", new { databaseName = connectionInfo.DatabaseName, query }));
                 methodsToTry.Add(("execute_query_in_database", query));
                 methodsToTry.Add(("query", query));
             }
@@ -680,7 +680,7 @@ namespace IntegrationTests.Tests
             {
                 // For master database, we need both the database name and the query
                 methodName = "execute_query_in_database";
-                methodParams = new { database = connectionInfo.DatabaseName, query };
+                methodParams = new { databaseName = connectionInfo.DatabaseName, query };
             }
             else
             {
@@ -857,7 +857,7 @@ namespace IntegrationTests.Tests
             if (connectionInfo.IsMasterDatabase)
             {
                 methodName = "get_table_schema_in_database";
-                methodParams = new { database = connectionInfo.DatabaseName, table = tableName };
+                methodParams = new { databaseName = connectionInfo.DatabaseName, table = tableName };
             }
             else
             {
