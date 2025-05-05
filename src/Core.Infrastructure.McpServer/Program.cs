@@ -1,5 +1,8 @@
+using Core.Application.Interfaces;
 using Core.Infrastructure.McpServer.Configuration;
 using Core.Infrastructure.McpServer.Tools;
+using Core.Infrastructure.SqlClient;
+using Core.Infrastructure.SqlClient.Interfaces;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,7 +80,7 @@ namespace Core.Infrastructure.McpServer
                 consoleLogOptions.LogToStandardErrorThreshold = LogLevel.Trace;
             });
             
-            // Get DefaultTimeZoneId from config 
+            // Get connection string from config 
             string? connectionString = builder.Configuration.GetValue<string>("MSSQL_CONNECTIONSTRING");
             if(connectionString == null)
             {
@@ -92,11 +95,29 @@ namespace Core.Infrastructure.McpServer
             // Register the database configuration
             var dbConfig = new DatabaseConfiguration { ConnectionString = connectionString };
             builder.Services.AddSingleton(dbConfig);
-            
-            // Register connection context information
-            builder.Services.AddSingleton(new SqlConnectionContext { IsConnectedToMaster = isConnectedToMaster });
 
-            // Register MCP server and reference the ChronosTools
+            // Register our database services
+            
+            // First register the core database service that both user and master services will use
+            builder.Services.AddSingleton<IDatabaseService>(provider => new DatabaseService(connectionString));
+            
+            if (isConnectedToMaster)
+            {
+                // When connected to master, we need both user and master database services
+                builder.Services.AddSingleton<IUserDatabase>(provider => 
+                    new UserDatabaseService(provider.GetRequiredService<IDatabaseService>()));
+                
+                builder.Services.AddSingleton<IMasterDatabase>(provider => 
+                    new MasterDatabaseService(provider.GetRequiredService<IDatabaseService>()));
+            }
+            else
+            {
+                // When connected to user database, we only need user database service
+                builder.Services.AddSingleton<IUserDatabase>(provider => 
+                    new UserDatabaseService(provider.GetRequiredService<IDatabaseService>()));
+            }
+
+            // Register MCP server
             var mcpServerBuilder = builder.Services
                 .AddMcpServer(options =>
                 {
@@ -110,23 +131,22 @@ namespace Core.Infrastructure.McpServer
 
             if (isConnectedToMaster)
             {
+                // Master database mode tools
                 mcpServerBuilder.WithTools<MasterListTablesTool>();
-                mcpServerBuilder.WithTools<ListDatabasesTool>();
+                mcpServerBuilder.WithTools<MasterListDatabasesTool>();
+                mcpServerBuilder.WithTools<MasterExecuteQueryTool>();
+                mcpServerBuilder.WithTools<MasterGetTableSchemaTool>();
             }
             else
             {
+                // User database mode tools
                 mcpServerBuilder.WithTools<ListTablesTool>();
+                mcpServerBuilder.WithTools<ExecuteQueryTool>();
+                mcpServerBuilder.WithTools<GetTableSchemaTool>();
             } 
 
             await builder.Build().RunAsync();
         }
     }
 
-    /// <summary>
-    /// Holds information about the SQL Server connection context
-    /// </summary>
-    public class SqlConnectionContext
-    {
-        public bool IsConnectedToMaster { get; set; }
-    }
 }

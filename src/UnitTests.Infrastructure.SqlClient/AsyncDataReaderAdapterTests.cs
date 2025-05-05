@@ -1,11 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Core.Application;
+using Core.Application.Interfaces;
 using Core.Infrastructure.SqlClient;
 using FluentAssertions;
 using Moq;
