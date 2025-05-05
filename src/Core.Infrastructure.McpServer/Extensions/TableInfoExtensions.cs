@@ -1,4 +1,5 @@
 using System.Text;
+using System.Linq;
 using Core.Application.Models;
 
 namespace Core.Infrastructure.McpServer.Extensions
@@ -17,6 +18,7 @@ namespace Core.Infrastructure.McpServer.Extensions
         public static string ToToolResult(this IEnumerable<TableInfo> tables, string? databaseName = null)
         {
             var sb = new StringBuilder();
+            var tablesList = tables.ToList();
             
             // Add title with optional database name
             if (!string.IsNullOrEmpty(databaseName))
@@ -29,12 +31,76 @@ namespace Core.Infrastructure.McpServer.Extensions
             }
             
             sb.AppendLine();
-            sb.AppendLine("Schema | Table Name | Row Count | Size (MB) | Type | Indexes | Foreign Keys");
-            sb.AppendLine("------ | ---------- | --------- | --------- | ---- | ------- | ------------");
             
-            foreach (var table in tables)
+            // Check if all tables have zero values for specific columns
+            bool allRowCountsZero = tablesList.All(t => t.RowCount == 0);
+            bool allSizesZero = tablesList.All(t => t.SizeMB == 0);
+            bool allIndexCountsZero = tablesList.All(t => t.IndexCount == 0);
+            bool allForeignKeyCountsZero = tablesList.All(t => t.ForeignKeyCount == 0);
+            
+            // Build header based on values
+            List<string> headerParts = new() { "Schema", "Table Name" };
+            List<string> separatorParts = new() { "------", "----------" };
+            
+            if (!allRowCountsZero)
             {
-                sb.AppendLine($"{table.Schema} | {table.Name} | {table.RowCount} | {table.SizeMB:F2} | {table.TableType} | {table.IndexCount} | {table.ForeignKeyCount}");
+                headerParts.Add("Row Count");
+                separatorParts.Add("---------");
+            }
+            
+            if (!allSizesZero)
+            {
+                headerParts.Add("Size (MB)");
+                separatorParts.Add("---------");
+            }
+            
+            headerParts.Add("Type");
+            separatorParts.Add("----");
+            
+            if (!allIndexCountsZero)
+            {
+                headerParts.Add("Indexes");
+                separatorParts.Add("-------");
+            }
+            
+            if (!allForeignKeyCountsZero)
+            {
+                headerParts.Add("Foreign Keys");
+                separatorParts.Add("------------");
+            }
+            
+            // Write headers
+            sb.AppendLine(string.Join(" | ", headerParts));
+            sb.AppendLine(string.Join(" | ", separatorParts));
+            
+            // Write table data
+            foreach (var table in tablesList)
+            {
+                List<string> rowParts = new() { table.Schema, table.Name };
+                
+                if (!allRowCountsZero)
+                {
+                    rowParts.Add(table.RowCount.ToString());
+                }
+                
+                if (!allSizesZero)
+                {
+                    rowParts.Add(table.SizeMB.ToString("F2"));
+                }
+                
+                rowParts.Add(table.TableType);
+                
+                if (!allIndexCountsZero)
+                {
+                    rowParts.Add(table.IndexCount.ToString());
+                }
+                
+                if (!allForeignKeyCountsZero)
+                {
+                    rowParts.Add(table.ForeignKeyCount.ToString());
+                }
+                
+                sb.AppendLine(string.Join(" | ", rowParts));
             }
             
             return sb.ToString();

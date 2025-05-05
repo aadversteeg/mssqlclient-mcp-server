@@ -48,55 +48,95 @@ namespace Core.Infrastructure.SqlClient
                     }
                 }
                 
-                // Query to get all user tables with their information
-                string query = @"
-                    SELECT 
-                        s.name AS SchemaName,
-                        t.name AS TableName,
-                        p.rows AS RowCount,
-                        SUM(a.total_pages) * 8 / 1024 AS TotalSizeMB,
-                        t.create_date AS CreateDate,
-                        t.modify_date AS ModifyDate,
-                        CASE WHEN t.temporal_type = 1 THEN 'System-Versioned' 
-                             WHEN t.temporal_type = 2 THEN 'History Table' 
-                             ELSE 'Normal' END AS TableType,
-                        (SELECT COUNT(*) FROM sys.indexes i WHERE i.object_id = t.object_id) AS IndexCount,
-                        (SELECT COUNT(*) FROM sys.foreign_keys fk WHERE fk.parent_object_id = t.object_id) AS ForeignKeyCount
-                    FROM 
-                        sys.tables t
-                    JOIN 
-                        sys.schemas s ON t.schema_id = s.schema_id
-                    JOIN 
-                        sys.indexes i ON t.object_id = i.object_id
-                    JOIN 
-                        sys.partitions p ON i.object_id = p.object_id AND i.index_id = p.index_id
-                    JOIN 
-                        sys.allocation_units a ON p.partition_id = a.container_id
-                    WHERE 
-                        t.is_ms_shipped = 0
-                    GROUP BY 
-                        s.name, t.name, p.rows, t.create_date, t.modify_date, t.temporal_type, t.object_id
-                    ORDER BY 
-                        s.name, t.name";
-
-                using (var command = new SqlCommand(query, connection))
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                try
                 {
-                    while (await reader.ReadAsync(cancellationToken))
-                    {
-                        var tableInfo = new TableInfo(
-                            Schema: reader["SchemaName"].ToString() ?? string.Empty,
-                            Name: reader["TableName"].ToString() ?? string.Empty,
-                            RowCount: reader["RowCount"] is DBNull ? 0 : Convert.ToInt64(reader["RowCount"]),
-                            SizeMB: reader["TotalSizeMB"] is DBNull ? 0 : Convert.ToDouble(reader["TotalSizeMB"]),
-                            CreateDate: Convert.ToDateTime(reader["CreateDate"]),
-                            ModifyDate: Convert.ToDateTime(reader["ModifyDate"]),
-                            IndexCount: Convert.ToInt32(reader["IndexCount"]),
-                            ForeignKeyCount: Convert.ToInt32(reader["ForeignKeyCount"]),
-                            TableType: reader["TableType"].ToString() ?? string.Empty
-                        );
+                    // First try a simpler query that should work on all SQL Server versions
+                    string simpleQuery = @"
+                        SELECT 
+                            s.name AS SchemaName,
+                            t.name AS TableName,
+                            0 AS RowCount, -- Default to 0 for row count
+                            0 AS TotalSizeMB, -- Default to 0 for size
+                            t.create_date AS CreateDate,
+                            t.modify_date AS ModifyDate,
+                            'Normal' AS TableType,
+                            0 AS IndexCount, -- Default to 0 for index count
+                            0 AS ForeignKeyCount -- Default to 0 for foreign key count
+                        FROM 
+                            sys.tables t
+                        JOIN 
+                            sys.schemas s ON t.schema_id = s.schema_id
+                        WHERE 
+                            t.is_ms_shipped = 0
+                        ORDER BY 
+                            s.name, t.name";
 
-                        result.Add(tableInfo);
+                    using (var command = new SqlCommand(simpleQuery, connection))
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                    {
+                        while (await reader.ReadAsync(cancellationToken))
+                        {
+                            var tableInfo = new TableInfo(
+                                Schema: reader["SchemaName"].ToString() ?? string.Empty,
+                                Name: reader["TableName"].ToString() ?? string.Empty,
+                                RowCount: reader["RowCount"] is DBNull ? 0 : Convert.ToInt64(reader["RowCount"]),
+                                SizeMB: reader["TotalSizeMB"] is DBNull ? 0 : Convert.ToDouble(reader["TotalSizeMB"]),
+                                CreateDate: Convert.ToDateTime(reader["CreateDate"]),
+                                ModifyDate: Convert.ToDateTime(reader["ModifyDate"]),
+                                IndexCount: reader["IndexCount"] is DBNull ? 0 : Convert.ToInt32(reader["IndexCount"]),
+                                ForeignKeyCount: reader["ForeignKeyCount"] is DBNull ? 0 : Convert.ToInt32(reader["ForeignKeyCount"]),
+                                TableType: reader["TableType"].ToString() ?? string.Empty
+                            );
+
+                            result.Add(tableInfo);
+                        }
+                    }
+
+                    // Try to get additional information in separate queries 
+                    // to be more compatible with different SQL Server versions
+                    await EnhanceTableInfoAsync(result, connection, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Error executing complex query: {ex.Message}. Falling back to basic query.");
+                    
+                    // If the query fails, use an even simpler query as fallback
+                    string fallbackQuery = @"
+                        SELECT 
+                            SCHEMA_NAME(schema_id) AS SchemaName,
+                            name AS TableName,
+                            create_date AS CreateDate,
+                            modify_date AS ModifyDate
+                        FROM 
+                            sys.tables
+                        WHERE 
+                            is_ms_shipped = 0
+                        ORDER BY 
+                            SchemaName, TableName";
+                    
+                    // Clear previous results if any
+                    result.Clear();
+                        
+                    using (var command = new SqlCommand(fallbackQuery, connection))
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                    {
+                        while (await reader.ReadAsync(cancellationToken))
+                        {
+                            // Create TableInfo with minimal information
+                            var tableInfo = new TableInfo(
+                                Schema: reader["SchemaName"].ToString() ?? string.Empty,
+                                Name: reader["TableName"].ToString() ?? string.Empty,
+                                RowCount: 0, // Default since we couldn't get this info
+                                SizeMB: 0, // Default since we couldn't get this info
+                                CreateDate: Convert.ToDateTime(reader["CreateDate"]),
+                                ModifyDate: Convert.ToDateTime(reader["ModifyDate"]),
+                                IndexCount: 0, // Default since we couldn't get this info
+                                ForeignKeyCount: 0, // Default since we couldn't get this info
+                                TableType: "Normal" // Default since we couldn't get this info
+                            );
+
+                            result.Add(tableInfo);
+                        }
                     }
                 }
                 
@@ -118,6 +158,103 @@ namespace Core.Infrastructure.SqlClient
             }
 
             return result;
+        }
+        
+        /// <summary>
+        /// Enhances table information with additional details in a way that's compatible
+        /// with different SQL Server versions.
+        /// </summary>
+        /// <param name="tables">The list of tables to enhance</param>
+        /// <param name="connection">An open SQL connection</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        private async Task EnhanceTableInfoAsync(
+            List<TableInfo> tables, 
+            SqlConnection connection, 
+            CancellationToken cancellationToken = default)
+        {
+            if (tables == null || tables.Count == 0)
+                return;
+                
+            try
+            {
+                // Get row counts - this approach is more compatible
+                foreach (var table in tables)
+                {
+                    try
+                    {
+                        string countQuery = $"SELECT COUNT(*) FROM [{table.Schema}].[{table.Name}]";
+                        using (var command = new SqlCommand(countQuery, connection))
+                        {
+                            var count = await command.ExecuteScalarAsync(cancellationToken);
+                            if (count != null && count != DBNull.Value)
+                            {
+                                // This creates a new TableInfo with updated row count but preserves other properties
+                                var index = tables.IndexOf(table);
+                                if (index >= 0)
+                                {
+                                    tables[index] = table with { RowCount = Convert.ToInt64(count) };
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // If counting rows fails for a table, just continue with the next one
+                        Console.Error.WriteLine($"Failed to get row count for table {table.Schema}.{table.Name}: {ex.Message}");
+                    }
+                }
+
+                // Try to get index counts
+                try
+                {
+                    string indexQuery = @"
+                        SELECT 
+                            SCHEMA_NAME(t.schema_id) AS SchemaName,
+                            t.name AS TableName,
+                            COUNT(i.index_id) AS IndexCount
+                        FROM 
+                            sys.tables t
+                        LEFT JOIN 
+                            sys.indexes i ON t.object_id = i.object_id
+                        WHERE 
+                            t.is_ms_shipped = 0
+                        GROUP BY 
+                            t.schema_id, t.name";
+
+                    using (var command = new SqlCommand(indexQuery, connection))
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                    {
+                        while (await reader.ReadAsync(cancellationToken))
+                        {
+                            string schema = reader["SchemaName"].ToString() ?? string.Empty;
+                            string name = reader["TableName"].ToString() ?? string.Empty;
+                            int indexCount = Convert.ToInt32(reader["IndexCount"]);
+                            
+                            // Find matching table and update index count
+                            var table = tables.FirstOrDefault(t => 
+                                t.Schema.Equals(schema, StringComparison.OrdinalIgnoreCase) && 
+                                t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                                
+                            if (table != null)
+                            {
+                                var index = tables.IndexOf(table);
+                                if (index >= 0)
+                                {
+                                    tables[index] = table with { IndexCount = indexCount };
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Failed to get index counts: {ex.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error enhancing table information: {ex.Message}");
+            }
         }
 
         /// <summary>

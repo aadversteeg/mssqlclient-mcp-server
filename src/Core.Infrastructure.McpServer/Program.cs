@@ -71,6 +71,11 @@ namespace Core.Infrastructure.McpServer
                 optional: true, 
                 reloadOnChange: true);
 
+            builder.Configuration.AddUserSecrets(
+                Assembly.GetExecutingAssembly(),
+                optional: true,
+                reloadOnChange: true);
+
             builder.Configuration.AddEnvironmentVariables();
 
             // Configure logging
