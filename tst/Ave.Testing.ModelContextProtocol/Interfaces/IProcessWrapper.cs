@@ -16,6 +16,16 @@ namespace Ave.Testing.ModelContextProtocol.Interfaces
         bool HasExited { get; }
 
         /// <summary>
+        /// Gets or sets the working directory for the process
+        /// </summary>
+        string? WorkingDirectory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the arguments for the process
+        /// </summary>
+        string? Arguments { get; set; }
+
+        /// <summary>
         /// Reads a line from the process's standard output
         /// </summary>
         /// <param name="cancellationToken">A cancellation token</param>

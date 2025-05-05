@@ -17,6 +17,24 @@ namespace Ave.Testing.ModelContextProtocol.Implementation
         private bool _disposed;
 
         /// <summary>
+        /// Gets or sets the working directory for the process
+        /// </summary>
+        public string? WorkingDirectory
+        {
+            get => _process.StartInfo.WorkingDirectory;
+            set => _process.StartInfo.WorkingDirectory = value ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Gets or sets the arguments for the process
+        /// </summary>
+        public string? Arguments
+        {
+            get => _process.StartInfo.Arguments;
+            set => _process.StartInfo.Arguments = value ?? string.Empty;
+        }
+
+        /// <summary>
         /// Creates a new process wrapper
         /// </summary>
         /// <param name="executablePath">Path to the executable</param>
