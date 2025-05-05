@@ -48,9 +48,9 @@ namespace Core.Infrastructure.SqlClient.Interfaces
         string GetCurrentDatabaseName();
 
         /// <summary>
-        /// Determines if the current database is the master database.
+        /// Determines if the current database is the master database by examining the connection string.
         /// </summary>
-        /// <returns>True if connected to master, false otherwise</returns>
+        /// <returns>True if the database in the connection string is "master", false otherwise</returns>
         Task<bool> IsMasterDatabaseAsync(CancellationToken cancellationToken = default);
         
         /// <summary>

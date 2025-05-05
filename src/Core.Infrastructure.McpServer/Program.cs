@@ -27,27 +27,54 @@ namespace Core.Infrastructure.McpServer
         }
         
         /// <summary>
-        /// Determines if the database connection is to the master database
+        /// Determines if the database connection is to the master database by examining the connection string
+        /// without establishing an actual database connection
         /// </summary>
         /// <param name="connectionString">SQL Server connection string</param>
-        /// <returns>True if connected to master, false otherwise</returns>
+        /// <returns>True if the database in the connection string is "master", false otherwise</returns>
         public static bool IsMasterDb(string connectionString)
         {
             try
             {
-                using (var connection = new SqlConnection(connectionString))
+                var builder = new SqlConnectionStringBuilder(connectionString);
+                string databaseName = builder.InitialCatalog;
+
+                if (string.IsNullOrEmpty(databaseName) && connectionString.Contains("Database=", StringComparison.OrdinalIgnoreCase))
                 {
-                    connection.Open();
-                    using (var command = new SqlCommand("SELECT DB_NAME()", connection))
+                    // Parse the Database parameter directly if SqlConnectionStringBuilder didn't work
+                    var dbParamStart = connectionString.IndexOf("Database=", StringComparison.OrdinalIgnoreCase);
+                    if (dbParamStart >= 0)
                     {
-                        string? dbName = (string?)command.ExecuteScalar();
-                        return string.Equals(dbName, "master", StringComparison.OrdinalIgnoreCase);
+                        dbParamStart += "Database=".Length;
+                        var dbParamEnd = connectionString.IndexOf(';', dbParamStart);
+                        if (dbParamEnd < 0)
+                            dbParamEnd = connectionString.Length;
+
+                        databaseName = connectionString.Substring(dbParamStart, dbParamEnd - dbParamStart);
                     }
                 }
+
+                // Also check for Initial Catalog which is an alternative to Database
+                if (string.IsNullOrEmpty(databaseName) && connectionString.Contains("Initial Catalog=", StringComparison.OrdinalIgnoreCase))
+                {
+                    var dbParamStart = connectionString.IndexOf("Initial Catalog=", StringComparison.OrdinalIgnoreCase);
+                    if (dbParamStart >= 0)
+                    {
+                        dbParamStart += "Initial Catalog=".Length;
+                        var dbParamEnd = connectionString.IndexOf(';', dbParamStart);
+                        if (dbParamEnd < 0)
+                            dbParamEnd = connectionString.Length;
+
+                        databaseName = connectionString.Substring(dbParamStart, dbParamEnd - dbParamStart);
+                    }
+                }
+
+                Console.Error.WriteLine($"Database name from connection string: {databaseName}");
+                return string.Equals(databaseName, "master", StringComparison.OrdinalIgnoreCase);
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"Error checking database connection: {ex.Message}");
+                Console.Error.WriteLine($"Error checking database name in connection string: {ex.Message}");
                 return false; // Default to false if there's an error
             }
         }
@@ -93,9 +120,9 @@ namespace Core.Infrastructure.McpServer
                 return;
             }
 
-            // Check if we're connected to master database
+            // Check if the connection string specifies the master database
             bool isConnectedToMaster = IsMasterDb(connectionString);
-            Console.Error.WriteLine($"Connected to master database: {isConnectedToMaster}");
+            Console.Error.WriteLine($"Using master database mode: {isConnectedToMaster}");
 
             // Register the database configuration
             var dbConfig = new DatabaseConfiguration { ConnectionString = connectionString };
@@ -134,21 +161,34 @@ namespace Core.Infrastructure.McpServer
                 })
                 .WithStdioServerTransport();
 
+            Console.Error.WriteLine("Registering MCP tools...");
+
             if (isConnectedToMaster)
             {
                 // Master database mode tools
+                Console.Error.WriteLine("Registering master database tools...");
                 mcpServerBuilder.WithTools<MasterListTablesTool>();
+                Console.Error.WriteLine("Registered MasterListTablesTool");
                 mcpServerBuilder.WithTools<MasterListDatabasesTool>();
+                Console.Error.WriteLine("Registered MasterListDatabasesTool");
                 mcpServerBuilder.WithTools<MasterExecuteQueryTool>();
+                Console.Error.WriteLine("Registered MasterExecuteQueryTool");
                 mcpServerBuilder.WithTools<MasterGetTableSchemaTool>();
+                Console.Error.WriteLine("Registered MasterGetTableSchemaTool");
             }
             else
             {
                 // User database mode tools
+                Console.Error.WriteLine("Registering user database tools...");
                 mcpServerBuilder.WithTools<ListTablesTool>();
+                Console.Error.WriteLine("Registered ListTablesTool");
                 mcpServerBuilder.WithTools<ExecuteQueryTool>();
+                Console.Error.WriteLine("Registered ExecuteQueryTool");
                 mcpServerBuilder.WithTools<GetTableSchemaTool>();
-            } 
+                Console.Error.WriteLine("Registered GetTableSchemaTool");
+            }
+            
+            Console.Error.WriteLine("All tools registered. Building MCP server..."); 
 
             await builder.Build().RunAsync();
         }

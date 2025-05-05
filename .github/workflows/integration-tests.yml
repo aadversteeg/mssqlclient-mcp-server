@@ -1,0 +1,60 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, feature/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 9.0.x
+    
+    - name: Install dependencies
+      run: |
+        cd src
+        dotnet restore
+    
+    - name: Build
+      run: |
+        cd src
+        dotnet build --no-restore
+    
+    - name: Build test project
+      run: |
+        cd tst
+        dotnet build
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Run integration tests
+      run: |
+        cd tst
+        dotnet test -v n
+      env:
+        # Set environment variables for integration tests
+        IntegrationTests__SqlServer__PortRange: 14330-14339
+        IntegrationTests__McpServer__PortRange: 5100-5110
+        IntegrationTests__SqlServer__Password: IntegrationTest!123
+    
+    - name: Print Docker logs on failure
+      if: ${{ failure() }}
+      run: |
+        docker ps
+        docker logs $(docker ps -q --filter "name=mssql-test-") || true
+        docker-compose -f tst/IntegrationTests/Docker/docker-compose.yml -p mssqlclient-integration-tests down -v || true
+    
+    - name: Clean up Docker resources
+      if: ${{ always() }}
+      run: |
+        docker-compose -f tst/IntegrationTests/Docker/docker-compose.yml -p mssqlclient-integration-tests down -v || true
+        docker system prune -f || true

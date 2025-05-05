@@ -349,21 +349,30 @@ namespace Core.Infrastructure.SqlClient
         }
 
         /// <summary>
-        /// Determines if the current database is the master database.
+        /// Determines if the current database is the master database by examining the connection string.
         /// </summary>
         /// <returns>True if connected to master, false otherwise</returns>
-        public async Task<bool> IsMasterDatabaseAsync(CancellationToken cancellationToken = default)
+        public Task<bool> IsMasterDatabaseAsync(CancellationToken cancellationToken = default)
         {
-            using (var connection = new SqlConnection(_connectionString))
+            var builder = new SqlConnectionStringBuilder(_connectionString);
+            string databaseName = builder.InitialCatalog;
+            
+            // Also check for Database parameter directly if InitialCatalog is empty
+            if (string.IsNullOrEmpty(databaseName) && _connectionString.Contains("Database=", StringComparison.OrdinalIgnoreCase))
             {
-                await connection.OpenAsync(cancellationToken);
-                
-                using (var command = new SqlCommand("SELECT DB_NAME()", connection))
+                var dbParamStart = _connectionString.IndexOf("Database=", StringComparison.OrdinalIgnoreCase);
+                if (dbParamStart >= 0)
                 {
-                    string? dbName = (string?)await command.ExecuteScalarAsync(cancellationToken);
-                    return string.Equals(dbName, "master", StringComparison.OrdinalIgnoreCase);
+                    dbParamStart += "Database=".Length;
+                    var dbParamEnd = _connectionString.IndexOf(';', dbParamStart);
+                    if (dbParamEnd < 0)
+                        dbParamEnd = _connectionString.Length;
+
+                    databaseName = _connectionString.Substring(dbParamStart, dbParamEnd - dbParamStart);
                 }
             }
+            
+            return Task.FromResult(string.Equals(databaseName, "master", StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>
