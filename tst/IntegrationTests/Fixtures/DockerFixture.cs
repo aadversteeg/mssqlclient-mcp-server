@@ -75,16 +75,6 @@ namespace IntegrationTests.Fixtures
         {
             _logger.LogInformation("Initializing Docker test environment");
             
-            // Check if we should skip Docker tests
-            if (Environment.GetEnvironmentVariable("SKIP_DOCKER_TESTS") == "true")
-            {
-                _logger.LogInformation("Skipping Docker initialization as SKIP_DOCKER_TESTS is set");
-                // Set mock values for test
-                SqlServerConnectionString = "Server=mock;Database=mock;User Id=sa;Password=mock;TrustServerCertificate=True;";
-                McpServerEndpoint = "http://localhost:12345";
-                return;
-            }
-            
             // Check if we should use existing containers
             if (_configuration.GetValue<bool>("IntegrationTests:UseExistingContainers"))
             {

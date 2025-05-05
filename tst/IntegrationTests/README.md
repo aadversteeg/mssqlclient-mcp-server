@@ -7,14 +7,14 @@ This project contains integration tests for the SQL Server MCP server. These tes
 - .NET 9 SDK
 - Docker (for running containers)
 
-## Running the Tests on Windows
+## Running the Tests
 
-### Option 1: Fully Automatic (Recommended)
+### Running All Tests
 
 The tests automatically start and manage all required Docker containers:
 
-```cmd
-cd D:\ai\mcp\src\mssqlclient-mcp-server\tst\IntegrationTests
+```shell
+cd /mnt/d/ai/mcp/src/mssqlclient-mcp-server/tst/IntegrationTests
 dotnet test
 ```
 
@@ -24,25 +24,32 @@ This will:
 3. Run ALL tests, ensuring everything passes
 4. Clean up all containers when done
 
+### Running Specific Test Categories
+
+You can use test filters to run specific categories of tests:
+
+```shell
+# Run only unit tests
+dotnet test --filter "Category=Unit"
+
+# Run only SQL integration tests
+dotnet test --filter "Category=SQL"
+
+# Run only MCP integration tests
+dotnet test --filter "Category=MCP"
+
+# Run all integration tests
+dotnet test --filter "TestType=Integration"
+```
+
 The system has multiple robust features:
 - If docker-compose fails, it will try direct `docker run` commands
 - If container startup fails, it will use fallback connection strings
 - SQL tests include retry logic to handle container startup delays
 - MCP tests will automatically build the MCP server if it's not found
-- All tests must pass - no tests are skipped unless explicitly requested
+- Test categories can be filtered using the --filter option
 
 Everything is automatic - no need to manually start containers or build anything!
-
-### Option 2: Environment Variable Configuration
-
-You can also set environment variables for your SQL Server connection:
-
-```cmd
-set TEST_SQL_SERVER=localhost,14330
-set TEST_SQL_DATABASE=master
-set TEST_SQL_USERNAME=sa
-set TEST_SQL_PASSWORD=IntegrationTest!123
-```
 
 ### MCP Integration Tests
 

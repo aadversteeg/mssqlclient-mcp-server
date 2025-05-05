@@ -36,14 +36,6 @@ namespace IntegrationTests.Tests
         [Fact(DisplayName = "SQL-001: SQL Server connection string should be valid")]
         public void SQL001()
         {
-            // Arrange
-            var skipTest = Environment.GetEnvironmentVariable("SKIP_DOCKER_TESTS") == "true";
-            if (skipTest)
-            {
-                _logger.LogInformation("Test skipped because SKIP_DOCKER_TESTS is set");
-                return;
-            }
-            
             // Act & Assert
             _fixture.SqlServerConnectionString.Should().NotBeNullOrEmpty();
         }
@@ -51,14 +43,6 @@ namespace IntegrationTests.Tests
         [Fact(DisplayName = "SQL-002: Can connect to SQL Server")]
         public async Task SQL002()
         {
-            // Arrange
-            var skipTest = Environment.GetEnvironmentVariable("SKIP_DOCKER_TESTS") == "true";
-            if (skipTest)
-            {
-                _logger.LogInformation("Test skipped because SKIP_DOCKER_TESTS is set");
-                return;
-            }
-            
             // Act & Assert - With retry logic
             const int maxRetries = 5;
             int retryCount = 0;

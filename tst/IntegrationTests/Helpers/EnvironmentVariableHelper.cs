@@ -42,30 +42,14 @@ namespace IntegrationTests.Helpers
         }
         
         /// <summary>
-        /// Gets the default connection string based on platform
+        /// Gets the default connection string for SQL Server tests
         /// </summary>
-        /// <returns>Default connection string for the current platform</returns>
+        /// <returns>Default connection string for SQL Server</returns>
         public static string GetDefaultConnectionString()
         {
             // In MCP tests, we need to use localhost,14330 instead of "sql-server" hostname
             // because the MCP server runs outside Docker network
-            string dockerConnectionString = "Server=localhost,14330;Database=master;User Id=sa;Password=IntegrationTest!123;TrustServerCertificate=true;";
-            
-            // Check for environment variable override
-            if (Environment.GetEnvironmentVariable("USE_ENV_CONNECTION") == "true")
-            {
-                string? sqlServer = Environment.GetEnvironmentVariable("TEST_SQL_SERVER");
-                string? sqlDatabase = Environment.GetEnvironmentVariable("TEST_SQL_DATABASE") ?? "master";
-                string? sqlUsername = Environment.GetEnvironmentVariable("TEST_SQL_USERNAME") ?? "sa";
-                string? sqlPassword = Environment.GetEnvironmentVariable("TEST_SQL_PASSWORD");
-                
-                if (!string.IsNullOrEmpty(sqlServer) && !string.IsNullOrEmpty(sqlPassword))
-                {
-                    return $"Server={sqlServer};Database={sqlDatabase};User Id={sqlUsername};Password={sqlPassword};TrustServerCertificate=true;";
-                }
-            }
-            
-            return dockerConnectionString;
+            return "Server=localhost,14330;Database=master;User Id=sa;Password=IntegrationTest!123;TrustServerCertificate=true;";
         }
         
         /// <summary>

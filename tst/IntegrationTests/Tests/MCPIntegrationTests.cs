@@ -36,14 +36,6 @@ namespace IntegrationTests.Tests
         [Fact(DisplayName = "MCP-INT-000: Ping server to verify it's responsive")]
         public async Task MCP_INT_000()
         {
-            // Only skip if explicitly requested by environment variable
-            var skipTest = Environment.GetEnvironmentVariable("SKIP_MCP_TESTS") == "true";
-            if (skipTest)
-            {
-                _logger.LogInformation("Test skipped because SKIP_MCP_TESTS is set");
-                return;
-            }
-            
             // Ensure MCP server path is valid
             if (string.IsNullOrEmpty(_fixture.McpServerExecutablePath) || !File.Exists(_fixture.McpServerExecutablePath))
             {
@@ -249,14 +241,6 @@ namespace IntegrationTests.Tests
         [Fact(DisplayName = "MCP-INT-001: Discover available MCP methods")]
         public async Task MCP_INT_001()
         {
-            // Only skip if explicitly requested by environment variable
-            var skipTest = Environment.GetEnvironmentVariable("SKIP_MCP_TESTS") == "true";
-            if (skipTest)
-            {
-                _logger.LogInformation("Test skipped because SKIP_MCP_TESTS is set");
-                return;
-            }
-            
             // Ensure MCP server path is valid
             if (string.IsNullOrEmpty(_fixture.McpServerExecutablePath) || !File.Exists(_fixture.McpServerExecutablePath))
             {
@@ -410,14 +394,6 @@ namespace IntegrationTests.Tests
         [Fact(DisplayName = "MCP-INT-002: Should list tables from database")]
         public async Task MCP_INT_002()
         {
-            // Only skip if explicitly requested by environment variable
-            var skipTest = Environment.GetEnvironmentVariable("SKIP_MCP_TESTS") == "true";
-            if (skipTest)
-            {
-                _logger.LogInformation("Test skipped because SKIP_MCP_TESTS is set");
-                return;
-            }
-            
             // Ensure MCP server path is valid
             if (string.IsNullOrEmpty(_fixture.McpServerExecutablePath) || !File.Exists(_fixture.McpServerExecutablePath))
             {
@@ -537,14 +513,6 @@ namespace IntegrationTests.Tests
         [Fact(DisplayName = "MCP-INT-003: Should execute SQL query via MCP")]
         public async Task MCP_INT_003()
         {
-            // Only skip if explicitly requested by environment variable
-            var skipTest = Environment.GetEnvironmentVariable("SKIP_MCP_TESTS") == "true";
-            if (skipTest)
-            {
-                _logger.LogInformation("Test skipped because SKIP_MCP_TESTS is set");
-                return;
-            }
-            
             // Ensure MCP server path is valid
             if (string.IsNullOrEmpty(_fixture.McpServerExecutablePath) || !File.Exists(_fixture.McpServerExecutablePath))
             {
@@ -659,14 +627,6 @@ namespace IntegrationTests.Tests
         [Fact(DisplayName = "MCP-INT-004: Should handle error when query is invalid")]
         public async Task MCP_INT_004()
         {
-            // Only skip if explicitly requested by environment variable
-            var skipTest = Environment.GetEnvironmentVariable("SKIP_MCP_TESTS") == "true";
-            if (skipTest)
-            {
-                _logger.LogInformation("Test skipped because SKIP_MCP_TESTS is set");
-                return;
-            }
-            
             // Ensure MCP server path is valid
             if (string.IsNullOrEmpty(_fixture.McpServerExecutablePath) || !File.Exists(_fixture.McpServerExecutablePath))
             {
@@ -728,14 +688,6 @@ namespace IntegrationTests.Tests
         [Fact(DisplayName = "MCP-INT-005: Should list databases when connected to master")]
         public async Task MCP_INT_005()
         {
-            // Only skip if explicitly requested by environment variable
-            var skipTest = Environment.GetEnvironmentVariable("SKIP_MCP_TESTS") == "true";
-            if (skipTest)
-            {
-                _logger.LogInformation("Test skipped because SKIP_MCP_TESTS is set");
-                return;
-            }
-            
             // Ensure MCP server path is valid
             if (string.IsNullOrEmpty(_fixture.McpServerExecutablePath) || !File.Exists(_fixture.McpServerExecutablePath))
             {
@@ -786,14 +738,6 @@ namespace IntegrationTests.Tests
         [Fact(DisplayName = "MCP-INT-006: Should get table schema from database")]
         public async Task MCP_INT_006()
         {
-            // Only skip if explicitly requested by environment variable
-            var skipTest = Environment.GetEnvironmentVariable("SKIP_MCP_TESTS") == "true";
-            if (skipTest)
-            {
-                _logger.LogInformation("Test skipped because SKIP_MCP_TESTS is set");
-                return;
-            }
-            
             // Ensure MCP server path is valid
             if (string.IsNullOrEmpty(_fixture.McpServerExecutablePath) || !File.Exists(_fixture.McpServerExecutablePath))
             {
@@ -893,14 +837,6 @@ namespace IntegrationTests.Tests
         [Fact(DisplayName = "MCP-INT-007: Should connect to user database")]
         public async Task MCP_INT_007()
         {
-            // Only skip if explicitly requested by environment variable
-            var skipTest = Environment.GetEnvironmentVariable("SKIP_MCP_TESTS") == "true";
-            if (skipTest)
-            {
-                _logger.LogInformation("Test skipped because SKIP_MCP_TESTS is set");
-                return;
-            }
-            
             // Ensure MCP server path is valid
             if (string.IsNullOrEmpty(_fixture.McpServerExecutablePath) || !File.Exists(_fixture.McpServerExecutablePath))
             {
