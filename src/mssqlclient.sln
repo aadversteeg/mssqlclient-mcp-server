@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests.Infrastructure.Mc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Infrastructure.SqlClient", "Core.Infrastructure.SqlClient\Core.Infrastructure.SqlClient.csproj", "{7D1B88A4-E2B1-4C41-86FC-86C5CCE6D2E3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Application", "Core.Application\Core.Application.csproj", "{2CAEB32E-061B-4524-91D8-61C19EC9CCF7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{7D1B88A4-E2B1-4C41-86FC-86C5CCE6D2E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D1B88A4-E2B1-4C41-86FC-86C5CCE6D2E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D1B88A4-E2B1-4C41-86FC-86C5CCE6D2E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2CAEB32E-061B-4524-91D8-61C19EC9CCF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2CAEB32E-061B-4524-91D8-61C19EC9CCF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2CAEB32E-061B-4524-91D8-61C19EC9CCF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2CAEB32E-061B-4524-91D8-61C19EC9CCF7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -11,11 +11,13 @@ namespace Core.Infrastructure.McpServer.Tools
     {
         private readonly string? _connectionString;
         private readonly SqlConnectionContext _connectionContext;
+        private readonly ListTablesTool _listTablesTool;
 
-        public MasterListTablesTool(DatabaseConfiguration dbConfig, SqlConnectionContext connectionContext)
+        public MasterListTablesTool(DatabaseConfiguration dbConfig, SqlConnectionContext connectionContext, ListTablesTool listTablesTool)
         {
             _connectionString = dbConfig.ConnectionString;
             _connectionContext = connectionContext ?? throw new ArgumentNullException(nameof(connectionContext));
+            _listTablesTool = listTablesTool ?? throw new ArgumentNullException(nameof(listTablesTool));
             Console.Error.WriteLine($"MasterListTablesTool constructed with connection string: {(string.IsNullOrEmpty(_connectionString) ? "missing" : "present")}");
             Console.Error.WriteLine($"Connected to master: {_connectionContext.IsConnectedToMaster}");
         }
@@ -77,152 +79,26 @@ namespace Core.Infrastructure.McpServer.Tools
                         }
                     }
 
-                    // Get table information using three-part naming
-                    string tableQuery = $@"
-                        SELECT 
-                            s.name AS SchemaName,
-                            t.name AS TableName,
-                            p.rows AS RowCount,
-                            SUM(a.total_pages) * 8 / 1024 AS TotalSizeMB,
-                            t.create_date AS CreateDate,
-                            t.modify_date AS ModifyDate,
-                            CASE WHEN t.temporal_type = 1 THEN 'System-Versioned' 
-                                 WHEN t.temporal_type = 2 THEN 'History Table' 
-                                 ELSE 'Normal' END AS TableType,
-                            (SELECT COUNT(*) FROM [{databaseName}].sys.indexes i WHERE i.object_id = t.object_id) AS IndexCount,
-                            (SELECT COUNT(*) FROM [{databaseName}].sys.foreign_keys fk WHERE fk.parent_object_id = t.object_id) AS ForeignKeyCount
-                        FROM 
-                            [{databaseName}].sys.tables t
-                        JOIN 
-                            [{databaseName}].sys.schemas s ON t.schema_id = s.schema_id
-                        JOIN 
-                            [{databaseName}].sys.indexes i ON t.object_id = i.object_id
-                        JOIN 
-                            [{databaseName}].sys.partitions p ON i.object_id = p.object_id AND i.index_id = p.index_id
-                        JOIN 
-                            [{databaseName}].sys.allocation_units a ON p.partition_id = a.container_id
-                        WHERE 
-                            t.is_ms_shipped = 0
-                        GROUP BY 
-                            s.name, t.name, p.rows, t.create_date, t.modify_date, t.temporal_type, t.object_id
-                        ORDER BY 
-                            s.name, t.name";
+                    // Create a new connection string to the specific database
+                    SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(_connectionString);
+                    string originalDatabase = builder.InitialCatalog; // Save the original database name
+                    builder.InitialCatalog = databaseName;
+                    string databaseConnectionString = builder.ConnectionString;
 
-                    using (var tableCommand = new SqlCommand(tableQuery, connection))
+                    // Create a temporary DatabaseConfiguration to pass to ListTablesTool
+                    DatabaseConfiguration tempConfig = new DatabaseConfiguration
                     {
-                        using (var reader = tableCommand.ExecuteReader())
-                        {
-                            // If no tables found
-                            if (!reader.HasRows)
-                            {
-                                sb.AppendLine($"No user tables found in database '{databaseName}'.");
-                                return sb.ToString();
-                            }
+                        ConnectionString = databaseConnectionString
+                    };
 
-                            // Create table header
-                            sb.AppendLine("| Schema | Table Name | Row Count | Size (MB) | Indexes | Foreign Keys | Created | Last Modified | Type |");
-                            sb.AppendLine("|--------|------------|-----------|-----------|---------|--------------|---------|---------------|------|");
-
-                            // Add table rows
-                            while (reader.Read())
-                            {
-                                string schema = reader["SchemaName"].ToString() ?? "";
-                                string tableName = reader["TableName"].ToString() ?? "";
-                                long rowCount = reader["RowCount"] != DBNull.Value ? Convert.ToInt64(reader["RowCount"]) : 0;
-                                double totalSizeMB = reader["TotalSizeMB"] != DBNull.Value ? Convert.ToDouble(reader["TotalSizeMB"]) : 0;
-                                DateTime createDate = Convert.ToDateTime(reader["CreateDate"]);
-                                DateTime modifyDate = Convert.ToDateTime(reader["ModifyDate"]);
-                                string tableType = reader["TableType"].ToString() ?? "Normal";
-                                int indexCount = Convert.ToInt32(reader["IndexCount"]);
-                                int foreignKeyCount = Convert.ToInt32(reader["ForeignKeyCount"]);
-
-                                sb.AppendLine($"| {schema} | {tableName} | {rowCount:#,0} | {totalSizeMB:F2} | {indexCount} | {foreignKeyCount} | {createDate:yyyy-MM-dd} | {modifyDate:yyyy-MM-dd} | {tableType} |");
-                            }
-                        }
-                    }
-
-                    // Add a summary section
-                    sb.AppendLine();
-                    sb.AppendLine("## Summary");
-                    sb.AppendLine();
-
-                    string summaryQuery = $@"
-                        SELECT 
-                            COUNT(*) AS TableCount,
-                            SUM(p.rows) AS TotalRows,
-                            SUM(a.total_pages) * 8 / 1024 AS TotalSizeMB,
-                            COUNT(DISTINCT s.name) AS SchemaCount
-                        FROM 
-                            [{databaseName}].sys.tables t
-                        JOIN 
-                            [{databaseName}].sys.schemas s ON t.schema_id = s.schema_id
-                        JOIN 
-                            [{databaseName}].sys.indexes i ON t.object_id = i.object_id
-                        JOIN 
-                            [{databaseName}].sys.partitions p ON i.object_id = p.object_id AND i.index_id = p.index_id
-                        JOIN 
-                            [{databaseName}].sys.allocation_units a ON p.partition_id = a.container_id
-                        WHERE 
-                            t.is_ms_shipped = 0";
-
-                    using (var summaryCommand = new SqlCommand(summaryQuery, connection))
-                    {
-                        using (var reader = summaryCommand.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                int tableCount = Convert.ToInt32(reader["TableCount"]);
-                                long totalRows = reader["TotalRows"] != DBNull.Value ? Convert.ToInt64(reader["TotalRows"]) : 0;
-                                double totalSizeMB = reader["TotalSizeMB"] != DBNull.Value ? Convert.ToDouble(reader["TotalSizeMB"]) : 0;
-                                int schemaCount = Convert.ToInt32(reader["SchemaCount"]);
-
-                                sb.AppendLine($"- **Total Tables**: {tableCount}");
-                                sb.AppendLine($"- **Total Rows**: {totalRows:#,0}");
-                                sb.AppendLine($"- **Total Size**: {totalSizeMB:F2} MB");
-                                sb.AppendLine($"- **Schemas**: {schemaCount}");
-                            }
-                        }
-                    }
-
-                    // Add schema distribution
-                    sb.AppendLine();
-                    sb.AppendLine("## Tables by Schema");
-                    sb.AppendLine();
-
-                    string schemaQuery = $@"
-                        SELECT 
-                            s.name AS SchemaName,
-                            COUNT(*) AS TableCount
-                        FROM 
-                            [{databaseName}].sys.tables t
-                        JOIN 
-                            [{databaseName}].sys.schemas s ON t.schema_id = s.schema_id
-                        WHERE 
-                            t.is_ms_shipped = 0
-                        GROUP BY 
-                            s.name
-                        ORDER BY 
-                            COUNT(*) DESC";
-
-                    using (var schemaCommand = new SqlCommand(schemaQuery, connection))
-                    {
-                        using (var reader = schemaCommand.ExecuteReader())
-                        {
-                            if (reader.HasRows)
-                            {
-                                sb.AppendLine("| Schema | Table Count |");
-                                sb.AppendLine("|--------|-------------|");
-
-                                while (reader.Read())
-                                {
-                                    string schemaName = reader["SchemaName"].ToString() ?? "";
-                                    int tableCount = Convert.ToInt32(reader["TableCount"]);
-
-                                    sb.AppendLine($"| {schemaName} | {tableCount} |");
-                                }
-                            }
-                        }
-                    }
+                    // Create a new instance of ListTablesTool with the database-specific connection string
+                    ListTablesTool dbSpecificListTablesTool = new ListTablesTool(tempConfig);
+                    
+                    // Get the table listing from ListTablesTool
+                    string tableListingResult = dbSpecificListTablesTool.ListTables();
+                    
+                    // Add the result to our output
+                    sb.AppendLine(tableListingResult);
                 }
 
                 return sb.ToString();

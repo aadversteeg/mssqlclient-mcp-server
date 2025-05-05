@@ -110,6 +110,7 @@ namespace Core.Infrastructure.McpServer
 
             if (isConnectedToMaster)
             {
+                mcpServerBuilder.WithTools<MasterListTablesTool>();
                 mcpServerBuilder.WithTools<ListDatabasesTool>();
             }
             else
