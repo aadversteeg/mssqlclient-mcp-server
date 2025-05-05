@@ -9,6 +9,8 @@ using Moq;
 
 namespace IntegrationTests.Tests
 {
+    [Trait("Category", "MCP")]
+    [Trait("TestType", "Unit")]
     public class MCPClientTests
     {
         private readonly ILogger<MCPClientTests> _logger;

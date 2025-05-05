@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 namespace IntegrationTests.Tests
 {
     [Collection("MCP Tests")]
+    [Trait("Category", "MCP")]
+    [Trait("TestType", "Integration")]
     public class MCPIntegrationTests
     {
         private readonly MCPFixture _fixture;

@@ -12,6 +12,8 @@ namespace IntegrationTests.Tests
     /// Integration tests for SQL Server connections
     /// </summary>
     [Collection("Docker Resources")]
+    [Trait("Category", "SQL")]
+    [Trait("TestType", "Integration")]
     public class SqlConnectionTests : IClassFixture<McpServerFixture>
     {
         private readonly McpServerFixture _fixture;
