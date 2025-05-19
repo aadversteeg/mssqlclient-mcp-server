@@ -6,17 +6,17 @@ using Core.Infrastructure.McpServer.Extensions;
 namespace Core.Infrastructure.McpServer.Tools
 {
     [McpServerToolType]
-    public class MasterGetTableSchemaTool
+    public class ServerGetTableSchemaTool
     {
-        private readonly IMasterDatabase _masterDatabase;
+        private readonly IServerDatabase _serverDatabase;
 
-        public MasterGetTableSchemaTool(IMasterDatabase masterDatabase)
+        public ServerGetTableSchemaTool(IServerDatabase serverDatabase)
         {
-            _masterDatabase = masterDatabase ?? throw new ArgumentNullException(nameof(masterDatabase));
-            Console.Error.WriteLine("MasterGetTableSchemaTool constructed with master database service");
+            _serverDatabase = serverDatabase ?? throw new ArgumentNullException(nameof(serverDatabase));
+            Console.Error.WriteLine("ServerGetTableSchemaTool constructed with server database service");
         }
 
-        [McpServerTool(Name = "get_table_schema_in_database"), Description("Get the schema of a table in the specified database (requires master database connection).")]
+        [McpServerTool(Name = "get_table_schema_in_database"), Description("Get the schema of a table in the specified database (requires server mode).")]
         public async Task<string> GetTableSchemaInDatabase(string databaseName, string tableName)
         {
             Console.Error.WriteLine($"GetTableSchemaInDatabase called with databaseName: {databaseName}, tableName: {tableName}");
@@ -33,8 +33,8 @@ namespace Core.Infrastructure.McpServer.Tools
 
             try
             {
-                // Get schema information for the table using the master database service
-                var tableSchema = await _masterDatabase.GetTableSchemaAsync(databaseName, tableName);
+                // Get schema information for the table using the server database service
+                var tableSchema = await _serverDatabase.GetTableSchemaAsync(databaseName, tableName);
                 return tableSchema.ToToolResult();
             }
             catch (Exception ex)

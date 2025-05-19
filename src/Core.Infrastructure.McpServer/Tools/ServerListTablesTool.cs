@@ -6,17 +6,17 @@ using Core.Infrastructure.McpServer.Extensions;
 namespace Core.Infrastructure.McpServer.Tools
 {
     [McpServerToolType]
-    public class MasterListTablesTool
+    public class ServerListTablesTool
     {
-        private readonly IMasterDatabase _masterDatabase;
+        private readonly IServerDatabase _serverDatabase;
 
-        public MasterListTablesTool(IMasterDatabase masterDatabase)
+        public ServerListTablesTool(IServerDatabase serverDatabase)
         {
-            _masterDatabase = masterDatabase ?? throw new ArgumentNullException(nameof(masterDatabase));
-            Console.Error.WriteLine($"MasterListTablesTool constructed with master database service");
+            _serverDatabase = serverDatabase ?? throw new ArgumentNullException(nameof(serverDatabase));
+            Console.Error.WriteLine($"ServerListTablesTool constructed with server database service");
         }
 
-        [McpServerTool(Name = "list_tables_in_database"), Description("List tables in the specified database (requires master database connection).")]
+        [McpServerTool(Name = "list_tables_in_database"), Description("List tables in the specified database (requires server mode).")]
         public async Task<string> ListTablesInDatabase(string databaseName)
         {
             Console.Error.WriteLine($"ListTablesInDatabase called with databaseName: {databaseName}");
@@ -28,7 +28,7 @@ namespace Core.Infrastructure.McpServer.Tools
 
             try
             {
-                var tables = await _masterDatabase.ListTablesAsync(databaseName);
+                var tables = await _serverDatabase.ListTablesAsync(databaseName);
                 return tables.ToToolResult(databaseName);
             }
             catch (Exception ex)

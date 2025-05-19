@@ -27,18 +27,22 @@ namespace Core.Infrastructure.McpServer
         }
         
         /// <summary>
-        /// Determines if the database connection is to the master database by examining the connection string
-        /// without establishing an actual database connection
+        /// Determines if the connection should use Server mode by examining if a specific database 
+        /// is specified in the connection string.
         /// </summary>
         /// <param name="connectionString">SQL Server connection string</param>
-        /// <returns>True if the database in the connection string is "master", false otherwise</returns>
-        public static bool IsMasterDb(string connectionString)
+        /// <returns>True if no database is specified (Server mode), false if a specific database is targeted (Database mode)</returns>
+        public static bool IsServerMode(string connectionString)
         {
             try
             {
+                string databaseName = null;
+                
+                // First try using SqlConnectionStringBuilder
                 var builder = new SqlConnectionStringBuilder(connectionString);
-                string databaseName = builder.InitialCatalog;
+                databaseName = builder.InitialCatalog;
 
+                // If builder didn't get database, try direct parsing of Database=
                 if (string.IsNullOrEmpty(databaseName) && connectionString.Contains("Database=", StringComparison.OrdinalIgnoreCase))
                 {
                     // Parse the Database parameter directly if SqlConnectionStringBuilder didn't work
@@ -69,13 +73,15 @@ namespace Core.Infrastructure.McpServer
                     }
                 }
 
-                Console.Error.WriteLine($"Database name from connection string: {databaseName}");
-                return string.Equals(databaseName, "master", StringComparison.OrdinalIgnoreCase);
+                Console.Error.WriteLine($"Database name from connection string: {databaseName ?? "(not specified)"}");
+                
+                // In Server mode if no database is specified or the database is empty
+                return string.IsNullOrWhiteSpace(databaseName);
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Error checking database name in connection string: {ex.Message}");
-                return false; // Default to false if there's an error
+                return false; // Default to Database mode if there's an error
             }
         }
         
@@ -120,9 +126,9 @@ namespace Core.Infrastructure.McpServer
                 return;
             }
 
-            // Check if the connection string specifies the master database
-            bool isConnectedToMaster = IsMasterDb(connectionString);
-            Console.Error.WriteLine($"Using master database mode: {isConnectedToMaster}");
+            // Check if the connection string doesn't specify a database (Server mode)
+            bool isServerMode = IsServerMode(connectionString);
+            Console.Error.WriteLine($"Using server mode: {isServerMode}");
 
             // Register the database configuration
             var dbConfig = new DatabaseConfiguration { ConnectionString = connectionString };
@@ -130,23 +136,23 @@ namespace Core.Infrastructure.McpServer
 
             // Register our database services
             
-            // First register the core database service that both user and master services will use
+            // First register the core database service that both Database and Server services will use
             builder.Services.AddSingleton<IDatabaseService>(provider => new DatabaseService(connectionString));
             
-            if (isConnectedToMaster)
+            if (isServerMode)
             {
-                // When connected to master, we need both user and master database services
-                builder.Services.AddSingleton<IUserDatabase>(provider => 
-                    new UserDatabaseService(provider.GetRequiredService<IDatabaseService>()));
+                // When in server mode, we need both database context and server database services
+                builder.Services.AddSingleton<IDatabaseContext>(provider => 
+                    new DatabaseContextService(provider.GetRequiredService<IDatabaseService>()));
                 
-                builder.Services.AddSingleton<IMasterDatabase>(provider => 
-                    new MasterDatabaseService(provider.GetRequiredService<IDatabaseService>()));
+                builder.Services.AddSingleton<IServerDatabase>(provider => 
+                    new ServerDatabaseService(provider.GetRequiredService<IDatabaseService>()));
             }
             else
             {
-                // When connected to user database, we only need user database service
-                builder.Services.AddSingleton<IUserDatabase>(provider => 
-                    new UserDatabaseService(provider.GetRequiredService<IDatabaseService>()));
+                // When in database mode, we only need database context service
+                builder.Services.AddSingleton<IDatabaseContext>(provider => 
+                    new DatabaseContextService(provider.GetRequiredService<IDatabaseService>()));
             }
 
             // Register MCP server
@@ -163,23 +169,23 @@ namespace Core.Infrastructure.McpServer
 
             Console.Error.WriteLine("Registering MCP tools...");
 
-            if (isConnectedToMaster)
+            if (isServerMode)
             {
-                // Master database mode tools
-                Console.Error.WriteLine("Registering master database tools...");
-                mcpServerBuilder.WithTools<MasterListTablesTool>();
-                Console.Error.WriteLine("Registered MasterListTablesTool");
-                mcpServerBuilder.WithTools<MasterListDatabasesTool>();
-                Console.Error.WriteLine("Registered MasterListDatabasesTool");
-                mcpServerBuilder.WithTools<MasterExecuteQueryTool>();
-                Console.Error.WriteLine("Registered MasterExecuteQueryTool");
-                mcpServerBuilder.WithTools<MasterGetTableSchemaTool>();
-                Console.Error.WriteLine("Registered MasterGetTableSchemaTool");
+                // Server mode tools
+                Console.Error.WriteLine("Registering server mode tools...");
+                mcpServerBuilder.WithTools<ServerListTablesTool>();
+                Console.Error.WriteLine("Registered ServerListTablesTool");
+                mcpServerBuilder.WithTools<ServerListDatabasesTool>();
+                Console.Error.WriteLine("Registered ServerListDatabasesTool");
+                mcpServerBuilder.WithTools<ServerExecuteQueryTool>();
+                Console.Error.WriteLine("Registered ServerExecuteQueryTool");
+                mcpServerBuilder.WithTools<ServerGetTableSchemaTool>();
+                Console.Error.WriteLine("Registered ServerGetTableSchemaTool");
             }
             else
             {
-                // User database mode tools
-                Console.Error.WriteLine("Registering user database tools...");
+                // Database mode tools
+                Console.Error.WriteLine("Registering database mode tools...");
                 mcpServerBuilder.WithTools<ListTablesTool>();
                 Console.Error.WriteLine("Registered ListTablesTool");
                 mcpServerBuilder.WithTools<ExecuteQueryTool>();

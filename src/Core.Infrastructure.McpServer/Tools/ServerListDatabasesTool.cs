@@ -9,13 +9,13 @@ namespace Core.Infrastructure.McpServer.Tools
     /// Tool to list all databases on a SQL Server instance with their properties
     /// </summary>
     [McpServerToolType]
-    public class MasterListDatabasesTool
+    public class ServerListDatabasesTool
     {
-        private readonly IMasterDatabase _masterDatabase;
+        private readonly IServerDatabase _serverDatabase;
 
-        public MasterListDatabasesTool(IMasterDatabase masterDatabase)
+        public ServerListDatabasesTool(IServerDatabase serverDatabase)
         {
-            _masterDatabase = masterDatabase ?? throw new ArgumentNullException(nameof(masterDatabase));
+            _serverDatabase = serverDatabase ?? throw new ArgumentNullException(nameof(serverDatabase));
         }
 
         /// <summary>
@@ -27,7 +27,7 @@ namespace Core.Infrastructure.McpServer.Tools
         {
             try
             {
-                var databases = await _masterDatabase.ListDatabasesAsync();
+                var databases = await _serverDatabase.ListDatabasesAsync();
                 return databases.ToToolResult();
             }
             catch (Exception ex)

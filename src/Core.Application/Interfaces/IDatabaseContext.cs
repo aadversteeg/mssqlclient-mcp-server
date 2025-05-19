@@ -4,10 +4,10 @@ using Core.Application.Interfaces;
 namespace Core.Application.Interfaces
 {
     /// <summary>
-    /// Interface for user database operations.
-    /// Provides access to tables in the currently connected database.
+    /// Interface for database context operations.
+    /// Provides access to tables and queries in the currently connected database.
     /// </summary>
-    public interface IUserDatabase
+    public interface IDatabaseContext
     {
         /// <summary>
         /// Lists all tables in the current database.

@@ -10,24 +10,19 @@ using Xunit;
 
 namespace UnitTests.Infrastructure.SqlClient
 {
-    public class MasterDatabaseServiceExecuteQueryTests
+    public class ServerDatabaseServiceExecuteQueryTests
     {
         private readonly Mock<IDatabaseService> _mockDatabaseService;
-        private readonly MasterDatabaseService _masterDatabaseService;
+        private readonly ServerDatabaseService _serverDatabaseService;
         
-        public MasterDatabaseServiceExecuteQueryTests()
+        public ServerDatabaseServiceExecuteQueryTests()
         {
             _mockDatabaseService = new Mock<IDatabaseService>();
-            
-            // Setup GetCurrentDatabaseName to return "master"
-            _mockDatabaseService.Setup(x => x.GetCurrentDatabaseName())
-                .Returns("master");
-            
-            _masterDatabaseService = new MasterDatabaseService(_mockDatabaseService.Object);
+            _serverDatabaseService = new ServerDatabaseService(_mockDatabaseService.Object);
         }
         
-        [Fact(DisplayName = "MDSEQ-001: ExecuteQueryInDatabaseAsync delegates to database service with provided database name")]
-        public async Task MDSEQ001()
+        [Fact(DisplayName = "SDSEQ-001: ExecuteQueryInDatabaseAsync delegates to database service with provided database name")]
+        public async Task SDSEQ001()
         {
             // Arrange
             string databaseName = "TestDb";
@@ -41,43 +36,43 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(mockDataReader.Object);
             
             // Act
-            var result = await _masterDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query);
+            var result = await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query);
             
             // Assert
             result.Should().Be(mockDataReader.Object);
             _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<CancellationToken>()), Times.Once);
         }
         
-        [Fact(DisplayName = "MDSEQ-002: ExecuteQueryInDatabaseAsync with empty database name throws ArgumentException")]
-        public async Task MDSEQ002()
+        [Fact(DisplayName = "SDSEQ-002: ExecuteQueryInDatabaseAsync with empty database name throws ArgumentException")]
+        public async Task SDSEQ002()
         {
             // Arrange
             string query = "SELECT * FROM Users";
             
             // Act
-            Func<Task> act = async () => await _masterDatabaseService.ExecuteQueryInDatabaseAsync(string.Empty, query);
+            Func<Task> act = async () => await _serverDatabaseService.ExecuteQueryInDatabaseAsync(string.Empty, query);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()
                 .WithMessage("*Database name cannot be empty*");
         }
         
-        [Fact(DisplayName = "MDSEQ-003: ExecuteQueryInDatabaseAsync with empty query throws ArgumentException")]
-        public async Task MDSEQ003()
+        [Fact(DisplayName = "SDSEQ-003: ExecuteQueryInDatabaseAsync with empty query throws ArgumentException")]
+        public async Task SDSEQ003()
         {
             // Arrange
             string databaseName = "TestDb";
             
             // Act
-            Func<Task> act = async () => await _masterDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, string.Empty);
+            Func<Task> act = async () => await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, string.Empty);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()
                 .WithMessage("*Query cannot be empty*");
         }
         
-        [Fact(DisplayName = "MDSEQ-004: ExecuteQueryInDatabaseAsync with non-existent database throws InvalidOperationException")]
-        public async Task MDSEQ004()
+        [Fact(DisplayName = "SDSEQ-004: ExecuteQueryInDatabaseAsync with non-existent database throws InvalidOperationException")]
+        public async Task SDSEQ004()
         {
             // Arrange
             string databaseName = "NonExistentDb";
@@ -87,15 +82,15 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(false);
             
             // Act
-            Func<Task> act = async () => await _masterDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query);
+            Func<Task> act = async () => await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query);
             
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>()
                 .WithMessage($"*Database '{databaseName}' does not exist*");
         }
         
-        [Fact(DisplayName = "MDSEQ-005: ExecuteQueryInDatabaseAsync passes cancellation token to database service")]
-        public async Task MDSEQ005()
+        [Fact(DisplayName = "SDSEQ-005: ExecuteQueryInDatabaseAsync passes cancellation token to database service")]
+        public async Task SDSEQ005()
         {
             // Arrange
             string databaseName = "TestDb";
@@ -110,7 +105,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(mockDataReader.Object);
             
             // Act
-            await _masterDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query, cancellationToken);
+            await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query, cancellationToken);
             
             // Assert
             _mockDatabaseService.Verify(x => x.DoesDatabaseExistAsync(databaseName, cancellationToken), Times.Once);

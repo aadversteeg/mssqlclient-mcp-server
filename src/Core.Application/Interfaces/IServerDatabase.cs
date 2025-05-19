@@ -4,10 +4,10 @@ using Core.Application.Interfaces;
 namespace Core.Application.Interfaces
 {
     /// <summary>
-    /// Interface for master database operations.
-    /// Provides access to database-level operations and cross-database queries.
+    /// Interface for server-level database operations.
+    /// Provides access to server-wide operations and cross-database queries.
     /// </summary>
-    public interface IMasterDatabase
+    public interface IServerDatabase
     {
         /// <summary>
         /// Lists all tables in the specified database.

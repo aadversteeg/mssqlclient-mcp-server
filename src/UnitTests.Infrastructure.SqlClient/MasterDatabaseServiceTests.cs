@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Core.Application.Interfaces;
 using Core.Application.Models;
 using Core.Infrastructure.SqlClient;
 using Core.Infrastructure.SqlClient.Interfaces;
@@ -11,52 +12,46 @@ using Xunit;
 
 namespace UnitTests.Infrastructure.SqlClient
 {
-    public class MasterDatabaseServiceTests
+    public class ServerDatabaseServiceTests
     {
         private readonly Mock<IDatabaseService> _mockDatabaseService;
-        private readonly MasterDatabaseService _masterDatabaseService;
+        private readonly ServerDatabaseService _serverDatabaseService;
         
-        public MasterDatabaseServiceTests()
+        public ServerDatabaseServiceTests()
         {
             _mockDatabaseService = new Mock<IDatabaseService>();
-            
-            // Setup GetCurrentDatabaseName to return "master"
-            _mockDatabaseService.Setup(x => x.GetCurrentDatabaseName())
-                .Returns("master");
-            
-            _masterDatabaseService = new MasterDatabaseService(_mockDatabaseService.Object);
+            _serverDatabaseService = new ServerDatabaseService(_mockDatabaseService.Object);
         }
         
-        [Fact(DisplayName = "MDS-001: Constructor with null database service throws ArgumentNullException")]
-        public void MDS001()
+        [Fact(DisplayName = "SDS-001: Constructor with null database service throws ArgumentNullException")]
+        public void SDS001()
         {
             // Act
             IDatabaseService? nullService = null;
-            Action act = () => new MasterDatabaseService(nullService);
+            Action act = () => new ServerDatabaseService(nullService);
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
                 .WithParameterName("databaseService");
         }
         
-        [Fact(DisplayName = "MDS-002: Constructor with non-master database service throws ArgumentException")]
-        public void MDS002()
+        [Fact(DisplayName = "SDS-002: Constructor doesn't require master database anymore")]
+        public void SDS002()
         {
             // Arrange
             var mockNonMasterService = new Mock<IDatabaseService>();
             mockNonMasterService.Setup(x => x.GetCurrentDatabaseName())
                 .Returns("NotMaster");
             
-            // Act
-            Action act = () => new MasterDatabaseService(mockNonMasterService.Object);
+            // Act - Should not throw an exception
+            var serverDbService = new ServerDatabaseService(mockNonMasterService.Object);
             
             // Assert
-            act.Should().Throw<ArgumentException>()
-                .WithMessage("*master database*");
+            serverDbService.Should().NotBeNull();
         }
         
-        [Fact(DisplayName = "MDS-003: ListTablesAsync delegates to database service with provided database name")]
-        public async Task MDS003()
+        [Fact(DisplayName = "SDS-003: ListTablesAsync delegates to database service with provided database name")]
+        public async Task SDS003()
         {
             // Arrange
             var databaseName = "TestDb";
@@ -73,26 +68,26 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(true);
             
             // Act
-            var result = await _masterDatabaseService.ListTablesAsync(databaseName);
+            var result = await _serverDatabaseService.ListTablesAsync(databaseName);
             
             // Assert
             result.Should().BeEquivalentTo(expectedTables);
             _mockDatabaseService.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
         }
         
-        [Fact(DisplayName = "MDS-004: ListTablesAsync with empty database name throws ArgumentException")]
-        public async Task MDS004()
+        [Fact(DisplayName = "SDS-004: ListTablesAsync with empty database name throws ArgumentException")]
+        public async Task SDS004()
         {
             // Act
-            Func<Task> act = async () => await _masterDatabaseService.ListTablesAsync(string.Empty);
+            Func<Task> act = async () => await _serverDatabaseService.ListTablesAsync(string.Empty);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()
                 .WithMessage("*Database name cannot be empty*");
         }
         
-        [Fact(DisplayName = "MDS-005: ListTablesAsync with non-existent database throws InvalidOperationException")]
-        public async Task MDS005()
+        [Fact(DisplayName = "SDS-005: ListTablesAsync with non-existent database throws InvalidOperationException")]
+        public async Task SDS005()
         {
             // Arrange
             var databaseName = "NonExistentDb";
@@ -101,15 +96,15 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(false);
             
             // Act
-            Func<Task> act = async () => await _masterDatabaseService.ListTablesAsync(databaseName);
+            Func<Task> act = async () => await _serverDatabaseService.ListTablesAsync(databaseName);
             
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>()
                 .WithMessage($"*Database '{databaseName}' does not exist*");
         }
         
-        [Fact(DisplayName = "MDS-006: ListTablesAsync passes cancellation token to database service")]
-        public async Task MDS006()
+        [Fact(DisplayName = "SDS-006: ListTablesAsync passes cancellation token to database service")]
+        public async Task SDS006()
         {
             // Arrange
             var databaseName = "TestDb";
@@ -119,15 +114,15 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(true);
             
             // Act
-            await _masterDatabaseService.ListTablesAsync(databaseName, cancellationToken);
+            await _serverDatabaseService.ListTablesAsync(databaseName, cancellationToken);
             
             // Assert
             _mockDatabaseService.Verify(x => x.DoesDatabaseExistAsync(databaseName, cancellationToken), Times.Once);
             _mockDatabaseService.Verify(x => x.ListTablesAsync(databaseName, cancellationToken), Times.Once);
         }
         
-        [Fact(DisplayName = "MDS-007: ListDatabasesAsync delegates to database service")]
-        public async Task MDS007()
+        [Fact(DisplayName = "SDS-007: ListDatabasesAsync delegates to database service")]
+        public async Task SDS007()
         {
             // Arrange
             var expectedDatabases = new List<DatabaseInfo>
@@ -140,21 +135,21 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(expectedDatabases);
             
             // Act
-            var result = await _masterDatabaseService.ListDatabasesAsync();
+            var result = await _serverDatabaseService.ListDatabasesAsync();
             
             // Assert
             result.Should().BeEquivalentTo(expectedDatabases);
             _mockDatabaseService.Verify(x => x.ListDatabasesAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
         
-        [Fact(DisplayName = "MDS-008: ListDatabasesAsync passes cancellation token to database service")]
-        public async Task MDS008()
+        [Fact(DisplayName = "SDS-008: ListDatabasesAsync passes cancellation token to database service")]
+        public async Task SDS008()
         {
             // Arrange
             var cancellationToken = new CancellationToken();
             
             // Act
-            await _masterDatabaseService.ListDatabasesAsync(cancellationToken);
+            await _serverDatabaseService.ListDatabasesAsync(cancellationToken);
             
             // Assert
             _mockDatabaseService.Verify(x => x.ListDatabasesAsync(cancellationToken), Times.Once);

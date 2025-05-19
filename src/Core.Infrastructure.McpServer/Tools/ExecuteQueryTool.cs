@@ -8,12 +8,12 @@ namespace Core.Infrastructure.McpServer.Tools
     [McpServerToolType]
     public class ExecuteQueryTool
     {
-        private readonly IUserDatabase _userDatabase;
+        private readonly IDatabaseContext _databaseContext;
 
-        public ExecuteQueryTool(IUserDatabase userDatabase)
+        public ExecuteQueryTool(IDatabaseContext databaseContext)
         {
-            _userDatabase = userDatabase ?? throw new ArgumentNullException(nameof(userDatabase));
-            Console.Error.WriteLine("ExecuteQueryTool constructed with user database service");
+            _databaseContext = databaseContext ?? throw new ArgumentNullException(nameof(databaseContext));
+            Console.Error.WriteLine("ExecuteQueryTool constructed with database context service");
         }
 
         [McpServerTool(Name = "execute_query"), Description("Execute a SQL query on the connected SQL Server database.")]
@@ -28,8 +28,8 @@ namespace Core.Infrastructure.McpServer.Tools
 
             try
             {
-                // Use the UserDatabase service to execute the query
-                IAsyncDataReader reader = await _userDatabase.ExecuteQueryAsync(query);
+                // Use the DatabaseContext service to execute the query
+                IAsyncDataReader reader = await _databaseContext.ExecuteQueryAsync(query);
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();

@@ -1,30 +1,26 @@
 using Core.Application.Interfaces;
 using Core.Application.Models;
 using Core.Infrastructure.SqlClient.Interfaces;
-using Microsoft.Data.SqlClient;
 
 namespace Core.Infrastructure.SqlClient
 {
     /// <summary>
-    /// Implementation of the IMasterDatabase interface for SQL Server master database.
+    /// Implementation of the IServerDatabase interface for SQL Server operations at server level.
     /// </summary>
-    public class MasterDatabaseService : IMasterDatabase
+    public class ServerDatabaseService : IServerDatabase
     {
         private readonly IDatabaseService _databaseService;
         
         /// <summary>
-        /// Initializes a new instance of the MasterDatabaseService class with an existing database service.
+        /// Initializes a new instance of the ServerDatabaseService class with an existing database service.
         /// </summary>
         /// <param name="databaseService">The database service to use</param>
-        public MasterDatabaseService(IDatabaseService databaseService)
+        public ServerDatabaseService(IDatabaseService databaseService)
         {
             _databaseService = databaseService ?? throw new ArgumentNullException(nameof(databaseService));
             
-            // Validate that the database service is connected to the master database
-            if (!_databaseService.GetCurrentDatabaseName().Equals("master", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException("The database service must be connected to the master database");
-            }
+            // In server mode, we don't require connection to master database specifically
+            // This allows using server mode with empty database name in connection string
         }
 
         /// <summary>

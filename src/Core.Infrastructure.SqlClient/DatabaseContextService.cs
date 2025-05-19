@@ -6,18 +6,18 @@ using Microsoft.Data.SqlClient;
 namespace Core.Infrastructure.SqlClient
 {
     /// <summary>
-    /// Implementation of the IUserDatabase interface for SQL Server databases.
-    /// Provides operations for working with tables in a user database.
+    /// Implementation of the IDatabaseContext interface for SQL Server databases.
+    /// Provides operations for working with tables in the context of a specific database.
     /// </summary>
-    public class UserDatabaseService : IUserDatabase
+    public class DatabaseContextService : IDatabaseContext
     {
         private readonly IDatabaseService _databaseService;
 
         /// <summary>
-        /// Initializes a new instance of the UserDatabaseService class.
+        /// Initializes a new instance of the DatabaseContextService class.
         /// </summary>
         /// <param name="connectionString">The SQL Server connection string</param>
-        public UserDatabaseService(string connectionString)
+        public DatabaseContextService(string connectionString)
         {
             if (string.IsNullOrEmpty(connectionString)) 
                 throw new ArgumentNullException(nameof(connectionString));
@@ -26,16 +26,16 @@ namespace Core.Infrastructure.SqlClient
         }
 
         /// <summary>
-        /// Initializes a new instance of the UserDatabaseService class with an existing database service.
+        /// Initializes a new instance of the DatabaseContextService class with an existing database service.
         /// </summary>
         /// <param name="databaseService">The database service to use</param>
-        public UserDatabaseService(IDatabaseService databaseService)
+        public DatabaseContextService(IDatabaseService databaseService)
         {
             _databaseService = databaseService ?? throw new ArgumentNullException(nameof(databaseService));
         }
 
         /// <summary>
-        /// Lists all tables in the current database.
+        /// Lists all tables in the current database context.
         /// </summary>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of table information</returns>
@@ -46,7 +46,7 @@ namespace Core.Infrastructure.SqlClient
         }
 
         /// <summary>
-        /// Gets the schema information for a specific table in the current database.
+        /// Gets the schema information for a specific table in the current database context.
         /// </summary>
         /// <param name="tableName">The name of the table to get schema for</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
@@ -61,7 +61,7 @@ namespace Core.Infrastructure.SqlClient
         }
         
         /// <summary>
-        /// Executes a SQL query in the current database.
+        /// Executes a SQL query in the current database context.
         /// </summary>
         /// <param name="query">The SQL query to execute</param>
         /// <param name="cancellationToken">Optional cancellation token</param>

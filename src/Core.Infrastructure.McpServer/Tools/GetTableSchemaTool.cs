@@ -8,12 +8,12 @@ namespace Core.Infrastructure.McpServer.Tools
     [McpServerToolType]
     public class GetTableSchemaTool
     {
-        private readonly IUserDatabase _userDatabase;
+        private readonly IDatabaseContext _databaseContext;
 
-        public GetTableSchemaTool(IUserDatabase userDatabase)
+        public GetTableSchemaTool(IDatabaseContext databaseContext)
         {
-            _userDatabase = userDatabase ?? throw new ArgumentNullException(nameof(userDatabase));
-            Console.Error.WriteLine("GetTableSchemaTool constructed with user database service");
+            _databaseContext = databaseContext ?? throw new ArgumentNullException(nameof(databaseContext));
+            Console.Error.WriteLine("GetTableSchemaTool constructed with database context service");
         }
 
         [McpServerTool(Name = "get_table_schema"), Description("Get the schema of a table from the connected SQL Server database.")]
@@ -28,8 +28,8 @@ namespace Core.Infrastructure.McpServer.Tools
 
             try
             {
-                // Get schema information for the table using the user database service
-                var tableSchema = await _userDatabase.GetTableSchemaAsync(tableName);
+                // Get schema information for the table using the database context service
+                var tableSchema = await _databaseContext.GetTableSchemaAsync(tableName);
                 return tableSchema.ToToolResult();
             }
             catch (Exception ex)

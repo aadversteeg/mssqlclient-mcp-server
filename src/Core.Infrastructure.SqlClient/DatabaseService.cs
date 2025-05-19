@@ -3,7 +3,6 @@ using Core.Application.Interfaces;
 using Core.Application.Models;
 using Core.Infrastructure.SqlClient.Interfaces;
 using System.Data;
-using System.Collections.Generic;
 
 namespace Core.Infrastructure.SqlClient
 {

@@ -8,12 +8,12 @@ namespace Core.Infrastructure.McpServer.Tools
     [McpServerToolType]
     public class ListTablesTool
     {
-        private readonly IUserDatabase _userDatabase;
+        private readonly IDatabaseContext _databaseContext;
 
-        public ListTablesTool(IUserDatabase userDatabase)
+        public ListTablesTool(IDatabaseContext databaseContext)
         {
-            _userDatabase = userDatabase ?? throw new ArgumentNullException(nameof(userDatabase));
-            Console.Error.WriteLine("ListTablesTool constructed with user database service");
+            _databaseContext = databaseContext ?? throw new ArgumentNullException(nameof(databaseContext));
+            Console.Error.WriteLine("ListTablesTool constructed with database context service");
         }
 
         [McpServerTool(Name = "list_tables"), Description("List all tables in the connected SQL Server database.")]
@@ -23,7 +23,7 @@ namespace Core.Infrastructure.McpServer.Tools
 
             try
             {
-                var tables = await _userDatabase.ListTablesAsync();
+                var tables = await _databaseContext.ListTablesAsync();
                 return tables.ToToolResult();
             }
             catch (Exception ex)

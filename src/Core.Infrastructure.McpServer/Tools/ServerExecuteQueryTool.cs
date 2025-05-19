@@ -6,17 +6,17 @@ using Core.Infrastructure.McpServer.Extensions;
 namespace Core.Infrastructure.McpServer.Tools
 {
     [McpServerToolType]
-    public class MasterExecuteQueryTool
+    public class ServerExecuteQueryTool
     {
-        private readonly IMasterDatabase _masterDatabase;
+        private readonly IServerDatabase _serverDatabase;
 
-        public MasterExecuteQueryTool(IMasterDatabase masterDatabase)
+        public ServerExecuteQueryTool(IServerDatabase serverDatabase)
         {
-            _masterDatabase = masterDatabase ?? throw new ArgumentNullException(nameof(masterDatabase));
-            Console.Error.WriteLine("MasterExecuteQueryTool constructed with master database service");
+            _serverDatabase = serverDatabase ?? throw new ArgumentNullException(nameof(serverDatabase));
+            Console.Error.WriteLine("ServerExecuteQueryTool constructed with server database service");
         }
 
-        [McpServerTool(Name = "execute_query_in_database"), Description("Execute a SQL query in the specified database (requires master database connection).")]
+        [McpServerTool(Name = "execute_query_in_database"), Description("Execute a SQL query in the specified database (requires server mode).")]
         public async Task<string> ExecuteQueryInDatabase(string databaseName, string query)
         {
             Console.Error.WriteLine($"ExecuteQueryInDatabase called with databaseName: {databaseName}, query: {query}");
@@ -33,8 +33,8 @@ namespace Core.Infrastructure.McpServer.Tools
 
             try
             {
-                // Use the MasterDatabase service to execute the query in the specified database
-                IAsyncDataReader reader = await _masterDatabase.ExecuteQueryInDatabaseAsync(databaseName, query);
+                // Use the ServerDatabase service to execute the query in the specified database
+                IAsyncDataReader reader = await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query);
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();
