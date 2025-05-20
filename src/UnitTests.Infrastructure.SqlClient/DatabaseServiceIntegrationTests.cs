@@ -277,32 +277,5 @@ namespace UnitTests.Infrastructure.SqlClient
             userDbName.Should().Be(TestDbName);
         }
         
-        [SkippableFact(DisplayName = "DBS-007: IsMasterDatabaseAsync returns true for master database")]
-        public async Task DBS007()
-        {
-            Skip.If(_skipTests, "LocalDB is only available on Windows");
-            
-            // Arrange
-            
-            // Act
-            var isMaster = await _serverDatabaseService.IsMasterDatabaseAsync();
-            
-            // Assert
-            isMaster.Should().BeTrue();
-        }
-        
-        [SkippableFact(DisplayName = "DBS-008: IsMasterDatabaseAsync returns false for user database")]
-        public async Task DBS008()
-        {
-            Skip.If(_skipTests, "LocalDB is only available on Windows");
-            
-            // Arrange
-            
-            // Act
-            var isMaster = await _databaseService.IsMasterDatabaseAsync();
-            
-            // Assert
-            isMaster.Should().BeFalse();
-        }
     }
 }

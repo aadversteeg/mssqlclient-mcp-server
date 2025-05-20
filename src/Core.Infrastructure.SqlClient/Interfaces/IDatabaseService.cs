@@ -46,12 +46,6 @@ namespace Core.Infrastructure.SqlClient.Interfaces
         /// </summary>
         /// <returns>The current database name</returns>
         string GetCurrentDatabaseName();
-
-        /// <summary>
-        /// Determines if the current database is the master database by examining the connection string.
-        /// </summary>
-        /// <returns>True if the database in the connection string is "master", false otherwise</returns>
-        Task<bool> IsMasterDatabaseAsync(CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Executes a SQL query with optional database context switching.

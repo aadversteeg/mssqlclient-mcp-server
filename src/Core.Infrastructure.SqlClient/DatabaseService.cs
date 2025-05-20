@@ -348,33 +348,6 @@ namespace Core.Infrastructure.SqlClient
         }
 
         /// <summary>
-        /// Determines if the current database is the master database by examining the connection string.
-        /// </summary>
-        /// <returns>True if connected to master, false otherwise</returns>
-        public Task<bool> IsMasterDatabaseAsync(CancellationToken cancellationToken = default)
-        {
-            var builder = new SqlConnectionStringBuilder(_connectionString);
-            string databaseName = builder.InitialCatalog;
-            
-            // Also check for Database parameter directly if InitialCatalog is empty
-            if (string.IsNullOrEmpty(databaseName) && _connectionString.Contains("Database=", StringComparison.OrdinalIgnoreCase))
-            {
-                var dbParamStart = _connectionString.IndexOf("Database=", StringComparison.OrdinalIgnoreCase);
-                if (dbParamStart >= 0)
-                {
-                    dbParamStart += "Database=".Length;
-                    var dbParamEnd = _connectionString.IndexOf(';', dbParamStart);
-                    if (dbParamEnd < 0)
-                        dbParamEnd = _connectionString.Length;
-
-                    databaseName = _connectionString.Substring(dbParamStart, dbParamEnd - dbParamStart);
-                }
-            }
-            
-            return Task.FromResult(string.Equals(databaseName, "master", StringComparison.OrdinalIgnoreCase));
-        }
-
-        /// <summary>
         /// Executes a SQL query with optional database context switching.
         /// </summary>
         /// <param name="query">The SQL query to execute</param>

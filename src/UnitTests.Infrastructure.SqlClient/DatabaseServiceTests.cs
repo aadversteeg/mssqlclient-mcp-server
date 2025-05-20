@@ -68,32 +68,5 @@ namespace UnitTests.Infrastructure.SqlClient
                 .WithMessage("*Query cannot be empty*");
         }
         
-        [Fact(DisplayName = "DBS-005: IsMasterDatabaseAsync returns true for master database")]
-        public async Task DBS005()
-        {
-            // Arrange
-            string connectionString = "Data Source=localhost;Initial Catalog=master;Integrated Security=True;";
-            var dbService = new DatabaseService(connectionString);
-            
-            // Act
-            bool isMaster = await dbService.IsMasterDatabaseAsync();
-            
-            // Assert
-            isMaster.Should().BeTrue();
-        }
-        
-        [Fact(DisplayName = "DBS-006: IsMasterDatabaseAsync returns false for non-master database")]
-        public async Task DBS006()
-        {
-            // Arrange
-            string connectionString = "Data Source=localhost;Initial Catalog=TestDb;Integrated Security=True;";
-            var dbService = new DatabaseService(connectionString);
-            
-            // Act
-            bool isMaster = await dbService.IsMasterDatabaseAsync();
-            
-            // Assert
-            isMaster.Should().BeFalse();
-        }
     }
 }

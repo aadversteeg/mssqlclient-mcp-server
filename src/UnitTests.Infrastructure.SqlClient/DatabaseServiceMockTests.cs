@@ -62,9 +62,6 @@ namespace UnitTests.Infrastructure.SqlClient
         
         public bool GetCurrentDatabaseNameCalled { get; private set; }
         
-        public bool IsMasterDatabaseAsyncCalled { get; private set; }
-        public CancellationToken TokenPassedToIsMaster { get; private set; }
-        
         public bool GetTableSchemaAsyncCalled { get; private set; }
         public string? TableNamePassedToGetTableSchema { get; private set; }
         public string? DatabaseNamePassedToGetTableSchema { get; private set; }
@@ -80,7 +77,6 @@ namespace UnitTests.Infrastructure.SqlClient
         public List<DatabaseInfo> DatabasesResponse { get; set; } = new List<DatabaseInfo>();
         public bool DatabaseExistsResponse { get; set; } = true;
         public string CurrentDatabaseNameResponse { get; set; } = "TestDb";
-        public bool IsMasterResponse { get; set; } = false;
         public TableSchemaInfo TableSchemaResponse { get; set; } = new TableSchemaInfo("TestTable", "TestDb", new List<TableColumnInfo>());
         public IAsyncDataReader? ExecuteQueryResponse { get; set; } = null;
         
@@ -113,12 +109,6 @@ namespace UnitTests.Infrastructure.SqlClient
             return CurrentDatabaseNameResponse;
         }
         
-        public Task<bool> IsMasterDatabaseAsync(CancellationToken cancellationToken = default)
-        {
-            IsMasterDatabaseAsyncCalled = true;
-            TokenPassedToIsMaster = cancellationToken;
-            return Task.FromResult(IsMasterResponse);
-        }
         
         public Task<TableSchemaInfo> GetTableSchemaAsync(string tableName, string? databaseName = null, CancellationToken cancellationToken = default)
         {
