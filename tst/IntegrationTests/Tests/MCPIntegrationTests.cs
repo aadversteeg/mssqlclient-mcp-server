@@ -983,14 +983,15 @@ namespace IntegrationTests.Tests
                                 return null;
                             }
                             
-                            bool isMaster = string.Equals(dbName, "master", StringComparison.OrdinalIgnoreCase);
+                            // Check if this is server mode (using master database or empty database name)
+                            bool isServerMode = string.Equals(dbName, "master", StringComparison.OrdinalIgnoreCase);
                             
                             _logger.LogInformation("Successfully connected to SQL Server database: {DbName}", dbName);
                             
                             return new SqlConnectionInfo
                             {
                                 DatabaseName = dbName,
-                                IsMasterDatabase = isMaster
+                                IsServerMode = isServerMode
                             };
                         }
                     }
@@ -1080,9 +1081,21 @@ namespace IntegrationTests.Tests
         public string DatabaseName { get; set; } = "master";
         
         /// <summary>
-        /// Gets or sets a value indicating whether this is a connection to the master database
+        /// Gets or sets a value indicating whether this is a connection in server mode.
+        /// Server mode means the connection is to the master database, which allows server-wide operations.
         /// </summary>
-        public bool IsMasterDatabase { get; set; }
+        public bool IsServerMode { get; set; }
+        
+        /// <summary>
+        /// Gets or sets a value indicating whether this is a connection to the master database.
+        /// This property is maintained for backward compatibility and maps to IsServerMode.
+        /// </summary>
+        [Obsolete("Use IsServerMode instead")]
+        public bool IsMasterDatabase 
+        { 
+            get => IsServerMode; 
+            set => IsServerMode = value; 
+        }
     }
     
     /// <summary>
