@@ -178,6 +178,10 @@ namespace Core.Infrastructure.McpServer
                 .WithStdioServerTransport();
 
             Console.Error.WriteLine("Registering MCP tools...");
+            
+            // Register common tools that work in both modes
+            mcpServerBuilder.WithTools<ServerCapabilitiesTool>();
+            Console.Error.WriteLine("Registered ServerCapabilitiesTool");
 
             if (isServerMode)
             {

@@ -99,7 +99,92 @@ To connect to the SQL Server MCP Client from your applications:
 
 ### Available Tools
 
-The available tools differ depending on which mode the server is operating in:
+The available tools differ depending on which mode the server is operating in, with some tools available in both modes:
+
+## Common Tools (Available in Both Modes)
+
+#### server_capabilities
+
+Returns detailed information about the capabilities and features of the connected SQL Server instance.
+
+Example request:
+```json
+{
+  "name": "server_capabilities",
+  "parameters": {}
+}
+```
+
+Example response in Server Mode:
+```json
+{
+  "version": "Microsoft SQL Server 2019",
+  "majorVersion": 15,
+  "minorVersion": 0,
+  "buildNumber": 4123,
+  "edition": "Enterprise Edition",
+  "isAzureSqlDatabase": false,
+  "isAzureVmSqlServer": false,
+  "isOnPremisesSqlServer": true,
+  "toolMode": "server",
+  "features": {
+    "supportsPartitioning": true,
+    "supportsColumnstoreIndex": true,
+    "supportsJson": true,
+    "supportsInMemoryOLTP": true,
+    "supportsRowLevelSecurity": true,
+    "supportsDynamicDataMasking": true,
+    "supportsDataCompression": true,
+    "supportsDatabaseSnapshots": true,
+    "supportsQueryStore": true,
+    "supportsResumableIndexOperations": true,
+    "supportsGraphDatabase": true,
+    "supportsAlwaysEncrypted": true,
+    "supportsExactRowCount": true,
+    "supportsDetailedIndexMetadata": true,
+    "supportsTemporalTables": true
+  }
+}
+```
+
+Example response in Database Mode:
+```json
+{
+  "version": "Microsoft SQL Server 2019",
+  "majorVersion": 15,
+  "minorVersion": 0,
+  "buildNumber": 4123,
+  "edition": "Enterprise Edition",
+  "isAzureSqlDatabase": false,
+  "isAzureVmSqlServer": false,
+  "isOnPremisesSqlServer": true,
+  "toolMode": "database",
+  "databaseName": "Northwind",
+  "features": {
+    "supportsPartitioning": true,
+    "supportsColumnstoreIndex": true,
+    "supportsJson": true,
+    "supportsInMemoryOLTP": true,
+    "supportsRowLevelSecurity": true,
+    "supportsDynamicDataMasking": true,
+    "supportsDataCompression": true,
+    "supportsDatabaseSnapshots": true,
+    "supportsQueryStore": true,
+    "supportsResumableIndexOperations": true,
+    "supportsGraphDatabase": true,
+    "supportsAlwaysEncrypted": true,
+    "supportsExactRowCount": true,
+    "supportsDetailedIndexMetadata": true,
+    "supportsTemporalTables": true
+  }
+}
+```
+
+This tool is useful for:
+- Determining which features are available in your SQL Server instance
+- Debugging compatibility issues
+- Understanding which query patterns will be used
+- Verifying whether you're in server or database mode
 
 ## Database Mode Tools
 
