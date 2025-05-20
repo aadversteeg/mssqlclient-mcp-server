@@ -567,6 +567,17 @@ namespace Core.Infrastructure.SqlClient
                 throw new ArgumentException("Table name cannot be empty", nameof(tableName));
             }
 
+            // Parse schema and table name
+            string? schemaName = null;
+            string tableNameOnly = tableName;
+            
+            if (tableName.Contains("."))
+            {
+                var parts = tableName.Split(new[] {'.'}, 2);
+                schemaName = parts[0].Trim(new[] {'[', ']'});
+                tableNameOnly = parts[1].Trim(new[] {'[', ']'});
+            }
+
             var columns = new List<TableColumnInfo>();
             string currentDbName;
 
@@ -609,10 +620,32 @@ namespace Core.Infrastructure.SqlClient
                 }
                 
                 // Get schema information for the table
-                var schemaTable = connection.GetSchema("Columns", new[] { null, null, tableName });
+                var schemaTable = connection.GetSchema("Columns", new[] { null, schemaName, tableNameOnly });
                 
                 if (schemaTable.Rows.Count == 0)
                 {
+                    // If no rows were found and a schema was provided, try to check if the table exists at all
+                    if (!string.IsNullOrWhiteSpace(schemaName))
+                    {
+                        string checkTableQuery = @"
+                            SELECT COUNT(*) 
+                            FROM sys.tables t
+                            JOIN sys.schemas s ON t.schema_id = s.schema_id
+                            WHERE s.name = @schemaName AND t.name = @tableName";
+                        
+                        using (var command = new SqlCommand(checkTableQuery, connection))
+                        {
+                            command.Parameters.AddWithValue("@schemaName", schemaName);
+                            command.Parameters.AddWithValue("@tableName", tableNameOnly);
+                            int tableCount = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+                            
+                            if (tableCount > 0)
+                            {
+                                throw new InvalidOperationException($"Table '{schemaName}.{tableNameOnly}' exists in database '{currentDbName}' but you might not have permission to access its schema information");
+                            }
+                        }
+                    }
+                    
                     throw new InvalidOperationException($"Table '{tableName}' does not exist in database '{currentDbName}' or you don't have permission to access it");
                 }
                 
@@ -642,7 +675,8 @@ namespace Core.Infrastructure.SqlClient
                     }
                 }
             }
-
+            
+            // For the TableSchemaInfo output, use the original table name for better UX
             return new TableSchemaInfo(tableName, currentDbName, columns);
         }
     }
