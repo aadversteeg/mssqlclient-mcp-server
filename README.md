@@ -281,6 +281,40 @@ Example request:
 
 ## Configuration
 
+### Query Execution Security
+
+By default, the SQL query execution tools (`execute_query` and `execute_query_in_database`) are disabled for security reasons. To enable these tools, you must explicitly set the `EnableExecuteQuery` configuration setting to `true`.
+
+This can be configured in several ways:
+
+1. In the `appsettings.json` file:
+```json
+{
+  "EnableExecuteQuery": true
+}
+```
+
+2. As an environment variable when running the container:
+```bash
+docker run -e "EnableExecuteQuery=true" -e "MSSQL_CONNECTIONSTRING=Server=your_server;..." localhost:5000/mssqlclient-mcp-server:latest
+```
+
+3. In the Claude Desktop configuration:
+```json
+"mssql": {
+  "command": "dotnet",
+  "args": [
+    "YOUR_PATH_TO_DLL\\Core.Infrastructure.McpServer.dll"
+  ],
+  "env": {
+    "MSSQL_CONNECTIONSTRING": "Server=your_server;...",
+    "EnableExecuteQuery": "true"
+  }
+}
+```
+
+When this setting is `false` (the default), the query execution tools will not be registered and will not be available to clients. This provides an additional security layer when you only want to allow read-only operations like listing tables and viewing schemas.
+
 ### Database Connection String
 
 The SQL Server connection string is required to connect to your database. This connection string should include server information, authentication details, and any required connection options.
@@ -288,11 +322,11 @@ The SQL Server connection string is required to connect to your database. This c
 You can set the connection string using the `MSSQL_CONNECTIONSTRING` environment variable:
 
 ```bash
-# When running the Docker container in Database Mode
-docker run -e "MSSQL_CONNECTIONSTRING=Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;" localhost:5000/mssqlclient-mcp-server:latest
+# When running the Docker container in Database Mode (with query execution enabled)
+docker run -e "EnableExecuteQuery=true" -e "MSSQL_CONNECTIONSTRING=Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;" localhost:5000/mssqlclient-mcp-server:latest
 
-# When running the Docker container in Server Mode
-docker run -e "MSSQL_CONNECTIONSTRING=Server=your_server;User Id=your_user;Password=your_password;TrustServerCertificate=True;" localhost:5000/mssqlclient-mcp-server:latest
+# When running the Docker container in Server Mode (with query execution enabled)
+docker run -e "EnableExecuteQuery=true" -e "MSSQL_CONNECTIONSTRING=Server=your_server;User Id=your_user;Password=your_password;TrustServerCertificate=True;" localhost:5000/mssqlclient-mcp-server:latest
 ```
 
 #### Server Mode vs Database Mode
@@ -336,7 +370,8 @@ To configure Claude Desktop to use a locally installed SQL Server MCP client:
     "YOUR_PATH_TO_DLL\\Core.Infrastructure.McpServer.dll"
   ],
   "env": {
-    "MSSQL_CONNECTIONSTRING": "Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;"
+    "MSSQL_CONNECTIONSTRING": "Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;",
+    "EnableExecuteQuery": "true"  // Add this to enable query execution
   }
 }
 ```
@@ -356,6 +391,7 @@ To use the SQL Server MCP client from a Docker container with Claude Desktop:
     "--rm",
     "-i",
     "-e", "MSSQL_CONNECTIONSTRING=Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;",
+    "-e", "EnableExecuteQuery=true",  // Add this to enable query execution
     "localhost:5000/mssqlclient-mcp-server:latest"
   ]
 }

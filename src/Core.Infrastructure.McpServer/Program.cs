@@ -131,7 +131,12 @@ namespace Core.Infrastructure.McpServer
             Console.Error.WriteLine($"Using server mode: {isServerMode}");
 
             // Register the database configuration
-            var dbConfig = new DatabaseConfiguration { ConnectionString = connectionString };
+            var dbConfig = new DatabaseConfiguration 
+            { 
+                ConnectionString = connectionString,
+                EnableExecuteQuery = builder.Configuration.GetValue<bool>("EnableExecuteQuery", false) // Default to false if not specified
+            };
+            Console.Error.WriteLine($"EnableExecuteQuery setting: {dbConfig.EnableExecuteQuery}");
             builder.Services.AddSingleton(dbConfig);
 
             // Register our database services
@@ -177,8 +182,18 @@ namespace Core.Infrastructure.McpServer
                 Console.Error.WriteLine("Registered ServerListTablesTool");
                 mcpServerBuilder.WithTools<ServerListDatabasesTool>();
                 Console.Error.WriteLine("Registered ServerListDatabasesTool");
-                mcpServerBuilder.WithTools<ServerExecuteQueryTool>();
-                Console.Error.WriteLine("Registered ServerExecuteQueryTool");
+                
+                // Only register execute query tool if it's enabled in configuration
+                if (dbConfig.EnableExecuteQuery)
+                {
+                    mcpServerBuilder.WithTools<ServerExecuteQueryTool>();
+                    Console.Error.WriteLine("Registered ServerExecuteQueryTool");
+                }
+                else
+                {
+                    Console.Error.WriteLine("ServerExecuteQueryTool registration skipped (EnableExecuteQuery is false)");
+                }
+                
                 mcpServerBuilder.WithTools<ServerGetTableSchemaTool>();
                 Console.Error.WriteLine("Registered ServerGetTableSchemaTool");
             }
@@ -188,8 +203,18 @@ namespace Core.Infrastructure.McpServer
                 Console.Error.WriteLine("Registering database mode tools...");
                 mcpServerBuilder.WithTools<ListTablesTool>();
                 Console.Error.WriteLine("Registered ListTablesTool");
-                mcpServerBuilder.WithTools<ExecuteQueryTool>();
-                Console.Error.WriteLine("Registered ExecuteQueryTool");
+                
+                // Only register execute query tool if it's enabled in configuration
+                if (dbConfig.EnableExecuteQuery)
+                {
+                    mcpServerBuilder.WithTools<ExecuteQueryTool>();
+                    Console.Error.WriteLine("Registered ExecuteQueryTool");
+                }
+                else
+                {
+                    Console.Error.WriteLine("ExecuteQueryTool registration skipped (EnableExecuteQuery is false)");
+                }
+                
                 mcpServerBuilder.WithTools<GetTableSchemaTool>();
                 Console.Error.WriteLine("Registered GetTableSchemaTool");
             }
