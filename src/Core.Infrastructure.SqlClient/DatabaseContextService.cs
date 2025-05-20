@@ -22,7 +22,8 @@ namespace Core.Infrastructure.SqlClient
             if (string.IsNullOrEmpty(connectionString)) 
                 throw new ArgumentNullException(nameof(connectionString));
             
-            _databaseService = new DatabaseService(connectionString);
+            var capabilityDetector = new SqlServerCapabilityDetector(connectionString);
+            _databaseService = new DatabaseService(connectionString, capabilityDetector);
         }
 
         /// <summary>

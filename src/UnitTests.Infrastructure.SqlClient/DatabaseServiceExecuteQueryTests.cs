@@ -14,12 +14,24 @@ namespace UnitTests.Infrastructure.SqlClient
     {
         private readonly Mock<IDatabaseService> _mockDatabaseService;
         private readonly DatabaseService _databaseService;
+        private readonly Mock<ISqlServerCapabilityDetector> _mockCapabilityDetector;
         
         public DatabaseServiceExecuteQueryTests()
         {
             // Create a connection string for testing
             string connectionString = "Data Source=localhost;Initial Catalog=TestDb;Integrated Security=True;";
-            _databaseService = new DatabaseService(connectionString);
+            
+            // Create a mock capability detector
+            _mockCapabilityDetector = new Mock<ISqlServerCapabilityDetector>();
+            _mockCapabilityDetector.Setup(x => x.DetectCapabilitiesAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new SqlServerCapability
+                {
+                    MajorVersion = 14, // SQL Server 2017
+                    SupportsExactRowCount = true,
+                    SupportsDetailedIndexMetadata = true
+                });
+                
+            _databaseService = new DatabaseService(connectionString, _mockCapabilityDetector.Object);
             
             // Also create a mock for specific tests
             _mockDatabaseService = new Mock<IDatabaseService>();
@@ -30,7 +42,7 @@ namespace UnitTests.Infrastructure.SqlClient
         {
             // Act
             string? nullConnectionString = null;
-            Action act = () => new DatabaseService(nullConnectionString);
+            Action act = () => new DatabaseService(nullConnectionString, _mockCapabilityDetector.Object);
             
             // Assert
             act.Should().Throw<ArgumentNullException>()

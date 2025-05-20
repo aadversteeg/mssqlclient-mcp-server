@@ -32,11 +32,11 @@ namespace Core.Infrastructure.McpServer.Extensions
             
             sb.AppendLine();
             
-            // Check if all tables have zero values for specific columns
-            bool allRowCountsZero = tablesList.All(t => t.RowCount == 0);
-            bool allSizesZero = tablesList.All(t => t.SizeMB == 0);
-            bool allIndexCountsZero = tablesList.All(t => t.IndexCount == 0);
-            bool allForeignKeyCountsZero = tablesList.All(t => t.ForeignKeyCount == 0);
+            // Check if all tables have null or zero values for specific columns
+            bool allRowCountsZero = tablesList.All(t => t.RowCount == null || t.RowCount == 0);
+            bool allSizesZero = tablesList.All(t => t.SizeMB == null || t.SizeMB == 0);
+            bool allIndexCountsZero = tablesList.All(t => t.IndexCount == null || t.IndexCount == 0);
+            bool allForeignKeyCountsZero = tablesList.All(t => t.ForeignKeyCount == null || t.ForeignKeyCount == 0);
             
             // Build header based on values
             List<string> headerParts = new() { "Schema", "Table Name" };
@@ -80,24 +80,24 @@ namespace Core.Infrastructure.McpServer.Extensions
                 
                 if (!allRowCountsZero)
                 {
-                    rowParts.Add(table.RowCount.ToString());
+                    rowParts.Add(table.RowCount?.ToString() ?? "N/A");
                 }
                 
                 if (!allSizesZero)
                 {
-                    rowParts.Add(table.SizeMB.ToString("F2"));
+                    rowParts.Add(table.SizeMB.HasValue ? table.SizeMB.Value.ToString("F2") : "N/A");
                 }
                 
                 rowParts.Add(table.TableType);
                 
                 if (!allIndexCountsZero)
                 {
-                    rowParts.Add(table.IndexCount.ToString());
+                    rowParts.Add(table.IndexCount?.ToString() ?? "N/A");
                 }
                 
                 if (!allForeignKeyCountsZero)
                 {
-                    rowParts.Add(table.ForeignKeyCount.ToString());
+                    rowParts.Add(table.ForeignKeyCount?.ToString() ?? "N/A");
                 }
                 
                 sb.AppendLine(string.Join(" | ", rowParts));

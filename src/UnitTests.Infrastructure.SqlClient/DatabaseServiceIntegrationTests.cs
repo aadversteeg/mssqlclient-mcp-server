@@ -39,12 +39,20 @@ namespace UnitTests.Infrastructure.SqlClient
             _masterConnectionString = $@"Server=(localdb)\{TestInstanceName};Database=master;Integrated Security=true;Connection Timeout=30;";
             _userDbConnectionString = $@"Server=(localdb)\{TestInstanceName};Database={TestDbName};Integrated Security=true;Connection Timeout=30;";
 
+            // Create the capability detector for server database service
+            var serverCapabilityDetector = new SqlServerCapabilityDetector(_masterConnectionString);
+            
             // Create the server database service
-            _serverDatabaseService = new DatabaseService(_masterConnectionString);
+            _serverDatabaseService = new DatabaseService(_masterConnectionString, serverCapabilityDetector);
             
             // Create the test database and initialize services
             CreateTestDatabase().GetAwaiter().GetResult();
-            _databaseService = new DatabaseService(_userDbConnectionString);
+            
+            // Create the capability detector for user database service
+            var userDbCapabilityDetector = new SqlServerCapabilityDetector(_userDbConnectionString);
+            
+            // Create the user database service
+            _databaseService = new DatabaseService(_userDbConnectionString, userDbCapabilityDetector);
         }
 
         public void Dispose()

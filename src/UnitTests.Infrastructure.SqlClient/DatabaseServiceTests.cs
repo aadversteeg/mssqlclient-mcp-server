@@ -16,12 +16,24 @@ namespace UnitTests.Infrastructure.SqlClient
     {
         private readonly Mock<IDatabaseService> _mockDatabaseService;
         private readonly DatabaseService _databaseService;
+        private readonly Mock<ISqlServerCapabilityDetector> _mockCapabilityDetector;
         
         public DatabaseServiceTests()
         {
             // Create a connection string for testing
             string connectionString = "Data Source=localhost;Initial Catalog=TestDb;Integrated Security=True;";
-            _databaseService = new DatabaseService(connectionString);
+            
+            // Create a mock capability detector
+            _mockCapabilityDetector = new Mock<ISqlServerCapabilityDetector>();
+            _mockCapabilityDetector.Setup(x => x.DetectCapabilitiesAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new SqlServerCapability
+                {
+                    MajorVersion = 14, // SQL Server 2017
+                    SupportsExactRowCount = true,
+                    SupportsDetailedIndexMetadata = true
+                });
+                
+            _databaseService = new DatabaseService(connectionString, _mockCapabilityDetector.Object);
         }
         
         [Fact(DisplayName = "DBS-001: Constructor with null connection string throws ArgumentNullException")]
@@ -29,11 +41,24 @@ namespace UnitTests.Infrastructure.SqlClient
         {
             // Act
             string? nullConnectionString = null;
-            Action act = () => new DatabaseService(nullConnectionString);
+            Action act = () => new DatabaseService(nullConnectionString, _mockCapabilityDetector.Object);
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
                 .WithParameterName("connectionString");
+        }
+        
+        [Fact(DisplayName = "DBS-001a: Constructor with null capability detector throws ArgumentNullException")]
+        public void DBS001a()
+        {
+            // Act
+            string connectionString = "Data Source=localhost;Initial Catalog=TestDb;Integrated Security=True;";
+            ISqlServerCapabilityDetector? nullDetector = null;
+            Action act = () => new DatabaseService(connectionString, nullDetector);
+            
+            // Assert
+            act.Should().Throw<ArgumentNullException>()
+                .WithParameterName("capabilityDetector");
         }
         
         [Fact(DisplayName = "DBS-002: ListTablesAsync calls database with null database name when not specified")]
@@ -48,7 +73,7 @@ namespace UnitTests.Infrastructure.SqlClient
         {
             // Arrange
             string connectionString = "Data Source=localhost;Initial Catalog=TestDb;Integrated Security=True;";
-            var dbService = new DatabaseService(connectionString);
+            var dbService = new DatabaseService(connectionString, _mockCapabilityDetector.Object);
             
             // Act
             string databaseName = dbService.GetCurrentDatabaseName();

@@ -141,8 +141,13 @@ namespace Core.Infrastructure.McpServer
 
             // Register our database services
             
-            // First register the core database service that both Database and Server services will use
-            builder.Services.AddSingleton<IDatabaseService>(provider => new DatabaseService(connectionString));
+            // Register capability detector first
+            builder.Services.AddSingleton<ISqlServerCapabilityDetector>(provider => 
+                new SqlServerCapabilityDetector(connectionString));
+            
+            // Then register the core database service with the capability detector
+            builder.Services.AddSingleton<IDatabaseService>(provider => 
+                new DatabaseService(connectionString, provider.GetRequiredService<ISqlServerCapabilityDetector>()));
             
             if (isServerMode)
             {

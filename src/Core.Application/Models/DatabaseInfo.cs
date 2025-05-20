@@ -6,7 +6,7 @@ namespace Core.Application.Models
     public sealed record DatabaseInfo(
         string Name,
         string State,
-        double SizeMB,
+        double? SizeMB,
         string Owner,
         string CompatibilityLevel,
         string CollationName,

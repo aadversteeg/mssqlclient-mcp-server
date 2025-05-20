@@ -36,10 +36,19 @@ namespace UnitTests.Infrastructure.SqlClient
         public void DBS002()
         {
             // Arrange
-            // Create a test database service with a dummy connection string
+            // Create a test database service with a dummy connection string and a mock capability detector
             // Just to verify that it implements the interface
             var dummyConnectionString = "Server=test;Database=dummy;Trusted_Connection=True;";
-            var service = new DatabaseService(dummyConnectionString);
+            var mockCapabilityDetector = new Mock<ISqlServerCapabilityDetector>();
+            mockCapabilityDetector.Setup(x => x.DetectCapabilitiesAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new SqlServerCapability
+                {
+                    MajorVersion = 14, // SQL Server 2017
+                    SupportsExactRowCount = true,
+                    SupportsDetailedIndexMetadata = true
+                });
+                
+            var service = new DatabaseService(dummyConnectionString, mockCapabilityDetector.Object);
             
             // Act & Assert
             service.Should().BeAssignableTo<IDatabaseService>();

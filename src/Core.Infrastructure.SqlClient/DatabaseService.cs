@@ -13,14 +13,35 @@ namespace Core.Infrastructure.SqlClient
     public class DatabaseService : IDatabaseService
     {
         private readonly string _connectionString;
+        private readonly ISqlServerCapabilityDetector _capabilityDetector;
+        private SqlServerCapability? _capabilities;
+        private bool _capabilitiesDetected = false;
 
         /// <summary>
         /// Initializes a new instance of the DatabaseService class.
         /// </summary>
         /// <param name="connectionString">The SQL Server connection string</param>
-        public DatabaseService(string connectionString)
+        /// <param name="capabilityDetector">The SQL Server capability detector</param>
+        public DatabaseService(string connectionString, ISqlServerCapabilityDetector capabilityDetector)
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+            _capabilityDetector = capabilityDetector ?? throw new ArgumentNullException(nameof(capabilityDetector));
+            // Capabilities will be detected on first use
+        }
+
+        /// <summary>
+        /// Gets the capabilities of the connected SQL Server instance.
+        /// </summary>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>The SQL Server capabilities</returns>
+        private async Task<SqlServerCapability> GetCapabilitiesAsync(CancellationToken cancellationToken = default)
+        {
+            if (!_capabilitiesDetected)
+            {
+                _capabilities = await _capabilityDetector.DetectCapabilitiesAsync(cancellationToken);
+                _capabilitiesDetected = true;
+            }
+            return _capabilities!;
         }
 
         /// <summary>
@@ -31,6 +52,7 @@ namespace Core.Infrastructure.SqlClient
         /// <returns>A collection of table information</returns>
         public async Task<IEnumerable<TableInfo>> ListTablesAsync(string? databaseName = null, CancellationToken cancellationToken = default)
         {
+            var capabilities = await GetCapabilitiesAsync(cancellationToken);
             var result = new List<TableInfo>();
 
             using (var connection = new SqlConnection(_connectionString))
@@ -47,97 +69,44 @@ namespace Core.Infrastructure.SqlClient
                     }
                 }
                 
-                try
+                // Build a query based on detected capabilities
+                string query = BuildTableListQuery(capabilities);
+                
+                using (var command = new SqlCommand(query, connection))
+                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                 {
-                    // First try a simpler query that should work on all SQL Server versions
-                    string simpleQuery = @"
-                        SELECT 
-                            s.name AS SchemaName,
-                            t.name AS TableName,
-                            0 AS RowCount, -- Default to 0 for row count
-                            0 AS TotalSizeMB, -- Default to 0 for size
-                            t.create_date AS CreateDate,
-                            t.modify_date AS ModifyDate,
-                            'Normal' AS TableType,
-                            0 AS IndexCount, -- Default to 0 for index count
-                            0 AS ForeignKeyCount -- Default to 0 for foreign key count
-                        FROM 
-                            sys.tables t
-                        JOIN 
-                            sys.schemas s ON t.schema_id = s.schema_id
-                        WHERE 
-                            t.is_ms_shipped = 0
-                        ORDER BY 
-                            s.name, t.name";
-
-                    using (var command = new SqlCommand(simpleQuery, connection))
-                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
-                    {
-                        while (await reader.ReadAsync(cancellationToken))
-                        {
-                            var tableInfo = new TableInfo(
-                                Schema: reader["SchemaName"].ToString() ?? string.Empty,
-                                Name: reader["TableName"].ToString() ?? string.Empty,
-                                RowCount: reader["RowCount"] is DBNull ? 0 : Convert.ToInt64(reader["RowCount"]),
-                                SizeMB: reader["TotalSizeMB"] is DBNull ? 0 : Convert.ToDouble(reader["TotalSizeMB"]),
-                                CreateDate: Convert.ToDateTime(reader["CreateDate"]),
-                                ModifyDate: Convert.ToDateTime(reader["ModifyDate"]),
-                                IndexCount: reader["IndexCount"] is DBNull ? 0 : Convert.ToInt32(reader["IndexCount"]),
-                                ForeignKeyCount: reader["ForeignKeyCount"] is DBNull ? 0 : Convert.ToInt32(reader["ForeignKeyCount"]),
-                                TableType: reader["TableType"].ToString() ?? string.Empty
-                            );
-
-                            result.Add(tableInfo);
-                        }
-                    }
-
-                    // Try to get additional information in separate queries 
-                    // to be more compatible with different SQL Server versions
-                    await EnhanceTableInfoAsync(result, connection, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"Error executing complex query: {ex.Message}. Falling back to basic query.");
+                    var fieldMap = GetReaderFieldMap(reader);
                     
-                    // If the query fails, use an even simpler query as fallback
-                    string fallbackQuery = @"
-                        SELECT 
-                            SCHEMA_NAME(schema_id) AS SchemaName,
-                            name AS TableName,
-                            create_date AS CreateDate,
-                            modify_date AS ModifyDate
-                        FROM 
-                            sys.tables
-                        WHERE 
-                            is_ms_shipped = 0
-                        ORDER BY 
-                            SchemaName, TableName";
-                    
-                    // Clear previous results if any
-                    result.Clear();
-                        
-                    using (var command = new SqlCommand(fallbackQuery, connection))
-                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                    while (await reader.ReadAsync(cancellationToken))
                     {
-                        while (await reader.ReadAsync(cancellationToken))
-                        {
-                            // Create TableInfo with minimal information
-                            var tableInfo = new TableInfo(
-                                Schema: reader["SchemaName"].ToString() ?? string.Empty,
-                                Name: reader["TableName"].ToString() ?? string.Empty,
-                                RowCount: 0, // Default since we couldn't get this info
-                                SizeMB: 0, // Default since we couldn't get this info
-                                CreateDate: Convert.ToDateTime(reader["CreateDate"]),
-                                ModifyDate: Convert.ToDateTime(reader["ModifyDate"]),
-                                IndexCount: 0, // Default since we couldn't get this info
-                                ForeignKeyCount: 0, // Default since we couldn't get this info
-                                TableType: "Normal" // Default since we couldn't get this info
-                            );
+                        var tableInfoBuilder = TableInfoBuilder.Create()
+                            .WithSchema(reader["SchemaName"].ToString() ?? string.Empty)
+                            .WithName(reader["TableName"].ToString() ?? string.Empty)
+                            .WithCreateDate(Convert.ToDateTime(reader["CreateDate"]))
+                            .WithModifyDate(Convert.ToDateTime(reader["ModifyDate"]));
 
-                            result.Add(tableInfo);
-                        }
+                        // Add optional fields based on the columns available in the reader
+                        if (fieldMap.TryGetValue("RowCount", out int rowCountIndex) && reader[rowCountIndex] != DBNull.Value)
+                            tableInfoBuilder.WithRowCount(Convert.ToInt64(reader[rowCountIndex]));
+                            
+                        if (fieldMap.TryGetValue("TotalSizeMB", out int sizeIndex) && reader[sizeIndex] != DBNull.Value)
+                            tableInfoBuilder.WithSizeMB(Convert.ToDouble(reader[sizeIndex]));
+                            
+                        if (fieldMap.TryGetValue("IndexCount", out int indexCountIndex) && reader[indexCountIndex] != DBNull.Value)
+                            tableInfoBuilder.WithIndexCount(Convert.ToInt32(reader[indexCountIndex]));
+                            
+                        if (fieldMap.TryGetValue("ForeignKeyCount", out int fkCountIndex) && reader[fkCountIndex] != DBNull.Value)
+                            tableInfoBuilder.WithForeignKeyCount(Convert.ToInt32(reader[fkCountIndex]));
+                            
+                        if (fieldMap.TryGetValue("TableType", out int typeIndex))
+                            tableInfoBuilder.WithTableType(reader[typeIndex].ToString() ?? "Normal");
+
+                        result.Add(tableInfoBuilder.Build());
                     }
                 }
+
+                // Enhance table information if not all data was available in the initial query
+                await EnhanceTableInfoAsync(result, connection, capabilities, cancellationToken);
                 
                 // If we switched database contexts, switch back to the original database
                 if (!string.IsNullOrWhiteSpace(databaseName))
@@ -160,15 +129,106 @@ namespace Core.Infrastructure.SqlClient
         }
         
         /// <summary>
+        /// Builds a table list query based on SQL Server capabilities.
+        /// </summary>
+        /// <param name="capabilities">The detected SQL Server capabilities</param>
+        /// <returns>A SQL query string</returns>
+        private string BuildTableListQuery(SqlServerCapability capabilities)
+        {
+            // For older SQL Server versions (10.x and below), use a simpler query
+            if (capabilities.MajorVersion <= 10)
+            {
+                return @"
+                    SELECT 
+                        SCHEMA_NAME(schema_id) AS SchemaName,
+                        name AS TableName,
+                        create_date AS CreateDate,
+                        modify_date AS ModifyDate
+                    FROM 
+                        sys.tables
+                    WHERE 
+                        is_ms_shipped = 0
+                    ORDER BY 
+                        SchemaName, TableName";
+            }
+            
+            // For SQL Server 2012 and above, include more information
+            string query = @"
+                SELECT 
+                    s.name AS SchemaName,
+                    t.name AS TableName,
+                    t.create_date AS CreateDate,
+                    t.modify_date AS ModifyDate";
+            
+            // Conditionally add columns based on capabilities
+            if (capabilities.SupportsExactRowCount)
+            {
+                query += ",\n                    0 AS RowCount"; // Will be enhanced later
+            }
+            
+            if (capabilities.SupportsDetailedIndexMetadata)
+            {
+                query += ",\n                    0 AS IndexCount"; // Will be enhanced later
+                query += ",\n                    0 AS ForeignKeyCount"; // Will be enhanced later
+            }
+            
+            // Add table type for SQL Server 2016+ (13.x and above)
+            if (capabilities.MajorVersion >= 13)
+            {
+                query += ",\n                    CASE WHEN t.temporal_type = 1 THEN 'History' WHEN t.temporal_type = 2 THEN 'Temporal' ELSE 'Normal' END AS TableType";
+            }
+            else 
+            {
+                query += ",\n                    'Normal' AS TableType";
+            }
+            
+            // Include size information for SQL Server 2012+ (11.x and above)
+            if (capabilities.MajorVersion >= 11)
+            {
+                query += ",\n                    0 AS TotalSizeMB"; // Will be enhanced later
+            }
+            
+            // Complete the query
+            query += @"
+                FROM 
+                    sys.tables t
+                JOIN 
+                    sys.schemas s ON t.schema_id = s.schema_id
+                WHERE 
+                    t.is_ms_shipped = 0
+                ORDER BY 
+                    s.name, t.name";
+                    
+            return query;
+        }
+        
+        /// <summary>
+        /// Gets a mapping of field names to ordinal positions in the DataReader.
+        /// </summary>
+        /// <param name="reader">The data reader</param>
+        /// <returns>A dictionary mapping field names to their ordinal positions</returns>
+        private Dictionary<string, int> GetReaderFieldMap(SqlDataReader reader)
+        {
+            var fieldMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                fieldMap[reader.GetName(i)] = i;
+            }
+            return fieldMap;
+        }
+        
+        /// <summary>
         /// Enhances table information with additional details in a way that's compatible
         /// with different SQL Server versions.
         /// </summary>
         /// <param name="tables">The list of tables to enhance</param>
         /// <param name="connection">An open SQL connection</param>
+        /// <param name="capabilities">The SQL Server capabilities</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         private async Task EnhanceTableInfoAsync(
             List<TableInfo> tables, 
-            SqlConnection connection, 
+            SqlConnection connection,
+            SqlServerCapability capabilities,
             CancellationToken cancellationToken = default)
         {
             if (tables == null || tables.Count == 0)
@@ -176,78 +236,133 @@ namespace Core.Infrastructure.SqlClient
                 
             try
             {
-                // Get row counts - this approach is more compatible
-                foreach (var table in tables)
+                // Get row counts if supported
+                if (capabilities.SupportsExactRowCount)
+                {
+                    foreach (var table in tables)
+                    {
+                        try
+                        {
+                            string countQuery = $"SELECT COUNT(*) FROM [{table.Schema}].[{table.Name}]";
+                            using (var command = new SqlCommand(countQuery, connection))
+                            {
+                                var count = await command.ExecuteScalarAsync(cancellationToken);
+                                if (count != null && count != DBNull.Value)
+                                {
+                                    // This creates a new TableInfo with updated row count but preserves other properties
+                                    var index = tables.IndexOf(table);
+                                    if (index >= 0)
+                                    {
+                                        tables[index] = table with { RowCount = Convert.ToInt64(count) };
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // If counting rows fails for a table, just continue with the next one
+                            Console.Error.WriteLine($"Failed to get row count for table {table.Schema}.{table.Name}: {ex.Message}");
+                        }
+                    }
+                }
+
+                // Try to get index counts if detailed metadata is supported
+                if (capabilities.SupportsDetailedIndexMetadata)
                 {
                     try
                     {
-                        string countQuery = $"SELECT COUNT(*) FROM [{table.Schema}].[{table.Name}]";
-                        using (var command = new SqlCommand(countQuery, connection))
+                        string indexQuery = @"
+                            SELECT 
+                                SCHEMA_NAME(t.schema_id) AS SchemaName,
+                                t.name AS TableName,
+                                COUNT(i.index_id) AS IndexCount
+                            FROM 
+                                sys.tables t
+                            LEFT JOIN 
+                                sys.indexes i ON t.object_id = i.object_id
+                            WHERE 
+                                t.is_ms_shipped = 0
+                            GROUP BY 
+                                t.schema_id, t.name";
+
+                        using (var command = new SqlCommand(indexQuery, connection))
+                        using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                         {
-                            var count = await command.ExecuteScalarAsync(cancellationToken);
-                            if (count != null && count != DBNull.Value)
+                            while (await reader.ReadAsync(cancellationToken))
                             {
-                                // This creates a new TableInfo with updated row count but preserves other properties
-                                var index = tables.IndexOf(table);
-                                if (index >= 0)
+                                string schema = reader["SchemaName"].ToString() ?? string.Empty;
+                                string name = reader["TableName"].ToString() ?? string.Empty;
+                                int indexCount = Convert.ToInt32(reader["IndexCount"]);
+                                
+                                // Find matching table and update index count
+                                var table = tables.FirstOrDefault(t => 
+                                    t.Schema.Equals(schema, StringComparison.OrdinalIgnoreCase) && 
+                                    t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                                    
+                                if (table != null)
                                 {
-                                    tables[index] = table with { RowCount = Convert.ToInt64(count) };
+                                    var index = tables.IndexOf(table);
+                                    if (index >= 0)
+                                    {
+                                        tables[index] = table with { IndexCount = indexCount };
+                                    }
                                 }
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        // If counting rows fails for a table, just continue with the next one
-                        Console.Error.WriteLine($"Failed to get row count for table {table.Schema}.{table.Name}: {ex.Message}");
+                        Console.Error.WriteLine($"Failed to get index counts: {ex.Message}");
                     }
                 }
-
-                // Try to get index counts
-                try
+                
+                // Try to get table sizes if supported
+                if (capabilities.MajorVersion >= 11) // SQL Server 2012+
                 {
-                    string indexQuery = @"
-                        SELECT 
-                            SCHEMA_NAME(t.schema_id) AS SchemaName,
-                            t.name AS TableName,
-                            COUNT(i.index_id) AS IndexCount
-                        FROM 
-                            sys.tables t
-                        LEFT JOIN 
-                            sys.indexes i ON t.object_id = i.object_id
-                        WHERE 
-                            t.is_ms_shipped = 0
-                        GROUP BY 
-                            t.schema_id, t.name";
-
-                    using (var command = new SqlCommand(indexQuery, connection))
-                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                    try
                     {
-                        while (await reader.ReadAsync(cancellationToken))
+                        foreach (var table in tables)
                         {
-                            string schema = reader["SchemaName"].ToString() ?? string.Empty;
-                            string name = reader["TableName"].ToString() ?? string.Empty;
-                            int indexCount = Convert.ToInt32(reader["IndexCount"]);
-                            
-                            // Find matching table and update index count
-                            var table = tables.FirstOrDefault(t => 
-                                t.Schema.Equals(schema, StringComparison.OrdinalIgnoreCase) && 
-                                t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-                                
-                            if (table != null)
+                            try
                             {
-                                var index = tables.IndexOf(table);
-                                if (index >= 0)
+                                // This query works on SQL Server 2012 and above
+                                string sizeQuery = $@"
+                                    SELECT 
+                                        SUM(p.used_page_count) * 8.0 / 1024 AS TotalSizeMB
+                                    FROM 
+                                        sys.dm_db_partition_stats p
+                                    JOIN 
+                                        sys.tables t ON p.object_id = t.object_id
+                                    JOIN 
+                                        sys.schemas s ON t.schema_id = s.schema_id
+                                    WHERE 
+                                        s.name = '{table.Schema}' AND t.name = '{table.Name}'
+                                    GROUP BY 
+                                        s.name, t.name";
+                                        
+                                using (var command = new SqlCommand(sizeQuery, connection))
                                 {
-                                    tables[index] = table with { IndexCount = indexCount };
+                                    var size = await command.ExecuteScalarAsync(cancellationToken);
+                                    if (size != null && size != DBNull.Value)
+                                    {
+                                        var index = tables.IndexOf(table);
+                                        if (index >= 0)
+                                        {
+                                            tables[index] = table with { SizeMB = Convert.ToDouble(size) };
+                                        }
+                                    }
                                 }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.Error.WriteLine($"Failed to get size for table {table.Schema}.{table.Name}: {ex.Message}");
                             }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"Failed to get index counts: {ex.Message}");
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"Failed to get table sizes: {ex.Message}");
+                    }
                 }
             }
             catch (Exception ex)
@@ -263,51 +378,88 @@ namespace Core.Infrastructure.SqlClient
         /// <returns>A collection of database information</returns>
         public async Task<IEnumerable<DatabaseInfo>> ListDatabasesAsync(CancellationToken cancellationToken = default)
         {
+            var capabilities = await GetCapabilitiesAsync(cancellationToken);
             var result = new List<DatabaseInfo>();
 
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync(cancellationToken);
                 
-                string query = @"
-                    SELECT 
-                        name AS Name,
-                        state_desc AS State,
-                        (SELECT SUM(size * 8.0 / 1024) FROM sys.master_files WHERE database_id = db.database_id) AS SizeMB,
-                        SUSER_SNAME(owner_sid) AS Owner,
-                        compatibility_level AS CompatibilityLevel,
-                        collation_name AS CollationName,
-                        create_date AS CreateDate,
-                        recovery_model_desc AS RecoveryModel,
-                        is_read_only AS IsReadOnly
-                    FROM 
-                        sys.databases db
-                    ORDER BY 
-                        name";
+                // Build query based on capabilities
+                string query = BuildDatabaseListQuery(capabilities);
 
                 using (var command = new SqlCommand(query, connection))
                 using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                 {
+                    var fieldMap = GetReaderFieldMap(reader);
+                    
                     while (await reader.ReadAsync(cancellationToken))
                     {
-                        var databaseInfo = new DatabaseInfo(
-                            Name: reader["Name"].ToString() ?? string.Empty,
-                            State: reader["State"].ToString() ?? string.Empty,
-                            SizeMB: reader["SizeMB"] is DBNull ? 0 : Convert.ToDouble(reader["SizeMB"]),
-                            Owner: reader["Owner"].ToString() ?? string.Empty,
-                            CompatibilityLevel: reader["CompatibilityLevel"].ToString() ?? string.Empty,
-                            CollationName: reader["CollationName"].ToString() ?? string.Empty,
-                            CreateDate: Convert.ToDateTime(reader["CreateDate"]),
-                            RecoveryModel: reader["RecoveryModel"].ToString() ?? string.Empty,
-                            IsReadOnly: Convert.ToBoolean(reader["IsReadOnly"])
-                        );
+                        var dbInfoBuilder = new DatabaseInfoBuilder()
+                            .WithName(reader["Name"].ToString() ?? string.Empty)
+                            .WithState(reader["State"].ToString() ?? string.Empty)
+                            .WithCreateDate(Convert.ToDateTime(reader["CreateDate"]));
+                            
+                        // Add optional fields based on what's available in the reader
+                        if (fieldMap.TryGetValue("SizeMB", out int sizeIndex) && reader[sizeIndex] != DBNull.Value)
+                            dbInfoBuilder.WithSizeMB(Convert.ToDouble(reader[sizeIndex]));
+                            
+                        if (fieldMap.TryGetValue("Owner", out int ownerIndex) && reader[ownerIndex] != DBNull.Value)
+                            dbInfoBuilder.WithOwner(reader[ownerIndex].ToString() ?? string.Empty);
+                            
+                        if (fieldMap.TryGetValue("CompatibilityLevel", out int compatIndex) && reader[compatIndex] != DBNull.Value)
+                            dbInfoBuilder.WithCompatibilityLevel(reader[compatIndex].ToString() ?? string.Empty);
+                            
+                        if (fieldMap.TryGetValue("CollationName", out int collationIndex) && reader[collationIndex] != DBNull.Value)
+                            dbInfoBuilder.WithCollationName(reader[collationIndex].ToString() ?? string.Empty);
+                            
+                        if (fieldMap.TryGetValue("RecoveryModel", out int recoveryIndex) && reader[recoveryIndex] != DBNull.Value)
+                            dbInfoBuilder.WithRecoveryModel(reader[recoveryIndex].ToString() ?? string.Empty);
+                            
+                        if (fieldMap.TryGetValue("IsReadOnly", out int readOnlyIndex) && reader[readOnlyIndex] != DBNull.Value)
+                            dbInfoBuilder.WithIsReadOnly(Convert.ToBoolean(reader[readOnlyIndex]));
 
-                        result.Add(databaseInfo);
+                        result.Add(dbInfoBuilder.Build());
                     }
                 }
             }
 
             return result;
+        }
+        
+        /// <summary>
+        /// Builds a database list query based on SQL Server capabilities.
+        /// </summary>
+        /// <param name="capabilities">The detected SQL Server capabilities</param>
+        /// <returns>A SQL query string</returns>
+        private string BuildDatabaseListQuery(SqlServerCapability capabilities)
+        {
+            // Basic query that works on all SQL Server versions
+            string query = @"
+                SELECT 
+                    name AS Name,
+                    state_desc AS State,
+                    create_date AS CreateDate";
+                    
+            // Add more fields for SQL Server 2008 R2 and above
+            if (capabilities.MajorVersion >= 10 && capabilities.MinorVersion >= 50)
+            {
+                query += ",\n                    (SELECT SUM(size * 8.0 / 1024) FROM sys.master_files WHERE database_id = db.database_id) AS SizeMB";
+                query += ",\n                    SUSER_SNAME(owner_sid) AS Owner";
+                query += ",\n                    compatibility_level AS CompatibilityLevel";
+                query += ",\n                    collation_name AS CollationName";
+                query += ",\n                    recovery_model_desc AS RecoveryModel";
+                query += ",\n                    is_read_only AS IsReadOnly";
+            }
+            
+            // Complete the query
+            query += @"
+                FROM 
+                    sys.databases db
+                ORDER BY 
+                    name";
+                
+            return query;
         }
 
         /// <summary>
@@ -492,6 +644,91 @@ namespace Core.Infrastructure.SqlClient
             }
 
             return new TableSchemaInfo(tableName, currentDbName, columns);
+        }
+    }
+    
+    /// <summary>
+    /// Helper class to build DatabaseInfo objects with optional properties.
+    /// </summary>
+    public class DatabaseInfoBuilder
+    {
+        private string _name = string.Empty;
+        private string _state = string.Empty;
+        private double? _sizeMB;
+        private string? _owner;
+        private string? _compatibilityLevel;
+        private string? _collationName;
+        private DateTime _createDate;
+        private string? _recoveryModel;
+        private bool? _isReadOnly;
+        
+        public DatabaseInfoBuilder WithName(string name)
+        {
+            _name = name;
+            return this;
+        }
+        
+        public DatabaseInfoBuilder WithState(string state)
+        {
+            _state = state;
+            return this;
+        }
+        
+        public DatabaseInfoBuilder WithSizeMB(double sizeMB)
+        {
+            _sizeMB = sizeMB;
+            return this;
+        }
+        
+        public DatabaseInfoBuilder WithOwner(string owner)
+        {
+            _owner = owner;
+            return this;
+        }
+        
+        public DatabaseInfoBuilder WithCompatibilityLevel(string compatibilityLevel)
+        {
+            _compatibilityLevel = compatibilityLevel;
+            return this;
+        }
+        
+        public DatabaseInfoBuilder WithCollationName(string collationName)
+        {
+            _collationName = collationName;
+            return this;
+        }
+        
+        public DatabaseInfoBuilder WithCreateDate(DateTime createDate)
+        {
+            _createDate = createDate;
+            return this;
+        }
+        
+        public DatabaseInfoBuilder WithRecoveryModel(string recoveryModel)
+        {
+            _recoveryModel = recoveryModel;
+            return this;
+        }
+        
+        public DatabaseInfoBuilder WithIsReadOnly(bool isReadOnly)
+        {
+            _isReadOnly = isReadOnly;
+            return this;
+        }
+        
+        public DatabaseInfo Build()
+        {
+            return new DatabaseInfo(
+                Name: _name,
+                State: _state,
+                SizeMB: _sizeMB,
+                Owner: _owner ?? string.Empty,
+                CompatibilityLevel: _compatibilityLevel ?? string.Empty,
+                CollationName: _collationName ?? string.Empty,
+                CreateDate: _createDate,
+                RecoveryModel: _recoveryModel ?? string.Empty,
+                IsReadOnly: _isReadOnly ?? false
+            );
         }
     }
 }

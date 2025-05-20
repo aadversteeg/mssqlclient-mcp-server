@@ -6,11 +6,11 @@ namespace Core.Application.Models
     public sealed record TableInfo(
         string Schema,
         string Name,
-        long RowCount,
-        double SizeMB,
+        long? RowCount,
+        double? SizeMB,
         DateTime CreateDate,
         DateTime ModifyDate,
-        int IndexCount,
-        int ForeignKeyCount,
+        int? IndexCount,
+        int? ForeignKeyCount,
         string TableType);
 }
