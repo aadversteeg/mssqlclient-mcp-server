@@ -19,8 +19,8 @@ namespace Core.Infrastructure.SqlClient
         {
             _databaseService = databaseService ?? throw new ArgumentNullException(nameof(databaseService));
             
-            // In server mode, we don't require connection to master database specifically
-            // This allows using server mode with empty database name in connection string
+            // Server mode works with any database connection, not just master database
+            // This allows using server mode with any database name in connection string
         }
 
         /// <summary>

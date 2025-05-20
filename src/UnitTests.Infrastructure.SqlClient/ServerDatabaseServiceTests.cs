@@ -35,7 +35,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 .WithParameterName("databaseService");
         }
         
-        [Fact(DisplayName = "SDS-002: Constructor doesn't require master database anymore")]
+        [Fact(DisplayName = "SDS-002: Constructor works with any database, not just master")]
         public void SDS002()
         {
             // Arrange
