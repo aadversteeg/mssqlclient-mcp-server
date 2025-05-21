@@ -10,5 +10,12 @@
         /// Default is false.
         /// </summary>
         public bool EnableExecuteQuery { get; set; } = false;
+        
+        /// <summary>
+        /// Gets or sets whether the execute stored procedure tools should be enabled.
+        /// When false, the execute_stored_procedure and execute_stored_procedure_in_database tools will not be registered.
+        /// Default is false.
+        /// </summary>
+        public bool EnableExecuteStoredProcedure { get; set; } = false;
     }
 }

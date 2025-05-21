@@ -134,9 +134,11 @@ namespace Core.Infrastructure.McpServer
             var dbConfig = new DatabaseConfiguration 
             { 
                 ConnectionString = connectionString,
-                EnableExecuteQuery = builder.Configuration.GetValue<bool>("EnableExecuteQuery", false) // Default to false if not specified
+                EnableExecuteQuery = builder.Configuration.GetValue<bool>("EnableExecuteQuery", false), // Default to false if not specified
+                EnableExecuteStoredProcedure = builder.Configuration.GetValue<bool>("EnableExecuteStoredProcedure", false) // Default to false if not specified
             };
             Console.Error.WriteLine($"EnableExecuteQuery setting: {dbConfig.EnableExecuteQuery}");
+            Console.Error.WriteLine($"EnableExecuteStoredProcedure setting: {dbConfig.EnableExecuteStoredProcedure}");
             builder.Services.AddSingleton(dbConfig);
 
             // Register our database services
@@ -205,18 +207,26 @@ namespace Core.Infrastructure.McpServer
                 mcpServerBuilder.WithTools<ServerGetStoredProcedureDefinitionTool>();
                 Console.Error.WriteLine("Registered ServerGetStoredProcedureDefinitionTool");
                 
-                // Only register execute query and stored procedure tools if they're enabled in configuration
+                // Only register execute query tool if it's enabled in configuration
                 if (dbConfig.EnableExecuteQuery)
                 {
                     mcpServerBuilder.WithTools<ServerExecuteQueryTool>();
                     Console.Error.WriteLine("Registered ServerExecuteQueryTool");
-                    
+                }
+                else
+                {
+                    Console.Error.WriteLine("ServerExecuteQueryTool registration skipped (EnableExecuteQuery is false)");
+                }
+                
+                // Only register execute stored procedure tool if it's enabled in configuration
+                if (dbConfig.EnableExecuteStoredProcedure)
+                {
                     mcpServerBuilder.WithTools<ServerExecuteStoredProcedureTool>();
                     Console.Error.WriteLine("Registered ServerExecuteStoredProcedureTool");
                 }
                 else
                 {
-                    Console.Error.WriteLine("ServerExecuteQueryTool and ServerExecuteStoredProcedureTool registration skipped (EnableExecuteQuery is false)");
+                    Console.Error.WriteLine("ServerExecuteStoredProcedureTool registration skipped (EnableExecuteStoredProcedure is false)");
                 }
             }
             else
@@ -238,18 +248,26 @@ namespace Core.Infrastructure.McpServer
                 mcpServerBuilder.WithTools<GetStoredProcedureDefinitionTool>();
                 Console.Error.WriteLine("Registered GetStoredProcedureDefinitionTool");
                 
-                // Only register execute query and stored procedure tools if they're enabled in configuration
+                // Only register execute query tool if it's enabled in configuration
                 if (dbConfig.EnableExecuteQuery)
                 {
                     mcpServerBuilder.WithTools<ExecuteQueryTool>();
                     Console.Error.WriteLine("Registered ExecuteQueryTool");
-                    
+                }
+                else
+                {
+                    Console.Error.WriteLine("ExecuteQueryTool registration skipped (EnableExecuteQuery is false)");
+                }
+                
+                // Only register execute stored procedure tool if it's enabled in configuration
+                if (dbConfig.EnableExecuteStoredProcedure)
+                {
                     mcpServerBuilder.WithTools<ExecuteStoredProcedureTool>();
                     Console.Error.WriteLine("Registered ExecuteStoredProcedureTool");
                 }
                 else
                 {
-                    Console.Error.WriteLine("ExecuteQueryTool and ExecuteStoredProcedureTool registration skipped (EnableExecuteQuery is false)");
+                    Console.Error.WriteLine("ExecuteStoredProcedureTool registration skipped (EnableExecuteStoredProcedure is false)");
                 }
             }
             
