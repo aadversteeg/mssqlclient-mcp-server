@@ -753,7 +753,9 @@ namespace Core.Infrastructure.SqlClient
                 }
                 
                 // Enhance stored procedure information with parameters
-                foreach (var proc in result)
+                // Create a copy of the list to avoid modifying the collection during iteration
+                var procsCopy = new List<StoredProcedureInfo>(result);
+                foreach (var proc in procsCopy)
                 {
                     try
                     {
@@ -856,13 +858,15 @@ namespace Core.Infrastructure.SqlClient
                             {
                                 using (var statsReader = await statsCommand.ExecuteReaderAsync(cancellationToken))
                                 {
+                                    // Create a copy of the list again for this loop to avoid modifying during iteration
+                                    var procsCopy2 = new List<StoredProcedureInfo>(result);
                                     while (await statsReader.ReadAsync(cancellationToken))
                                     {
                                         string schemaName = statsReader["SchemaName"].ToString() ?? string.Empty;
                                         string procName = statsReader["ProcedureName"].ToString() ?? string.Empty;
                                         
                                         // Find matching procedure
-                                        var proc = result.FirstOrDefault(p => 
+                                        var proc = procsCopy2.FirstOrDefault(p => 
                                             p.SchemaName.Equals(schemaName, StringComparison.OrdinalIgnoreCase) && 
                                             p.Name.Equals(procName, StringComparison.OrdinalIgnoreCase));
                                             
