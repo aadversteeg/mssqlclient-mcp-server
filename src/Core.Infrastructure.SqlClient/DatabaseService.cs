@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
 using Core.Application.Interfaces;
 using Core.Application.Models;
 using Core.Infrastructure.SqlClient.Interfaces;
+using Core.Infrastructure.SqlClient.Utilities;
 using System.Data;
 
 namespace Core.Infrastructure.SqlClient
@@ -1142,6 +1143,9 @@ namespace Core.Infrastructure.SqlClient
                 throw new ArgumentException("Procedure name cannot be empty", nameof(procedureName));
             }
             
+            // Convert JSON parameters to appropriate .NET types
+            var convertedParameters = JsonParameterConverter.ConvertParameters(parameters);
+            
             // Parse schema and procedure name
             string? schemaName = null;
             string procNameOnly = procedureName;
@@ -1277,7 +1281,7 @@ namespace Core.Infrastructure.SqlClient
                     string normalizedName = parameterName.TrimStart('@');
                     
                     // Check if the parameter was provided
-                    bool parameterExists = parameters.TryGetValue(normalizedName, out var paramValue);
+                    bool parameterExists = convertedParameters.TryGetValue(normalizedName, out var paramValue);
                     
                     // If output parameter, add with direction Output
                     if (isOutput)
