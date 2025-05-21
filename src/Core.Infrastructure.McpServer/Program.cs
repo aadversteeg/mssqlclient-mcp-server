@@ -187,45 +187,70 @@ namespace Core.Infrastructure.McpServer
             {
                 // Server mode tools
                 Console.Error.WriteLine("Registering server mode tools...");
+                
+                // Table-related tools
                 mcpServerBuilder.WithTools<ServerListTablesTool>();
                 Console.Error.WriteLine("Registered ServerListTablesTool");
+                
                 mcpServerBuilder.WithTools<ServerListDatabasesTool>();
                 Console.Error.WriteLine("Registered ServerListDatabasesTool");
                 
-                // Only register execute query tool if it's enabled in configuration
+                mcpServerBuilder.WithTools<ServerGetTableSchemaTool>();
+                Console.Error.WriteLine("Registered ServerGetTableSchemaTool");
+                
+                // Stored procedure tools
+                mcpServerBuilder.WithTools<ServerListStoredProceduresTool>();
+                Console.Error.WriteLine("Registered ServerListStoredProceduresTool");
+                
+                mcpServerBuilder.WithTools<ServerGetStoredProcedureDefinitionTool>();
+                Console.Error.WriteLine("Registered ServerGetStoredProcedureDefinitionTool");
+                
+                // Only register execute query and stored procedure tools if they're enabled in configuration
                 if (dbConfig.EnableExecuteQuery)
                 {
                     mcpServerBuilder.WithTools<ServerExecuteQueryTool>();
                     Console.Error.WriteLine("Registered ServerExecuteQueryTool");
+                    
+                    mcpServerBuilder.WithTools<ServerExecuteStoredProcedureTool>();
+                    Console.Error.WriteLine("Registered ServerExecuteStoredProcedureTool");
                 }
                 else
                 {
-                    Console.Error.WriteLine("ServerExecuteQueryTool registration skipped (EnableExecuteQuery is false)");
+                    Console.Error.WriteLine("ServerExecuteQueryTool and ServerExecuteStoredProcedureTool registration skipped (EnableExecuteQuery is false)");
                 }
-                
-                mcpServerBuilder.WithTools<ServerGetTableSchemaTool>();
-                Console.Error.WriteLine("Registered ServerGetTableSchemaTool");
             }
             else
             {
                 // Database mode tools
                 Console.Error.WriteLine("Registering database mode tools...");
+                
+                // Table-related tools
                 mcpServerBuilder.WithTools<ListTablesTool>();
                 Console.Error.WriteLine("Registered ListTablesTool");
                 
-                // Only register execute query tool if it's enabled in configuration
+                mcpServerBuilder.WithTools<GetTableSchemaTool>();
+                Console.Error.WriteLine("Registered GetTableSchemaTool");
+                
+                // Stored procedure tools
+                mcpServerBuilder.WithTools<ListStoredProceduresTool>();
+                Console.Error.WriteLine("Registered ListStoredProceduresTool");
+                
+                mcpServerBuilder.WithTools<GetStoredProcedureDefinitionTool>();
+                Console.Error.WriteLine("Registered GetStoredProcedureDefinitionTool");
+                
+                // Only register execute query and stored procedure tools if they're enabled in configuration
                 if (dbConfig.EnableExecuteQuery)
                 {
                     mcpServerBuilder.WithTools<ExecuteQueryTool>();
                     Console.Error.WriteLine("Registered ExecuteQueryTool");
+                    
+                    mcpServerBuilder.WithTools<ExecuteStoredProcedureTool>();
+                    Console.Error.WriteLine("Registered ExecuteStoredProcedureTool");
                 }
                 else
                 {
-                    Console.Error.WriteLine("ExecuteQueryTool registration skipped (EnableExecuteQuery is false)");
+                    Console.Error.WriteLine("ExecuteQueryTool and ExecuteStoredProcedureTool registration skipped (EnableExecuteQuery is false)");
                 }
-                
-                mcpServerBuilder.WithTools<GetTableSchemaTool>();
-                Console.Error.WriteLine("Registered GetTableSchemaTool");
             }
             
             Console.Error.WriteLine("All tools registered. Building MCP server..."); 
@@ -233,5 +258,4 @@ namespace Core.Infrastructure.McpServer
             await builder.Build().RunAsync();
         }
     }
-
 }

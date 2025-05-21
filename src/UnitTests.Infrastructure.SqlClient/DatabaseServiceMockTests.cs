@@ -81,6 +81,22 @@ namespace UnitTests.Infrastructure.SqlClient
         public string? DatabaseNamePassedToExecuteQuery { get; private set; }
         public CancellationToken TokenPassedToExecuteQuery { get; private set; }
         
+        // New properties for stored procedure methods
+        public bool ListStoredProceduresAsyncCalled { get; private set; }
+        public string? DatabaseNamePassedToListStoredProcedures { get; private set; }
+        public CancellationToken TokenPassedToListStoredProcedures { get; private set; }
+        
+        public bool GetStoredProcedureDefinitionAsyncCalled { get; private set; }
+        public string? ProcedureNamePassedToGetStoredProcedureDefinition { get; private set; }
+        public string? DatabaseNamePassedToGetStoredProcedureDefinition { get; private set; }
+        public CancellationToken TokenPassedToGetStoredProcedureDefinition { get; private set; }
+        
+        public bool ExecuteStoredProcedureAsyncCalled { get; private set; }
+        public string? ProcedureNamePassedToExecuteStoredProcedure { get; private set; }
+        public Dictionary<string, object?>? ParametersPassedToExecuteStoredProcedure { get; private set; }
+        public string? DatabaseNamePassedToExecuteStoredProcedure { get; private set; }
+        public CancellationToken TokenPassedToExecuteStoredProcedure { get; private set; }
+        
         // Mock responses
         public List<TableInfo> TablesResponse { get; set; } = new List<TableInfo>();
         public List<DatabaseInfo> DatabasesResponse { get; set; } = new List<DatabaseInfo>();
@@ -88,6 +104,11 @@ namespace UnitTests.Infrastructure.SqlClient
         public string CurrentDatabaseNameResponse { get; set; } = "TestDb";
         public TableSchemaInfo TableSchemaResponse { get; set; } = new TableSchemaInfo("TestTable", "TestDb", new List<TableColumnInfo>());
         public IAsyncDataReader? ExecuteQueryResponse { get; set; } = null;
+        
+        // New mock responses for stored procedures
+        public List<StoredProcedureInfo> StoredProceduresResponse { get; set; } = new List<StoredProcedureInfo>();
+        public string StoredProcedureDefinitionResponse { get; set; } = "CREATE PROCEDURE Test_Proc AS SELECT 1;";
+        public IAsyncDataReader? ExecuteStoredProcedureResponse { get; set; } = null;
         
         public Task<IEnumerable<TableInfo>> ListTablesAsync(string? databaseName = null, CancellationToken cancellationToken = default)
         {
@@ -135,6 +156,34 @@ namespace UnitTests.Infrastructure.SqlClient
             DatabaseNamePassedToExecuteQuery = databaseName;
             TokenPassedToExecuteQuery = cancellationToken;
             return Task.FromResult(ExecuteQueryResponse ?? throw new System.InvalidOperationException("ExecuteQueryResponse is not set"));
+        }
+        
+        // New methods for stored procedures
+        public Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string? databaseName = null, CancellationToken cancellationToken = default)
+        {
+            ListStoredProceduresAsyncCalled = true;
+            DatabaseNamePassedToListStoredProcedures = databaseName;
+            TokenPassedToListStoredProcedures = cancellationToken;
+            return Task.FromResult<IEnumerable<StoredProcedureInfo>>(StoredProceduresResponse);
+        }
+        
+        public Task<string> GetStoredProcedureDefinitionAsync(string procedureName, string? databaseName = null, CancellationToken cancellationToken = default)
+        {
+            GetStoredProcedureDefinitionAsyncCalled = true;
+            ProcedureNamePassedToGetStoredProcedureDefinition = procedureName;
+            DatabaseNamePassedToGetStoredProcedureDefinition = databaseName;
+            TokenPassedToGetStoredProcedureDefinition = cancellationToken;
+            return Task.FromResult(StoredProcedureDefinitionResponse);
+        }
+        
+        public Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, CancellationToken cancellationToken = default)
+        {
+            ExecuteStoredProcedureAsyncCalled = true;
+            ProcedureNamePassedToExecuteStoredProcedure = procedureName;
+            ParametersPassedToExecuteStoredProcedure = parameters;
+            DatabaseNamePassedToExecuteStoredProcedure = databaseName;
+            TokenPassedToExecuteStoredProcedure = cancellationToken;
+            return Task.FromResult(ExecuteStoredProcedureResponse ?? throw new System.InvalidOperationException("ExecuteStoredProcedureResponse is not set"));
         }
     }
 }

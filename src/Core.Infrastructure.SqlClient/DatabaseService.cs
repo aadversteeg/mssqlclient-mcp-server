@@ -679,6 +679,632 @@ namespace Core.Infrastructure.SqlClient
             // For the TableSchemaInfo output, use the original table name for better UX
             return new TableSchemaInfo(tableName, currentDbName, columns);
         }
+
+        /// <summary>
+        /// Lists all stored procedures with optional database context switching.
+        /// </summary>
+        /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>A collection of stored procedure information</returns>
+        public async Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string? databaseName = null, CancellationToken cancellationToken = default)
+        {
+            var capabilities = await GetCapabilitiesAsync(cancellationToken);
+            var result = new List<StoredProcedureInfo>();
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync(cancellationToken);
+                
+                // If a database name is specified, change the database context
+                if (!string.IsNullOrWhiteSpace(databaseName))
+                {
+                    string changeDbCommand = $"USE [{databaseName}]";
+                    using (var command = new SqlCommand(changeDbCommand, connection))
+                    {
+                        await command.ExecuteNonQueryAsync(cancellationToken);
+                    }
+                }
+                
+                // Query to get basic stored procedure information
+                string query = @"
+                    SELECT 
+                        s.name AS SchemaName,
+                        p.name AS ProcedureName,
+                        p.create_date AS CreateDate,
+                        p.modify_date AS ModifyDate,
+                        ISNULL(USER_NAME(p.principal_id), '') AS Owner,
+                        p.is_ms_shipped,
+                        CAST(CASE WHEN p.type = 'P' THEN 0 ELSE 1 END AS BIT) AS IsFunction
+                    FROM 
+                        sys.procedures p
+                    JOIN 
+                        sys.schemas s ON p.schema_id = s.schema_id
+                    WHERE 
+                        p.is_ms_shipped = 0
+                    ORDER BY 
+                        s.name, p.name";
+                
+                using (var command = new SqlCommand(query, connection))
+                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                {
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        string schemaName = reader["SchemaName"].ToString() ?? string.Empty;
+                        string procName = reader["ProcedureName"].ToString() ?? string.Empty;
+                        DateTime createDate = Convert.ToDateTime(reader["CreateDate"]);
+                        DateTime modifyDate = Convert.ToDateTime(reader["ModifyDate"]);
+                        string owner = reader["Owner"].ToString() ?? string.Empty;
+                        bool isFunction = Convert.ToBoolean(reader["IsFunction"]);
+                        
+                        // Create a basic stored procedure info
+                        result.Add(new StoredProcedureInfo(
+                            SchemaName: schemaName,
+                            Name: procName,
+                            CreateDate: createDate,
+                            ModifyDate: modifyDate,
+                            Owner: owner,
+                            Parameters: new List<StoredProcedureParameterInfo>(), // Will be populated later
+                            IsFunction: isFunction,
+                            LastExecutionTime: null,
+                            ExecutionCount: null,
+                            AverageDurationMs: null
+                        ));
+                    }
+                }
+                
+                // Enhance stored procedure information with parameters
+                foreach (var proc in result)
+                {
+                    try
+                    {
+                        string paramQuery = @"
+                            SELECT 
+                                p.name AS ParameterName,
+                                t.name AS DataType,
+                                p.max_length AS Length,
+                                p.precision AS Precision,
+                                p.scale AS Scale,
+                                p.is_output AS IsOutput,
+                                p.is_nullable AS IsNullable,
+                                p.default_value
+                            FROM 
+                                sys.parameters p
+                            JOIN 
+                                sys.types t ON p.system_type_id = t.system_type_id
+                            JOIN 
+                                sys.procedures sp ON p.object_id = sp.object_id
+                            JOIN 
+                                sys.schemas s ON sp.schema_id = s.schema_id
+                            WHERE 
+                                s.name = @schemaName AND sp.name = @procName
+                            ORDER BY 
+                                p.parameter_id";
+                                
+                        var parameters = new List<StoredProcedureParameterInfo>();
+                        
+                        using (var paramCommand = new SqlCommand(paramQuery, connection))
+                        {
+                            paramCommand.Parameters.AddWithValue("@schemaName", proc.SchemaName);
+                            paramCommand.Parameters.AddWithValue("@procName", proc.Name);
+                            
+                            using (var paramReader = await paramCommand.ExecuteReaderAsync(cancellationToken))
+                            {
+                                while (await paramReader.ReadAsync(cancellationToken))
+                                {
+                                    string paramName = paramReader["ParameterName"].ToString() ?? string.Empty;
+                                    string dataType = paramReader["DataType"].ToString() ?? string.Empty;
+                                    int length = Convert.ToInt32(paramReader["Length"]);
+                                    int precision = Convert.ToInt32(paramReader["Precision"]);
+                                    int scale = Convert.ToInt32(paramReader["Scale"]);
+                                    bool isOutput = Convert.ToBoolean(paramReader["IsOutput"]);
+                                    bool isNullable = Convert.ToBoolean(paramReader["IsNullable"]);
+                                    string? defaultValue = paramReader["default_value"] != DBNull.Value ? 
+                                        paramReader["default_value"].ToString() : null;
+                                        
+                                    parameters.Add(new StoredProcedureParameterInfo(
+                                        Name: paramName,
+                                        DataType: dataType,
+                                        Length: length,
+                                        Precision: precision,
+                                        Scale: scale,
+                                        IsOutput: isOutput,
+                                        IsNullable: isNullable,
+                                        DefaultValue: defaultValue
+                                    ));
+                                }
+                            }
+                        }
+                        
+                        // Replace the stored procedure info with one that includes parameters
+                        int index = result.IndexOf(proc);
+                        if (index >= 0)
+                        {
+                            result[index] = proc with { Parameters = parameters };
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // If getting parameters fails for a stored procedure, just continue with the next one
+                        Console.Error.WriteLine($"Failed to get parameters for stored procedure {proc.SchemaName}.{proc.Name}: {ex.Message}");
+                    }
+                }
+                
+                // Try to get execution statistics if available (SQL Server 2008 R2 and above)
+                if (capabilities.MajorVersion >= 10 && capabilities.MinorVersion >= 50)
+                {
+                    try
+                    {
+                        string statsQuery = @"
+                            SELECT 
+                                SCHEMA_NAME(o.schema_id) AS SchemaName,
+                                o.name AS ProcedureName,
+                                MAX(s.last_execution_time) AS LastExecutionTime,
+                                MAX(s.execution_count) AS ExecutionCount,
+                                AVG(s.total_elapsed_time / s.execution_count) AS AvgDurationMs
+                            FROM 
+                                sys.dm_exec_procedure_stats s
+                            JOIN 
+                                sys.objects o ON s.object_id = o.object_id
+                            WHERE 
+                                o.type = 'P' AND o.is_ms_shipped = 0
+                            GROUP BY 
+                                o.schema_id, o.name";
+                                
+                        using (var statsCommand = new SqlCommand(statsQuery, connection))
+                        {
+                            try
+                            {
+                                using (var statsReader = await statsCommand.ExecuteReaderAsync(cancellationToken))
+                                {
+                                    while (await statsReader.ReadAsync(cancellationToken))
+                                    {
+                                        string schemaName = statsReader["SchemaName"].ToString() ?? string.Empty;
+                                        string procName = statsReader["ProcedureName"].ToString() ?? string.Empty;
+                                        
+                                        // Find matching procedure
+                                        var proc = result.FirstOrDefault(p => 
+                                            p.SchemaName.Equals(schemaName, StringComparison.OrdinalIgnoreCase) && 
+                                            p.Name.Equals(procName, StringComparison.OrdinalIgnoreCase));
+                                            
+                                        if (proc != null)
+                                        {
+                                            int index = result.IndexOf(proc);
+                                            if (index >= 0)
+                                            {
+                                                DateTime? lastExecTime = statsReader["LastExecutionTime"] != DBNull.Value ?
+                                                    Convert.ToDateTime(statsReader["LastExecutionTime"]) : null;
+                                                    
+                                                int? execCount = statsReader["ExecutionCount"] != DBNull.Value ?
+                                                    Convert.ToInt32(statsReader["ExecutionCount"]) : null;
+                                                    
+                                                int? avgDuration = statsReader["AvgDurationMs"] != DBNull.Value ?
+                                                    Convert.ToInt32(statsReader["AvgDurationMs"]) : null;
+                                                
+                                                result[index] = proc with { 
+                                                    LastExecutionTime = lastExecTime,
+                                                    ExecutionCount = execCount,
+                                                    AverageDurationMs = avgDuration
+                                                };
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            catch (SqlException ex)
+                            {
+                                // This query requires specific permissions, so it might fail
+                                Console.Error.WriteLine($"Failed to get execution statistics for stored procedures: {ex.Message}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"Error enhancing stored procedure information with statistics: {ex.Message}");
+                    }
+                }
+                
+                // If we switched database contexts, switch back to the original database
+                if (!string.IsNullOrWhiteSpace(databaseName))
+                {
+                    var builder = new SqlConnectionStringBuilder(_connectionString);
+                    string originalDatabase = builder.InitialCatalog;
+                    
+                    if (!string.IsNullOrWhiteSpace(originalDatabase))
+                    {
+                        string switchBackCommand = $"USE [{originalDatabase}]";
+                        using (var command = new SqlCommand(switchBackCommand, connection))
+                        {
+                            await command.ExecuteNonQueryAsync(cancellationToken);
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gets the definition information for a specific stored procedure with optional database context switching.
+        /// </summary>
+        /// <param name="procedureName">The name of the stored procedure</param>
+        /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>Stored procedure definition as SQL string</returns>
+        public async Task<string> GetStoredProcedureDefinitionAsync(string procedureName, string? databaseName = null, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(procedureName))
+            {
+                throw new ArgumentException("Procedure name cannot be empty", nameof(procedureName));
+            }
+
+            // Parse schema and procedure name
+            string? schemaName = null;
+            string procNameOnly = procedureName;
+            
+            if (procedureName.Contains("."))
+            {
+                var parts = procedureName.Split(new[] {'.'}, 2);
+                schemaName = parts[0].Trim(new[] {'[', ']'});
+                procNameOnly = parts[1].Trim(new[] {'[', ']'});
+            }
+            else
+            {
+                // Default schema is dbo if not specified
+                schemaName = "dbo";
+            }
+
+            string definition = string.Empty;
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync(cancellationToken);
+                
+                // If a database name is specified, change the database context
+                if (!string.IsNullOrWhiteSpace(databaseName))
+                {
+                    // First check if the database exists
+                    string checkDbQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = @dbName AND state_desc = 'ONLINE'";
+                    using (var checkCommand = new SqlCommand(checkDbQuery, connection))
+                    {
+                        checkCommand.Parameters.AddWithValue("@dbName", databaseName);
+                        int dbCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync(cancellationToken));
+                        
+                        if (dbCount == 0)
+                        {
+                            throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not online");
+                        }
+                    }
+                    
+                    // Change database context
+                    string useDbCommand = $"USE [{databaseName}]";
+                    using (var useCommand = new SqlCommand(useDbCommand, connection))
+                    {
+                        await useCommand.ExecuteNonQueryAsync(cancellationToken);
+                    }
+                }
+                
+                // Check if the stored procedure exists
+                string checkProcQuery = @"
+                    SELECT COUNT(*) 
+                    FROM sys.procedures p
+                    JOIN sys.schemas s ON p.schema_id = s.schema_id
+                    WHERE s.name = @schemaName AND p.name = @procName";
+                    
+                using (var checkCommand = new SqlCommand(checkProcQuery, connection))
+                {
+                    checkCommand.Parameters.AddWithValue("@schemaName", schemaName);
+                    checkCommand.Parameters.AddWithValue("@procName", procNameOnly);
+                    int procCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync(cancellationToken));
+                    
+                    if (procCount == 0)
+                    {
+                        throw new InvalidOperationException($"Stored procedure '{schemaName}.{procNameOnly}' does not exist in database '{databaseName ?? GetCurrentDatabaseName()}' or you don't have permission to access it");
+                    }
+                }
+                
+                // Get the definition
+                // Use the sys.sql_modules view to get the definition
+                string definitionQuery = @"
+                    SELECT ISNULL(m.definition, '') AS Definition
+                    FROM sys.procedures p
+                    JOIN sys.schemas s ON p.schema_id = s.schema_id
+                    LEFT JOIN sys.sql_modules m ON p.object_id = m.object_id
+                    WHERE s.name = @schemaName AND p.name = @procName";
+                    
+                using (var command = new SqlCommand(definitionQuery, connection))
+                {
+                    command.Parameters.AddWithValue("@schemaName", schemaName);
+                    command.Parameters.AddWithValue("@procName", procNameOnly);
+                    
+                    var result = await command.ExecuteScalarAsync(cancellationToken);
+                    
+                    if (result == null || result == DBNull.Value)
+                    {
+                        throw new InvalidOperationException($"Cannot retrieve definition for stored procedure '{schemaName}.{procNameOnly}'. It might be encrypted or you don't have sufficient permissions.");
+                    }
+                    
+                    definition = result.ToString() ?? string.Empty;
+                }
+                
+                // If the definition couldn't be retrieved using sys.sql_modules, try using OBJECT_DEFINITION()
+                if (string.IsNullOrWhiteSpace(definition))
+                {
+                    string altDefinitionQuery = @"
+                        SELECT ISNULL(OBJECT_DEFINITION(OBJECT_ID(@fullProcName)), '') AS Definition";
+                        
+                    using (var command = new SqlCommand(altDefinitionQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@fullProcName", $"{schemaName}.{procNameOnly}");
+                        
+                        var result = await command.ExecuteScalarAsync(cancellationToken);
+                        
+                        if (result != null && result != DBNull.Value)
+                        {
+                            definition = result.ToString() ?? string.Empty;
+                        }
+                    }
+                }
+                
+                // If we still don't have a definition, try getting it through sp_helptext
+                if (string.IsNullOrWhiteSpace(definition))
+                {
+                    string spHelpTextQuery = @"
+                        DECLARE @text TABLE (Text NVARCHAR(MAX))
+                        INSERT INTO @text
+                        EXEC sp_helptext @objname = @fullProcName
+                        SELECT STRING_AGG(Text, CHAR(13) + CHAR(10)) AS Definition FROM @text";
+                        
+                    using (var command = new SqlCommand(spHelpTextQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@fullProcName", $"{schemaName}.{procNameOnly}");
+                        
+                        try
+                        {
+                            var result = await command.ExecuteScalarAsync(cancellationToken);
+                            
+                            if (result != null && result != DBNull.Value)
+                            {
+                                definition = result.ToString() ?? string.Empty;
+                            }
+                        }
+                        catch (SqlException)
+                        {
+                            // sp_helptext might fail on older SQL Server versions or if STRING_AGG isn't available
+                            // In this case, we'll try one more approach
+                        }
+                    }
+                }
+                
+                // If we still don't have a definition, it's likely encrypted or we don't have permissions
+                if (string.IsNullOrWhiteSpace(definition))
+                {
+                    // Check if the stored procedure is encrypted
+                    string encryptedCheckQuery = @"
+                        SELECT CAST(CASE WHEN p.is_encrypted = 1 THEN 1 ELSE 0 END AS BIT) AS IsEncrypted
+                        FROM sys.procedures p
+                        JOIN sys.schemas s ON p.schema_id = s.schema_id
+                        WHERE s.name = @schemaName AND p.name = @procName";
+                        
+                    using (var command = new SqlCommand(encryptedCheckQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@schemaName", schemaName);
+                        command.Parameters.AddWithValue("@procName", procNameOnly);
+                        
+                        var result = await command.ExecuteScalarAsync(cancellationToken);
+                        
+                        if (result != null && result != DBNull.Value && Convert.ToBoolean(result))
+                        {
+                            definition = "-- The stored procedure is encrypted and its definition cannot be retrieved.";
+                        }
+                        else
+                        {
+                            definition = "-- Unable to retrieve stored procedure definition. You may not have sufficient permissions.";
+                        }
+                    }
+                }
+                
+                // If we switched database contexts, switch back to the original database
+                if (!string.IsNullOrWhiteSpace(databaseName))
+                {
+                    var builder = new SqlConnectionStringBuilder(_connectionString);
+                    string originalDatabase = builder.InitialCatalog;
+                    
+                    if (!string.IsNullOrWhiteSpace(originalDatabase))
+                    {
+                        string switchBackCommand = $"USE [{originalDatabase}]";
+                        using (var command = new SqlCommand(switchBackCommand, connection))
+                        {
+                            await command.ExecuteNonQueryAsync(cancellationToken);
+                        }
+                    }
+                }
+            }
+            
+            return definition;
+        }
+        
+        /// <summary>
+        /// Executes a stored procedure with optional database context switching.
+        /// </summary>
+        /// <param name="procedureName">The name of the stored procedure to execute</param>
+        /// <param name="parameters">Dictionary of parameter names and values</param>
+        /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
+        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(procedureName))
+            {
+                throw new ArgumentException("Procedure name cannot be empty", nameof(procedureName));
+            }
+            
+            // Parse schema and procedure name
+            string? schemaName = null;
+            string procNameOnly = procedureName;
+            
+            if (procedureName.Contains("."))
+            {
+                var parts = procedureName.Split(new[] {'.'}, 2);
+                schemaName = parts[0].Trim(new[] {'[', ']'});
+                procNameOnly = parts[1].Trim(new[] {'[', ']'});
+            }
+            else
+            {
+                // Default schema is dbo if not specified
+                schemaName = "dbo";
+            }
+            
+            // Create a new connection that will be owned by the reader
+            var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync(cancellationToken);
+            
+            try
+            {
+                // If a database name is specified, change the database context
+                if (!string.IsNullOrWhiteSpace(databaseName))
+                {
+                    // First check if the database exists
+                    string checkDbQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = @dbName AND state_desc = 'ONLINE'";
+                    using (var checkCommand = new SqlCommand(checkDbQuery, connection))
+                    {
+                        checkCommand.Parameters.AddWithValue("@dbName", databaseName);
+                        int dbCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync(cancellationToken));
+                        
+                        if (dbCount == 0)
+                        {
+                            connection.Dispose();
+                            throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not online");
+                        }
+                    }
+                    
+                    // Change database context
+                    string useDbCommand = $"USE [{databaseName}]";
+                    using (var useCommand = new SqlCommand(useDbCommand, connection))
+                    {
+                        await useCommand.ExecuteNonQueryAsync(cancellationToken);
+                    }
+                }
+                
+                // Check if the stored procedure exists
+                string checkProcQuery = @"
+                    SELECT COUNT(*) 
+                    FROM sys.procedures p
+                    JOIN sys.schemas s ON p.schema_id = s.schema_id
+                    WHERE s.name = @schemaName AND p.name = @procName";
+                    
+                using (var checkCommand = new SqlCommand(checkProcQuery, connection))
+                {
+                    checkCommand.Parameters.AddWithValue("@schemaName", schemaName);
+                    checkCommand.Parameters.AddWithValue("@procName", procNameOnly);
+                    int procCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync(cancellationToken));
+                    
+                    if (procCount == 0)
+                    {
+                        throw new InvalidOperationException($"Stored procedure '{schemaName}.{procNameOnly}' does not exist in database '{databaseName ?? GetCurrentDatabaseName()}' or you don't have permission to access it");
+                    }
+                }
+                
+                // Get the stored procedure's parameter information
+                string paramQuery = @"
+                    SELECT 
+                        p.name AS ParameterName,
+                        p.parameter_id AS ParameterId,
+                        t.name AS DataType,
+                        p.max_length AS Length,
+                        p.precision AS Precision,
+                        p.scale AS Scale,
+                        p.is_output AS IsOutput,
+                        p.has_default_value AS HasDefaultValue,
+                        p.default_value AS DefaultValue
+                    FROM 
+                        sys.parameters p
+                    JOIN 
+                        sys.types t ON p.system_type_id = t.system_type_id
+                    JOIN 
+                        sys.procedures sp ON p.object_id = sp.object_id
+                    JOIN 
+                        sys.schemas s ON sp.schema_id = s.schema_id
+                    WHERE 
+                        s.name = @schemaName AND sp.name = @procName
+                    ORDER BY 
+                        p.parameter_id";
+
+                var procParameters = new List<(string Name, int ParameterId, string DataType, bool IsOutput)>();
+                
+                using (var paramCommand = new SqlCommand(paramQuery, connection))
+                {
+                    paramCommand.Parameters.AddWithValue("@schemaName", schemaName);
+                    paramCommand.Parameters.AddWithValue("@procName", procNameOnly);
+                    
+                    using (var paramReader = await paramCommand.ExecuteReaderAsync(cancellationToken))
+                    {
+                        while (await paramReader.ReadAsync(cancellationToken))
+                        {
+                            string paramName = paramReader["ParameterName"].ToString() ?? string.Empty;
+                            int parameterId = Convert.ToInt32(paramReader["ParameterId"]);
+                            string dataType = paramReader["DataType"].ToString() ?? string.Empty;
+                            bool isOutput = Convert.ToBoolean(paramReader["IsOutput"]);
+                            
+                            procParameters.Add((
+                                Name: paramName, 
+                                ParameterId: parameterId, 
+                                DataType: dataType, 
+                                IsOutput: isOutput
+                            ));
+                        }
+                    }
+                }
+                
+                // Create the command to execute the stored procedure
+                var command = new SqlCommand($"{schemaName}.{procNameOnly}", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                
+                // Add the parameters
+                foreach (var (name, parameterId, dataType, isOutput) in procParameters)
+                {
+                    // Skip the return value parameter (usually has parameterId = 0)
+                    if (string.IsNullOrEmpty(name))
+                        continue;
+                        
+                    // Determine if the parameter was provided
+                    string parameterName = name.StartsWith("@") ? name : $"@{name}";
+                    string normalizedName = parameterName.TrimStart('@');
+                    
+                    // Check if the parameter was provided
+                    bool parameterExists = parameters.TryGetValue(normalizedName, out var paramValue);
+                    
+                    // If output parameter, add with direction Output
+                    if (isOutput)
+                    {
+                        var parameter = command.Parameters.AddWithValue(parameterName, parameterExists ? (paramValue ?? DBNull.Value) : DBNull.Value);
+                        parameter.Direction = ParameterDirection.Output;
+                    }
+                    else if (parameterExists || parameterId == 0) // If input parameter or return value
+                    {
+                        command.Parameters.AddWithValue(parameterName, parameterExists ? (paramValue ?? DBNull.Value) : DBNull.Value);
+                    }
+                    else
+                    {
+                        // Parameter was not provided but is required
+                        throw new ArgumentException($"Required parameter '{normalizedName}' was not provided for stored procedure '{schemaName}.{procNameOnly}'");
+                    }
+                }
+                
+                // Execute the stored procedure
+                var sqlReader = await command.ExecuteReaderAsync(CommandBehavior.CloseConnection, cancellationToken);
+                
+                // Wrap the SqlDataReader with an AsyncDataReaderAdapter
+                return new AsyncDataReaderAdapter(sqlReader);
+            }
+            catch (Exception)
+            {
+                // If any exception occurs, ensure the connection is closed
+                connection.Dispose();
+                throw;
+            }
+        }
     }
     
     /// <summary>

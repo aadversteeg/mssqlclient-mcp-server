@@ -154,5 +154,209 @@ namespace UnitTests.Infrastructure.SqlClient
             // Assert
             _mockDatabaseService.Verify(x => x.ListDatabasesAsync(cancellationToken), Times.Once);
         }
+        
+        // New tests for stored procedure functionality
+        
+        [Fact(DisplayName = "SDS-009: ListStoredProceduresAsync delegates to database service with provided database name")]
+        public async Task SDS009()
+        {
+            // Arrange
+            var databaseName = "TestDb";
+            var expectedProcs = new List<StoredProcedureInfo> 
+            {
+                new StoredProcedureInfo(
+                    SchemaName: "dbo",
+                    Name: "TestProc1",
+                    CreateDate: DateTime.Now,
+                    ModifyDate: DateTime.Now,
+                    Owner: "dbo",
+                    Parameters: new List<StoredProcedureParameterInfo>(),
+                    IsFunction: false,
+                    LastExecutionTime: null,
+                    ExecutionCount: null,
+                    AverageDurationMs: null),
+                new StoredProcedureInfo(
+                    SchemaName: "dbo",
+                    Name: "TestProc2",
+                    CreateDate: DateTime.Now,
+                    ModifyDate: DateTime.Now,
+                    Owner: "dbo",
+                    Parameters: new List<StoredProcedureParameterInfo>(),
+                    IsFunction: false,
+                    LastExecutionTime: null,
+                    ExecutionCount: null,
+                    AverageDurationMs: null)
+            };
+            
+            _mockDatabaseService.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(expectedProcs);
+            
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+            
+            // Act
+            var result = await _serverDatabaseService.ListStoredProceduresAsync(databaseName);
+            
+            // Assert
+            result.Should().BeEquivalentTo(expectedProcs);
+            _mockDatabaseService.Verify(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
+        }
+        
+        [Fact(DisplayName = "SDS-010: ListStoredProceduresAsync with empty database name throws ArgumentException")]
+        public async Task SDS010()
+        {
+            // Act
+            Func<Task> act = async () => await _serverDatabaseService.ListStoredProceduresAsync(string.Empty);
+            
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Database name cannot be empty*");
+        }
+        
+        [Fact(DisplayName = "SDS-011: ListStoredProceduresAsync with non-existent database throws InvalidOperationException")]
+        public async Task SDS011()
+        {
+            // Arrange
+            var databaseName = "NonExistentDb";
+            
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
+            
+            // Act
+            Func<Task> act = async () => await _serverDatabaseService.ListStoredProceduresAsync(databaseName);
+            
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage($"*Database '{databaseName}' does not exist*");
+        }
+        
+        [Fact(DisplayName = "SDS-012: GetStoredProcedureDefinitionAsync delegates to database service")]
+        public async Task SDS012()
+        {
+            // Arrange
+            var databaseName = "TestDb";
+            var procedureName = "TestProc";
+            var expectedDefinition = "CREATE PROCEDURE TestProc AS SELECT 1;";
+            
+            _mockDatabaseService.Setup(x => x.GetStoredProcedureDefinitionAsync(procedureName, databaseName, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(expectedDefinition);
+            
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+            
+            // Act
+            var result = await _serverDatabaseService.GetStoredProcedureDefinitionAsync(databaseName, procedureName);
+            
+            // Assert
+            result.Should().Be(expectedDefinition);
+            _mockDatabaseService.Verify(x => x.GetStoredProcedureDefinitionAsync(procedureName, databaseName, It.IsAny<CancellationToken>()), Times.Once);
+        }
+        
+        [Fact(DisplayName = "SDS-013: GetStoredProcedureDefinitionAsync with empty database name throws ArgumentException")]
+        public async Task SDS013()
+        {
+            // Act
+            Func<Task> act = async () => await _serverDatabaseService.GetStoredProcedureDefinitionAsync(string.Empty, "TestProc");
+            
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Database name cannot be empty*");
+        }
+        
+        [Fact(DisplayName = "SDS-014: GetStoredProcedureDefinitionAsync with empty procedure name throws ArgumentException")]
+        public async Task SDS014()
+        {
+            // Act
+            Func<Task> act = async () => await _serverDatabaseService.GetStoredProcedureDefinitionAsync("TestDb", string.Empty);
+            
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Procedure name cannot be empty*");
+        }
+        
+        [Fact(DisplayName = "SDS-015: ExecuteStoredProcedureAsync delegates to database service")]
+        public async Task SDS015()
+        {
+            // Arrange
+            var databaseName = "TestDb";
+            var procedureName = "TestProc";
+            var parameters = new Dictionary<string, object?>
+            {
+                { "Param1", 123 },
+                { "Param2", "test" }
+            };
+            var expectedReader = new Mock<IAsyncDataReader>().Object;
+            
+            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(expectedReader);
+            
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+            
+            // Act
+            var result = await _serverDatabaseService.ExecuteStoredProcedureAsync(databaseName, procedureName, parameters);
+            
+            // Assert
+            result.Should().Be(expectedReader);
+            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, It.IsAny<CancellationToken>()), Times.Once);
+        }
+        
+        [Fact(DisplayName = "SDS-016: ExecuteStoredProcedureAsync with empty database name throws ArgumentException")]
+        public async Task SDS016()
+        {
+            // Arrange
+            var parameters = new Dictionary<string, object?>();
+            
+            // Act
+            Func<Task> act = async () => await _serverDatabaseService.ExecuteStoredProcedureAsync(string.Empty, "TestProc", parameters);
+            
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Database name cannot be empty*");
+        }
+        
+        [Fact(DisplayName = "SDS-017: ExecuteStoredProcedureAsync with empty procedure name throws ArgumentException")]
+        public async Task SDS017()
+        {
+            // Arrange
+            var parameters = new Dictionary<string, object?>();
+            
+            // Act
+            Func<Task> act = async () => await _serverDatabaseService.ExecuteStoredProcedureAsync("TestDb", string.Empty, parameters);
+            
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*Procedure name cannot be empty*");
+        }
+        
+        [Fact(DisplayName = "SDS-018: ExecuteStoredProcedureAsync with null parameters throws ArgumentNullException")]
+        public async Task SDS018()
+        {
+            // Act
+            Func<Task> act = async () => await _serverDatabaseService.ExecuteStoredProcedureAsync("TestDb", "TestProc", null);
+            
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("parameters");
+        }
+        
+        [Fact(DisplayName = "SDS-019: ExecuteStoredProcedureAsync with non-existent database throws InvalidOperationException")]
+        public async Task SDS019()
+        {
+            // Arrange
+            var databaseName = "NonExistentDb";
+            var procedureName = "TestProc";
+            var parameters = new Dictionary<string, object?>();
+            
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
+            
+            // Act
+            Func<Task> act = async () => await _serverDatabaseService.ExecuteStoredProcedureAsync(databaseName, procedureName, parameters);
+            
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage($"*Database '{databaseName}' does not exist*");
+        }
     }
 }

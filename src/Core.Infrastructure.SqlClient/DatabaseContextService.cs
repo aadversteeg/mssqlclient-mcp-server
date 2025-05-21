@@ -75,5 +75,47 @@ namespace Core.Infrastructure.SqlClient
             // Call the database service without specifying a database name to use the current context
             return await _databaseService.ExecuteQueryAsync(query, null, cancellationToken);
         }
+        
+        /// <summary>
+        /// Lists all stored procedures in the current database context.
+        /// </summary>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>A collection of stored procedure information</returns>
+        public async Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(CancellationToken cancellationToken = default)
+        {
+            // Call the database service without specifying a database name to use the current context
+            return await _databaseService.ListStoredProceduresAsync(databaseName: null, cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets the definition information for a specific stored procedure in the current database context.
+        /// </summary>
+        /// <param name="procedureName">The name of the stored procedure</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>Stored procedure definition as SQL string</returns>
+        public async Task<string> GetStoredProcedureDefinitionAsync(string procedureName, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(procedureName))
+                throw new ArgumentException("Procedure name cannot be empty", nameof(procedureName));
+
+            // Call the database service without specifying a database name to use the current context
+            return await _databaseService.GetStoredProcedureDefinitionAsync(procedureName, null, cancellationToken);
+        }
+        
+        /// <summary>
+        /// Executes a stored procedure in the current database context.
+        /// </summary>
+        /// <param name="procedureName">The name of the stored procedure to execute</param>
+        /// <param name="parameters">Dictionary of parameter names and values</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
+        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(procedureName))
+                throw new ArgumentException("Procedure name cannot be empty", nameof(procedureName));
+                
+            // Call the database service without specifying a database name to use the current context
+            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, null, cancellationToken);
+        }
     }
 }

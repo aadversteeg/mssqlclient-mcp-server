@@ -1,6 +1,7 @@
 using Core.Application.Interfaces;
 using Core.Application.Models;
 using Microsoft.Data.SqlClient;
+using System.Collections.Generic;
 
 namespace Core.Infrastructure.SqlClient.Interfaces
 {
@@ -55,5 +56,32 @@ namespace Core.Infrastructure.SqlClient.Interfaces
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
         Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, CancellationToken cancellationToken = default);
+        
+        /// <summary>
+        /// Lists all stored procedures with optional database context switching.
+        /// </summary>
+        /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>A collection of stored procedure information</returns>
+        Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string? databaseName = null, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the definition information for a specific stored procedure with optional database context switching.
+        /// </summary>
+        /// <param name="procedureName">The name of the stored procedure</param>
+        /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>Stored procedure definition as SQL string</returns>
+        Task<string> GetStoredProcedureDefinitionAsync(string procedureName, string? databaseName = null, CancellationToken cancellationToken = default);
+        
+        /// <summary>
+        /// Executes a stored procedure with optional database context switching.
+        /// </summary>
+        /// <param name="procedureName">The name of the stored procedure to execute</param>
+        /// <param name="parameters">Dictionary of parameter names and values</param>
+        /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="cancellationToken">Optional cancellation token</param>
+        /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
+        Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, CancellationToken cancellationToken = default);
     }
 }
