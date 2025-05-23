@@ -68,13 +68,13 @@ If you want to build the project from source:
 
 ## Docker Support
 
-### Local Registry
+### Docker Hub
 
-The SQL Server MCP Client is available in your local registry at port 5000.
+The SQL Server MCP Client is available on Docker Hub.
 
 ```bash
 # Pull the latest version
-docker pull localhost:5000/mssqlclient-mcp-server:latest
+docker pull aadversteeg/mssqlclient-mcp-server:latest
 ```
 
 ### Manual Docker Build
@@ -102,6 +102,15 @@ docker build -f src/Core.Infrastructure.McpServer/Dockerfile -t localhost:5000/m
 
 # Push to local registry
 docker push localhost:5000/mssqlclient-mcp-server:latest
+```
+
+#### Using Local Registry
+
+If you have pushed the image to local registry running on port 5000, you can pull from it:
+
+```bash
+# Pull from local registry
+docker pull localhost:5000/mssqlclient-mcp-server:latest
 ```
 
 ## MCP Protocol Usage
@@ -625,7 +634,7 @@ docker run \
   -e "EnableExecuteQuery=true" \
   -e "EnableExecuteStoredProcedure=true" \
   -e "MSSQL_CONNECTIONSTRING=Server=your_server;..." \
-  localhost:5000/mssqlclient-mcp-server:latest
+  aadversteeg/mssqlclient-mcp-server:latest
 ```
 
 3. In the Claude Desktop configuration:
@@ -657,14 +666,14 @@ docker run \
   -e "EnableExecuteQuery=true" \
   -e "EnableExecuteStoredProcedure=true" \
   -e "MSSQL_CONNECTIONSTRING=Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;" \
-  localhost:5000/mssqlclient-mcp-server:latest
+  aadversteeg/mssqlclient-mcp-server:latest
 
 # Server Mode with both execution types enabled
 docker run \
   -e "EnableExecuteQuery=true" \
   -e "EnableExecuteStoredProcedure=true" \
   -e "MSSQL_CONNECTIONSTRING=Server=your_server;User Id=your_user;Password=your_password;TrustServerCertificate=True;" \
-  localhost:5000/mssqlclient-mcp-server:latest
+  aadversteeg/mssqlclient-mcp-server:latest
 ```
 
 #### Server Mode vs Database Mode
@@ -732,7 +741,7 @@ To use the SQL Server MCP client from a Docker container with Claude Desktop:
     "-e", "MSSQL_CONNECTIONSTRING=Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;",
     "-e", "EnableExecuteQuery=true",
     "-e", "EnableExecuteStoredProcedure=true",
-    "localhost:5000/mssqlclient-mcp-server:latest"
+    "aadversteeg/mssqlclient-mcp-server:latest"
   ]
 }
 ```
