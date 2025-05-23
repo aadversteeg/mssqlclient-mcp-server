@@ -1,34 +1,26 @@
-using Core.Infrastructure.McpServer.Configuration;
-using Microsoft.Data.SqlClient;
+using Core.Application.Interfaces;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
-using System.Data;
-using System.Text;
+using Core.Infrastructure.McpServer.Extensions;
 
-namespace Ave.McpServer.MSSQL.Tools
+namespace Core.Infrastructure.McpServer.Tools
 {
     [McpServerToolType]
     public class GetTableSchemaTool
     {
-        private readonly string? _connectionString;
+        private readonly IDatabaseContext _databaseContext;
 
-        public GetTableSchemaTool(DatabaseConfiguration dbConfig)
+        public GetTableSchemaTool(IDatabaseContext databaseContext)
         {
-            _connectionString = dbConfig.ConnectionString;
-            Console.Error.WriteLine($"GetTableSchemaTool constructed with connection string: {(string.IsNullOrEmpty(_connectionString) ? "missing" : "present")}");
+            _databaseContext = databaseContext ?? throw new ArgumentNullException(nameof(databaseContext));
+            Console.Error.WriteLine("GetTableSchemaTool constructed with database context service");
         }
 
         [McpServerTool(Name = "get_table_schema"), Description("Get the schema of a table from the connected SQL Server database.")]
-        public string GetTableSchema(string tableName)
+        public async Task<string> GetTableSchema(string tableName)
         {
             Console.Error.WriteLine($"GetTableSchema called with tableName: {tableName}");
-            Console.Error.WriteLine($"Connection string is: {(string.IsNullOrEmpty(_connectionString) ? "missing" : "present")}");
             
-            if (string.IsNullOrEmpty(_connectionString))
-            {
-                return "Error: No connection string provided. Set the MSSQL_CONNECTIONSTRING environment variable.";
-            }
-
             if (string.IsNullOrWhiteSpace(tableName))
             {
                 return "Error: Table name cannot be empty";
@@ -36,33 +28,13 @@ namespace Ave.McpServer.MSSQL.Tools
 
             try
             {
-                using SqlConnection connection = new SqlConnection(_connectionString);
-                connection.Open();
-                
-                // Get schema information for the table
-                var schemaTable = connection.GetSchema("Columns", new[] { null, null, tableName });
-                
-                StringBuilder schemaInfo = new StringBuilder();
-                schemaInfo.AppendLine($"Schema for table: {tableName}");
-                schemaInfo.AppendLine();
-                schemaInfo.AppendLine("Column Name | Data Type | Max Length | Is Nullable");
-                schemaInfo.AppendLine("----------- | --------- | ---------- | -----------");
-                
-                foreach (DataRow row in schemaTable.Rows)
-                {
-                    string columnName = row["COLUMN_NAME"].ToString() ?? "";
-                    string dataType = row["DATA_TYPE"].ToString() ?? "";
-                    string maxLength = row["CHARACTER_MAXIMUM_LENGTH"].ToString() ?? "-";
-                    string isNullable = row["IS_NULLABLE"].ToString() ?? "";
-                    
-                    schemaInfo.AppendLine($"{columnName} | {dataType} | {maxLength} | {isNullable}");
-                }
-                
-                return schemaInfo.ToString();
+                // Get schema information for the table using the database context service
+                var tableSchema = await _databaseContext.GetTableSchemaAsync(tableName);
+                return tableSchema.ToToolResult();
             }
             catch (Exception ex)
             {
-                return $"Error: SQL error: {ex.Message}";
+                return ex.ToSqlErrorResult("getting table schema");
             }
         }
     }
