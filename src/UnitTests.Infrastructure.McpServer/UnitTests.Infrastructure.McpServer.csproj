@@ -7,11 +7,6 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Tools\**" />
-    <EmbeddedResource Remove="Tools\**" />
-    <None Remove="Tools\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AutoFixture" Version="4.18.1" />

@@ -207,6 +207,9 @@ namespace Core.Infrastructure.McpServer
                 mcpServerBuilder.WithTools<ServerGetStoredProcedureDefinitionTool>();
                 Console.Error.WriteLine("Registered ServerGetStoredProcedureDefinitionTool");
                 
+                mcpServerBuilder.WithTools<ServerGetStoredProcedureParametersTool>();
+                Console.Error.WriteLine("Registered ServerGetStoredProcedureParametersTool");
+                
                 // Only register execute query tool if it's enabled in configuration
                 if (dbConfig.EnableExecuteQuery)
                 {
@@ -247,6 +250,9 @@ namespace Core.Infrastructure.McpServer
                 
                 mcpServerBuilder.WithTools<GetStoredProcedureDefinitionTool>();
                 Console.Error.WriteLine("Registered GetStoredProcedureDefinitionTool");
+                
+                mcpServerBuilder.WithTools<GetStoredProcedureParametersTool>();
+                Console.Error.WriteLine("Registered GetStoredProcedureParametersTool");
                 
                 // Only register execute query tool if it's enabled in configuration
                 if (dbConfig.EnableExecuteQuery)
