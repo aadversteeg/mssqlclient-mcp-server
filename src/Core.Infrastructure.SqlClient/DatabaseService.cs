@@ -56,12 +56,22 @@ namespace Core.Infrastructure.SqlClient
             var capabilities = await GetCapabilitiesAsync(cancellationToken);
             var result = new List<TableInfo>();
 
-            using (var connection = new SqlConnection(_connectionString))
+            // For Azure SQL Database, we need to specify the database in the connection string
+            string connectionString = _connectionString;
+            if (capabilities.IsAzureSqlDatabase && !string.IsNullOrWhiteSpace(databaseName))
+            {
+                // Create a new connection string with the specified database
+                var builder = new SqlConnectionStringBuilder(_connectionString);
+                builder.InitialCatalog = databaseName;
+                connectionString = builder.ToString();
+            }
+
+            using (var connection = new SqlConnection(connectionString))
             {
                 await connection.OpenAsync(cancellationToken);
                 
-                // If a database name is specified, change the database context
-                if (!string.IsNullOrWhiteSpace(databaseName))
+                // If a database name is specified and it's not Azure SQL, change the database context
+                if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
                     string changeDbCommand = $"USE [{databaseName}]";
                     using (var command = new SqlCommand(changeDbCommand, connection))
@@ -109,8 +119,8 @@ namespace Core.Infrastructure.SqlClient
                 // Enhance table information if not all data was available in the initial query
                 await EnhanceTableInfoAsync(result, connection, capabilities, cancellationToken);
                 
-                // If we switched database contexts, switch back to the original database
-                if (!string.IsNullOrWhiteSpace(databaseName))
+                // If we switched database contexts and it's not Azure SQL, switch back to the original database
+                if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
                     var builder = new SqlConnectionStringBuilder(_connectionString);
                     string originalDatabase = builder.InitialCatalog;
@@ -514,12 +524,25 @@ namespace Core.Infrastructure.SqlClient
                 throw new ArgumentException("Query cannot be empty", nameof(query));
             }
             
+            // Get capabilities to check if this is Azure SQL Database
+            var capabilities = await GetCapabilitiesAsync(cancellationToken);
+            
+            // For Azure SQL Database, we need to specify the database in the connection string
+            string connectionString = _connectionString;
+            if (capabilities.IsAzureSqlDatabase && !string.IsNullOrWhiteSpace(databaseName))
+            {
+                // Create a new connection string with the specified database
+                var builder = new SqlConnectionStringBuilder(_connectionString);
+                builder.InitialCatalog = databaseName;
+                connectionString = builder.ToString();
+            }
+            
             // Create a new connection that will be owned by the reader
-            var connection = new SqlConnection(_connectionString);
+            var connection = new SqlConnection(connectionString);
             await connection.OpenAsync(cancellationToken);
             
-            // If a database name is specified, change the database context
-            if (!string.IsNullOrWhiteSpace(databaseName))
+            // If a database name is specified and it's not Azure SQL, change the database context
+            if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
             {
                 // First check if the database exists
                 string checkDbQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = @dbName AND state_desc = 'ONLINE'";
@@ -582,7 +605,20 @@ namespace Core.Infrastructure.SqlClient
             var columns = new List<TableColumnInfo>();
             string currentDbName;
 
-            using (var connection = new SqlConnection(_connectionString))
+            // Get capabilities to check if this is Azure SQL Database
+            var capabilities = await GetCapabilitiesAsync(cancellationToken);
+            
+            // For Azure SQL Database, we need to specify the database in the connection string
+            string connectionString = _connectionString;
+            if (capabilities.IsAzureSqlDatabase && !string.IsNullOrWhiteSpace(databaseName))
+            {
+                // Create a new connection string with the specified database
+                var builder = new SqlConnectionStringBuilder(_connectionString);
+                builder.InitialCatalog = databaseName;
+                connectionString = builder.ToString();
+            }
+
+            using (var connection = new SqlConnection(connectionString))
             {
                 await connection.OpenAsync(cancellationToken);
                 
@@ -593,8 +629,8 @@ namespace Core.Infrastructure.SqlClient
                     currentDbName = (string?)await command.ExecuteScalarAsync(cancellationToken) ?? GetCurrentDatabaseName();
                 }
                 
-                // If a database name is specified, change the database context
-                if (!string.IsNullOrWhiteSpace(databaseName))
+                // If a database name is specified and it's not Azure SQL, change the database context
+                if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
                     // First check if the database exists
                     string checkDbQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = @dbName AND state_desc = 'ONLINE'";
@@ -660,8 +696,8 @@ namespace Core.Infrastructure.SqlClient
                     columns.Add(new TableColumnInfo(columnName, dataType, maxLength, isNullable));
                 }
                 
-                // If we switched database contexts, switch back to the original database
-                if (!string.IsNullOrWhiteSpace(databaseName))
+                // If we switched database contexts and it's not Azure SQL, switch back to the original database
+                if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
                     var builder = new SqlConnectionStringBuilder(_connectionString);
                     string originalDatabase = builder.InitialCatalog;
@@ -692,12 +728,22 @@ namespace Core.Infrastructure.SqlClient
             var capabilities = await GetCapabilitiesAsync(cancellationToken);
             var result = new List<StoredProcedureInfo>();
 
-            using (var connection = new SqlConnection(_connectionString))
+            // For Azure SQL Database, we need to specify the database in the connection string
+            string connectionString = _connectionString;
+            if (capabilities.IsAzureSqlDatabase && !string.IsNullOrWhiteSpace(databaseName))
+            {
+                // Create a new connection string with the specified database
+                var builder = new SqlConnectionStringBuilder(_connectionString);
+                builder.InitialCatalog = databaseName;
+                connectionString = builder.ToString();
+            }
+
+            using (var connection = new SqlConnection(connectionString))
             {
                 await connection.OpenAsync(cancellationToken);
                 
-                // If a database name is specified, change the database context
-                if (!string.IsNullOrWhiteSpace(databaseName))
+                // If a database name is specified and it's not Azure SQL, change the database context
+                if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
                     string changeDbCommand = $"USE [{databaseName}]";
                     using (var command = new SqlCommand(changeDbCommand, connection))
@@ -908,8 +954,8 @@ namespace Core.Infrastructure.SqlClient
                     }
                 }
                 
-                // If we switched database contexts, switch back to the original database
-                if (!string.IsNullOrWhiteSpace(databaseName))
+                // If we switched database contexts and it's not Azure SQL, switch back to the original database
+                if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
                     var builder = new SqlConnectionStringBuilder(_connectionString);
                     string originalDatabase = builder.InitialCatalog;
@@ -960,12 +1006,25 @@ namespace Core.Infrastructure.SqlClient
 
             string definition = string.Empty;
 
-            using (var connection = new SqlConnection(_connectionString))
+            // Get capabilities to check if this is Azure SQL Database
+            var capabilities = await GetCapabilitiesAsync(cancellationToken);
+            
+            // For Azure SQL Database, we need to specify the database in the connection string
+            string connectionString = _connectionString;
+            if (capabilities.IsAzureSqlDatabase && !string.IsNullOrWhiteSpace(databaseName))
+            {
+                // Create a new connection string with the specified database
+                var builder = new SqlConnectionStringBuilder(_connectionString);
+                builder.InitialCatalog = databaseName;
+                connectionString = builder.ToString();
+            }
+
+            using (var connection = new SqlConnection(connectionString))
             {
                 await connection.OpenAsync(cancellationToken);
                 
-                // If a database name is specified, change the database context
-                if (!string.IsNullOrWhiteSpace(databaseName))
+                // If a database name is specified and it's not Azure SQL, change the database context
+                if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
                     // First check if the database exists
                     string checkDbQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = @dbName AND state_desc = 'ONLINE'";
@@ -1108,8 +1167,8 @@ namespace Core.Infrastructure.SqlClient
                     }
                 }
                 
-                // If we switched database contexts, switch back to the original database
-                if (!string.IsNullOrWhiteSpace(databaseName))
+                // If we switched database contexts and it's not Azure SQL, switch back to the original database
+                if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
                     var builder = new SqlConnectionStringBuilder(_connectionString);
                     string originalDatabase = builder.InitialCatalog;
@@ -1157,13 +1216,26 @@ namespace Core.Infrastructure.SqlClient
                 procNameOnly = parts[1].Trim(new[] {'[', ']'});
             }
             
-            var connection = new SqlConnection(_connectionString);
+            // Get capabilities to check if this is Azure SQL Database
+            var capabilities = await GetCapabilitiesAsync(cancellationToken);
+            
+            // For Azure SQL Database, we need to specify the database in the connection string
+            string connectionString = _connectionString;
+            if (capabilities.IsAzureSqlDatabase && !string.IsNullOrWhiteSpace(databaseName))
+            {
+                // Create a new connection string with the specified database
+                var builder = new SqlConnectionStringBuilder(_connectionString);
+                builder.InitialCatalog = databaseName;
+                connectionString = builder.ToString();
+            }
+            
+            var connection = new SqlConnection(connectionString);
             await connection.OpenAsync(cancellationToken);
             
             try
             {
-                // Handle database context switching if needed
-                if (!string.IsNullOrWhiteSpace(databaseName))
+                // Handle database context switching if needed - for non-Azure SQL Server only
+                if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
                     await SwitchDatabaseContext(connection, databaseName, cancellationToken);
                 }
@@ -1228,9 +1300,12 @@ namespace Core.Infrastructure.SqlClient
 
         /// <summary>
         /// Switches database context if the specified database exists and is online.
+        /// For Azure SQL Database, creates a new connection with the target database in the connection string.
+        /// For regular SQL Server, uses the USE statement.
         /// </summary>
         private async Task SwitchDatabaseContext(SqlConnection connection, string databaseName, CancellationToken cancellationToken)
         {
+            // First check if the database exists
             string checkDbQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = @dbName AND state_desc = 'ONLINE'";
             using (var checkCommand = new SqlCommand(checkDbQuery, connection))
             {
@@ -1243,10 +1318,34 @@ namespace Core.Infrastructure.SqlClient
                 }
             }
             
-            string useDbCommand = $"USE [{databaseName}]";
-            using (var useCommand = new SqlCommand(useDbCommand, connection))
+            // Get capabilities to check if this is Azure SQL Database
+            var capabilities = await GetCapabilitiesAsync(cancellationToken);
+            
+            if (capabilities.IsAzureSqlDatabase)
             {
-                await useCommand.ExecuteNonQueryAsync(cancellationToken);
+                // For Azure SQL, we cannot use USE statement - the connection must be closed and reopened
+                // with the target database specified in the connection string
+                
+                // We do nothing here as the caller is responsible for managing the connection
+                // The caller should check capabilities.IsAzureSqlDatabase and create a new connection
+                // with the target database specified if needed
+                
+                // This method is called from ExecuteStoredProcedureAsync where we use a fresh connection
+                // that is managed by the caller, so we can just return here
+                
+                // We're intentionally NOT closing the connection here as that should be managed by the caller
+                
+                // Log info about Azure SQL database - will be handled by caller
+                Console.WriteLine($"Azure SQL Database detected. Database context switching will be handled by creating a new connection to '{databaseName}'.");
+            }
+            else
+            {
+                // For regular SQL Server, use the USE statement
+                string useDbCommand = $"USE [{databaseName}]";
+                using (var useCommand = new SqlCommand(useDbCommand, connection))
+                {
+                    await useCommand.ExecuteNonQueryAsync(cancellationToken);
+                }
             }
         }
 
