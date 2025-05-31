@@ -209,7 +209,7 @@ namespace Core.Infrastructure.SqlClient
                 // Try a row count query that would be problematic on older versions with large tables
                 const string countQuery = @"
                     SELECT OBJECT_NAME(p.object_id) AS TableName,
-                           SUM(p.rows) AS RowCount
+                           SUM(p.rows) AS [RowCount]
                     FROM sys.partitions p
                     WHERE p.index_id IN (0, 1) -- heap or clustered index
                     GROUP BY p.object_id

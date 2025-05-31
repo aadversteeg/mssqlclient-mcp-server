@@ -61,7 +61,7 @@ namespace UnitTests.Infrastructure.SqlClient
         {
             // Arrange
             var tableName = "TestTable";
-            var expectedSchema = new TableSchemaInfo(tableName, "TestDb", new List<TableColumnInfo>());
+            var expectedSchema = new TableSchemaInfo(tableName, "TestDb", string.Empty, new List<TableColumnInfo>());
             
             _mockDatabaseService.Setup(x => x.GetTableSchemaAsync(tableName, null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedSchema);

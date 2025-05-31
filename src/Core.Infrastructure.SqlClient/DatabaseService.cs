@@ -174,7 +174,7 @@ namespace Core.Infrastructure.SqlClient
             // Conditionally add columns based on capabilities
             if (capabilities.SupportsExactRowCount)
             {
-                query += ",\n                    0 AS RowCount"; // Will be enhanced later
+                query += ",\n                    0 AS [RowCount]"; // Will be enhanced later
             }
             
             if (capabilities.SupportsDetailedIndexMetadata)
@@ -621,14 +621,14 @@ namespace Core.Infrastructure.SqlClient
             using (var connection = new SqlConnection(connectionString))
             {
                 await connection.OpenAsync(cancellationToken);
-                
+
                 // Get the current database name for the context
                 string currentDbQuery = "SELECT DB_NAME()";
                 using (var command = new SqlCommand(currentDbQuery, connection))
                 {
                     currentDbName = (string?)await command.ExecuteScalarAsync(cancellationToken) ?? GetCurrentDatabaseName();
                 }
-                
+
                 // If a database name is specified and it's not Azure SQL, change the database context
                 if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
@@ -638,27 +638,26 @@ namespace Core.Infrastructure.SqlClient
                     {
                         checkCommand.Parameters.AddWithValue("@dbName", databaseName);
                         int dbCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync(cancellationToken));
-                        
+
                         if (dbCount == 0)
                         {
                             throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not online");
                         }
                     }
-                    
+
                     // Change database context
                     string useDbCommand = $"USE [{databaseName}]";
                     using (var useCommand = new SqlCommand(useDbCommand, connection))
                     {
                         await useCommand.ExecuteNonQueryAsync(cancellationToken);
                     }
-                    
+
                     // Update the current database name
                     currentDbName = databaseName;
                 }
-                
+
                 // Get schema information for the table
                 var schemaTable = connection.GetSchema("Columns", new[] { null, schemaName, tableNameOnly });
-                
                 if (schemaTable.Rows.Count == 0)
                 {
                     // If no rows were found and a schema was provided, try to check if the table exists at all
@@ -669,39 +668,46 @@ namespace Core.Infrastructure.SqlClient
                             FROM sys.tables t
                             JOIN sys.schemas s ON t.schema_id = s.schema_id
                             WHERE s.name = @schemaName AND t.name = @tableName";
-                        
+
                         using (var command = new SqlCommand(checkTableQuery, connection))
                         {
                             command.Parameters.AddWithValue("@schemaName", schemaName);
                             command.Parameters.AddWithValue("@tableName", tableNameOnly);
                             int tableCount = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
-                            
+
                             if (tableCount > 0)
                             {
                                 throw new InvalidOperationException($"Table '{schemaName}.{tableNameOnly}' exists in database '{currentDbName}' but you might not have permission to access its schema information");
                             }
                         }
                     }
-                    
+
                     throw new InvalidOperationException($"Table '{tableName}' does not exist in database '{currentDbName}' or you don't have permission to access it");
                 }
-                
+
+                var columnMsDescriptions = await GetMsDescriptionForTableColumnsAsync(
+                    connection,
+                    schemaName,
+                    tableName
+                    );
+
                 foreach (DataRow row in schemaTable.Rows)
                 {
                     string columnName = row["COLUMN_NAME"].ToString() ?? string.Empty;
                     string dataType = row["DATA_TYPE"].ToString() ?? string.Empty;
                     string maxLength = row["CHARACTER_MAXIMUM_LENGTH"].ToString() ?? "-";
                     string isNullable = row["IS_NULLABLE"].ToString() ?? string.Empty;
-                    
-                    columns.Add(new TableColumnInfo(columnName, dataType, maxLength, isNullable));
+
+                    _ = columnMsDescriptions.TryGetValue(columnName, out var columnMsDescription);
+                    columns.Add(new TableColumnInfo(columnName, dataType, maxLength, isNullable, columnMsDescription ?? string.Empty));
                 }
-                
+
                 // If we switched database contexts and it's not Azure SQL, switch back to the original database
                 if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
                 {
                     var builder = new SqlConnectionStringBuilder(_connectionString);
                     string originalDatabase = builder.InitialCatalog;
-                    
+
                     if (!string.IsNullOrWhiteSpace(originalDatabase))
                     {
                         string switchBackCommand = $"USE [{originalDatabase}]";
@@ -711,10 +717,16 @@ namespace Core.Infrastructure.SqlClient
                         }
                     }
                 }
+
+                var tableMsDescription = await GetMsDescriptionForTableAsync(
+                    connection,
+                    schemaName,
+                    tableName
+                    );
+
+                // For the TableSchemaInfo output, use the original table name for better UX
+                return new TableSchemaInfo(tableName, currentDbName, tableMsDescription, columns);
             }
-            
-            // For the TableSchemaInfo output, use the original table name for better UX
-            return new TableSchemaInfo(tableName, currentDbName, columns);
         }
 
         /// <summary>
@@ -1480,8 +1492,106 @@ namespace Core.Infrastructure.SqlClient
                     $"Expected parameters:\n{string.Join("\n", expectedParams)}");
             }
         }
+
+        /// <summary>
+        /// Collects and returns a MS Description extended property for a given table.
+        /// This info is valuable for LLM context.
+        /// </summary>
+        private async Task<string?> GetMsDescriptionForTableAsync(
+            SqlConnection connection,
+            string? schemaName,
+            string tableName
+            )
+        {
+            ArgumentNullException.ThrowIfNull(connection);
+            ArgumentException.ThrowIfNullOrEmpty(tableName);
+
+            schemaName ??= "dbo";
+
+            const string DescriptionColumnName = "Description";
+            const string CheckDbQuery =
+$"""
+SELECT 
+    sep.value [{DescriptionColumnName}]
+FROM sys.tables st
+LEFT JOIN sys.extended_properties sep ON
+    st.object_id = sep.major_id
+    and sep.minor_id = 0
+    and sep.name = 'MS_Description'
+WHERE
+    st.name = @tableName
+    AND st.schema_id = SCHEMA_ID(@schemaName)
+""";
+            using (var command = new SqlCommand(CheckDbQuery, connection))
+            {
+                command.Parameters.AddWithValue("@tableName", tableName);
+                command.Parameters.AddWithValue("@schemaName", schemaName);
+
+                var description = (await command.ExecuteScalarAsync()) as string;
+                return description;
+            }
+        }
+
+        /// <summary>
+        /// Collects and returns a columns MS Description extended property.
+        /// This info is valuable for LLM context.
+        /// </summary>
+        private async Task<Dictionary<string, string?>> GetMsDescriptionForTableColumnsAsync(
+            SqlConnection connection,
+            string? schemaName,
+            string tableName
+            )
+        {
+            ArgumentNullException.ThrowIfNull(connection);
+            ArgumentException.ThrowIfNullOrEmpty(tableName);
+
+            schemaName ??= "dbo";
+
+            var result = new Dictionary<string, string?>();
+
+            const string ColumnColumnName = "Column";
+            const string DescriptionColumnName = "Description";
+            const string CheckDbQuery =
+$"""
+SELECT 
+    sc.name [{ColumnColumnName}],
+    sep.value [{DescriptionColumnName}]
+FROM sys.tables st
+JOIN sys.columns sc ON st.object_id = sc.object_id
+LEFT JOIN sys.extended_properties sep ON
+    st.object_id = sep.major_id
+    and sc.column_id = sep.minor_id
+    and sep.name = 'MS_Description'
+WHERE
+    st.name = @tableName
+    AND st.schema_id = SCHEMA_ID(@schemaName)
+""";
+            using (var command = new SqlCommand(CheckDbQuery, connection))
+            {
+                command.Parameters.AddWithValue("@tableName", tableName);
+                command.Parameters.AddWithValue("@schemaName", schemaName);
+
+                using (var qr = await command.ExecuteReaderAsync())
+                {
+                    while (qr.Read())
+                    {
+                        if (qr.IsDBNull(DescriptionColumnName))
+                        {
+                            continue;
+                        }
+
+                        var columnName = qr.GetString(ColumnColumnName);
+                        var description = qr.GetString(DescriptionColumnName);
+                        result[columnName] = description;
+                    }
+                }
+            }
+
+            return result;
+        }
+
     }
-    
+
     /// <summary>
     /// Helper class to build DatabaseInfo objects with optional properties.
     /// </summary>

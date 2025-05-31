@@ -19,20 +19,20 @@ namespace Core.Infrastructure.McpServer.Extensions
             
             if (!string.IsNullOrEmpty(tableSchema.DatabaseName))
             {
-                sb.AppendLine($"# Schema for table: {tableSchema.TableName} in database: {tableSchema.DatabaseName}");
+                sb.AppendLine($"# Schema for table `{tableSchema.TableName}` {tableSchema.GetMsDescriptionWithBrackets()} in database `{tableSchema.DatabaseName}`:");
             }
             else
             {
-                sb.AppendLine($"Schema for table: {tableSchema.TableName}");
+                sb.AppendLine($"Schema for table `{tableSchema.TableName}` {tableSchema.GetMsDescriptionWithBrackets()}:");
             }
             
             sb.AppendLine();
-            sb.AppendLine("Column Name | Data Type | Max Length | Is Nullable");
-            sb.AppendLine("----------- | --------- | ---------- | -----------");
+            sb.AppendLine("Column Name | Data Type | Max Length | Is Nullable | Description");
+            sb.AppendLine("----------- | --------- | ---------- | ----------- | -----------");
             
             foreach (var column in tableSchema.Columns)
             {
-                sb.AppendLine($"{column.ColumnName} | {column.DataType} | {column.MaxLength} | {column.IsNullable}");
+                sb.AppendLine($"{column.ColumnName} | {column.DataType} | {column.MaxLength} | {column.IsNullable} | {column.MsDescription}");
             }
             
             return sb.ToString();

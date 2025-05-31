@@ -102,7 +102,7 @@ namespace UnitTests.Infrastructure.SqlClient
         public List<DatabaseInfo> DatabasesResponse { get; set; } = new List<DatabaseInfo>();
         public bool DatabaseExistsResponse { get; set; } = true;
         public string CurrentDatabaseNameResponse { get; set; } = "TestDb";
-        public TableSchemaInfo TableSchemaResponse { get; set; } = new TableSchemaInfo("TestTable", "TestDb", new List<TableColumnInfo>());
+        public TableSchemaInfo TableSchemaResponse { get; set; } = new TableSchemaInfo("TestTable", "TestDb", string.Empty, new List<TableColumnInfo>());
         public IAsyncDataReader? ExecuteQueryResponse { get; set; } = null;
         
         // New mock responses for stored procedures

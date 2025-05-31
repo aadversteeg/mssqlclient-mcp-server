@@ -1,3 +1,4 @@
+
 namespace Core.Application.Models
 {
     /// <summary>
@@ -7,7 +8,8 @@ namespace Core.Application.Models
         string ColumnName,
         string DataType,
         string MaxLength,
-        string IsNullable);
+        string IsNullable,
+        string MsDescription);
 
     /// <summary>
     /// Represents immutable information about a database table schema.
@@ -15,5 +17,22 @@ namespace Core.Application.Models
     public sealed record TableSchemaInfo(
         string TableName,
         string DatabaseName,
-        IEnumerable<TableColumnInfo> Columns);
+        string MsDescription,
+        IEnumerable<TableColumnInfo> Columns)
+    {
+        /// <summary>
+        /// Returns empty string if MsDescription is empty,
+        /// or returns a `({MsDescription})` string.
+        /// </summary>
+        /// <returns></returns>
+        public string GetMsDescriptionWithBrackets()
+        {
+            if (string.IsNullOrEmpty(MsDescription))
+            {
+                return string.Empty;
+            }
+
+            return $"({MsDescription})";
+        }
+    }
 }
