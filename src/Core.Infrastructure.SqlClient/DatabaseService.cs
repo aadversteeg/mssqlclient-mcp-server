@@ -725,7 +725,7 @@ namespace Core.Infrastructure.SqlClient
                     );
 
                 // For the TableSchemaInfo output, use the original table name for better UX
-                return new TableSchemaInfo(tableName, currentDbName, tableMsDescription, columns);
+                return new TableSchemaInfo(tableName, currentDbName, tableMsDescription ?? string.Empty, columns);
             }
         }
 
@@ -1508,11 +1508,10 @@ namespace Core.Infrastructure.SqlClient
 
             schemaName ??= "dbo";
 
-            const string DescriptionColumnName = "Description";
             const string CheckDbQuery =
 $"""
 SELECT 
-    sep.value [{DescriptionColumnName}]
+    sep.value [Description]
 FROM sys.tables st
 LEFT JOIN sys.extended_properties sep ON
     st.object_id = sep.major_id
@@ -1533,7 +1532,7 @@ WHERE
         }
 
         /// <summary>
-        /// Collects and returns a columns MS Description extended property.
+        /// Collects and returns a columns MS Description extended properties for a given table.
         /// This info is valuable for LLM context.
         /// </summary>
         private async Task<Dictionary<string, string?>> GetMsDescriptionForTableColumnsAsync(
