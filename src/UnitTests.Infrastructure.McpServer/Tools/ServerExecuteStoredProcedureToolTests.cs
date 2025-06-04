@@ -1,13 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Core.Application.Interfaces;
 using Core.Infrastructure.McpServer.Tools;
+using Core.Infrastructure.McpServer.Extensions;
 using FluentAssertions;
 using Moq;
 using System.Text.Json;
-using Xunit;
 
 namespace UnitTests.Infrastructure.McpServer.Tools
 {
@@ -33,7 +29,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
             
             // Act
-            var result = await tool.ExecuteStoredProcedureInDatabase(string.Empty, "TestProc", "{}");
+            var result = await tool.ExecuteStoredProcedureInDatabase(string.Empty, "TestProc", "{}", null);
             
             // Assert
             result.Should().Contain("Error: Database name cannot be empty");
@@ -47,7 +43,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
             
             // Act
-            var result = await tool.ExecuteStoredProcedureInDatabase("TestDb", string.Empty, "{}");
+            var result = await tool.ExecuteStoredProcedureInDatabase("TestDb", string.Empty, "{}", null);
             
             // Assert
             result.Should().Contain("Error: Procedure name cannot be empty");
@@ -82,14 +78,15 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                     p.Count == parameters.Count && 
                     p.ContainsKey("Param1") && 
                     p.ContainsKey("Param2")
-                ), 
+                ),
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
             var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
             
             // Act
-            var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, parametersJson);
+            var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, parametersJson, null);
             
             // Assert
             result.Should().NotBeNull();
@@ -97,6 +94,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 databaseName,
                 procedureName,
                 It.IsAny<Dictionary<string, object?>>(),
+                null,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         }
@@ -114,14 +112,15 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockServerDatabase.Setup(x => x.ExecuteStoredProcedureAsync(
                 databaseName,
                 procedureName, 
-                It.IsAny<Dictionary<string, object?>>(), 
+                It.IsAny<Dictionary<string, object?>>(),
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
             var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
             
             // Act
-            var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, parameters);
+            var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, parameters, null);
             
             // Assert
             result.Should().Contain(expectedErrorMessage);
@@ -140,10 +139,47 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
             
             // Act
-            var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, invalidJson);
+            var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, invalidJson, null);
             
             // Assert
             result.Should().Contain("Error parsing parameters");
+        }
+        
+        [Fact(DisplayName = "SESPT-007: ServerExecuteStoredProcedureTool passes timeout to server database")]
+        public async Task SESPT007()
+        {
+            // Arrange
+            var databaseName = "TestDb";
+            var procedureName = "TestProc";
+            var parametersJson = "{\"param1\": 123}";
+            var timeoutSeconds = 300;
+            
+            var mockReader = new Mock<IAsyncDataReader>();
+            
+            var mockServerDatabase = new Mock<IServerDatabase>();
+            mockServerDatabase
+                .Setup(x => x.ExecuteStoredProcedureAsync(
+                    databaseName,
+                    procedureName,
+                    It.IsAny<Dictionary<string, object?>>(),
+                    timeoutSeconds,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(mockReader.Object);
+            
+            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
+            
+            // Act
+            var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, parametersJson, timeoutSeconds);
+            
+            // Assert
+            result.Should().NotBeNull();
+            mockServerDatabase.Verify(x => x.ExecuteStoredProcedureAsync(
+                databaseName,
+                procedureName,
+                It.IsAny<Dictionary<string, object?>>(),
+                timeoutSeconds,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
         }
     }
 }

@@ -1,13 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Core.Application.Interfaces;
 using Core.Infrastructure.McpServer.Tools;
 using FluentAssertions;
 using Moq;
 using System.Text.Json;
-using Xunit;
 
 namespace UnitTests.Infrastructure.McpServer.Tools
 {
@@ -67,6 +62,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                     p.ContainsKey("Param1") && 
                     p.ContainsKey("Param2")
                 ), 
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
@@ -80,6 +76,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockDatabaseContext.Verify(x => x.ExecuteStoredProcedureAsync(
                 procedureName,
                 It.IsAny<Dictionary<string, object?>>(),
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
         }
@@ -96,6 +93,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockDatabaseContext.Setup(x => x.ExecuteStoredProcedureAsync(
                 procedureName, 
                 It.IsAny<Dictionary<string, object?>>(), 
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             

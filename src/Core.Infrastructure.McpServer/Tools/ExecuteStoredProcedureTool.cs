@@ -19,7 +19,7 @@ namespace Core.Infrastructure.McpServer.Tools
         }
 
         [McpServerTool(Name = "execute_stored_procedure"), 
-         Description(@"Execute a stored procedure on the connected SQL Server database.
+         Description(@"Execute a stored procedure on the connected SQL Server database and wait for results. Best for procedures that complete quickly.
 
 Parameters should be provided as a JSON object with parameter names as keys.
 Both '@ParameterName' and 'ParameterName' formats are accepted.
@@ -32,7 +32,13 @@ Examples:
 
 The tool will automatically convert JSON values to the appropriate SQL types based on the stored procedure's parameter definitions.
 Use 'get_stored_procedure_parameters' tool first to see what parameters are expected.")]
-        public async Task<string> ExecuteStoredProcedure(string procedureName, string parameters)
+        public async Task<string> ExecuteStoredProcedure(
+            [Description("The name of the stored procedure to execute")]
+            string procedureName, 
+            [Description("JSON object containing the parameters for the stored procedure")]
+            string parameters,
+            [Description("Optional timeout in seconds. If not specified, uses the default timeout")]
+            int? timeoutSeconds = null)
         {
             Console.Error.WriteLine($"ExecuteStoredProcedure called with stored procedure: {procedureName}");
             
@@ -62,7 +68,7 @@ Use 'get_stored_procedure_parameters' tool first to see what parameters are expe
                 }
                 
                 // Use the DatabaseContext service to execute the stored procedure
-                IAsyncDataReader reader = await _databaseContext.ExecuteStoredProcedureAsync(procedureName, paramDict);
+                IAsyncDataReader reader = await _databaseContext.ExecuteStoredProcedureAsync(procedureName, paramDict, timeoutSeconds);
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();

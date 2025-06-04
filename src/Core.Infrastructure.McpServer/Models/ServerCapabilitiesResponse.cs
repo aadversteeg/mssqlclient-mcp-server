@@ -1,5 +1,4 @@
 using Core.Infrastructure.SqlClient;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace Core.Infrastructure.McpServer.Models

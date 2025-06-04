@@ -1,9 +1,6 @@
-using Core.Application.Interfaces;
 using Core.Application.Models;
-using Microsoft.Data.SqlClient;
-using System.Collections.Generic;
 
-namespace Core.Infrastructure.SqlClient.Interfaces
+namespace Core.Application.Interfaces
 {
     /// <summary>
     /// Interface for core database operations with context switching capability.
@@ -49,13 +46,14 @@ namespace Core.Infrastructure.SqlClient.Interfaces
         string GetCurrentDatabaseName();
         
         /// <summary>
-        /// Executes a SQL query with optional database context switching.
+        /// Executes a database query with optional database context switching.
         /// </summary>
-        /// <param name="query">The SQL query to execute</param>
+        /// <param name="query">The database query to execute</param>
         /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
-        Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, CancellationToken cancellationToken = default);
+        Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Lists all stored procedures with optional database context switching.
@@ -71,7 +69,7 @@ namespace Core.Infrastructure.SqlClient.Interfaces
         /// <param name="procedureName">The name of the stored procedure</param>
         /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>Stored procedure definition as SQL string</returns>
+        /// <returns>Stored procedure definition as text</returns>
         Task<string> GetStoredProcedureDefinitionAsync(string procedureName, string? databaseName = null, CancellationToken cancellationToken = default);
         
         /// <summary>
@@ -80,8 +78,9 @@ namespace Core.Infrastructure.SqlClient.Interfaces
         /// <param name="procedureName">The name of the stored procedure to execute</param>
         /// <param name="parameters">Dictionary of parameter names and values</param>
         /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
-        Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, CancellationToken cancellationToken = default);
+        Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
     }
 }

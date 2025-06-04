@@ -3,8 +3,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Core.Application.Models;
 using Core.Infrastructure.SqlClient;
-using Core.Infrastructure.SqlClient.Interfaces;
+using Core.Application.Interfaces;
 using FluentAssertions;
 using Microsoft.Data.SqlClient;
 using Xunit;
@@ -21,9 +22,13 @@ namespace UnitTests.Infrastructure.SqlClient
         private readonly IDatabaseService? _serverDatabaseService;
         private readonly IDatabaseService? _databaseService;
         private readonly bool _skipTests;
+        private readonly DatabaseConfiguration _configuration;
 
         public DatabaseServiceIntegrationTests()
         {
+            // Create configuration for database services
+            _configuration = new DatabaseConfiguration { DefaultCommandTimeoutSeconds = 30 };
+            
             // Skip tests on non-Windows platforms
             _skipTests = !RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             if (_skipTests)
@@ -43,7 +48,7 @@ namespace UnitTests.Infrastructure.SqlClient
             var serverCapabilityDetector = new SqlServerCapabilityDetector(_masterConnectionString);
             
             // Create the server database service
-            _serverDatabaseService = new DatabaseService(_masterConnectionString, serverCapabilityDetector);
+            _serverDatabaseService = new DatabaseService(_masterConnectionString, serverCapabilityDetector, _configuration);
             
             // Create the test database and initialize services
             CreateTestDatabase().GetAwaiter().GetResult();
@@ -52,7 +57,7 @@ namespace UnitTests.Infrastructure.SqlClient
             var userDbCapabilityDetector = new SqlServerCapabilityDetector(_userDbConnectionString);
             
             // Create the user database service
-            _databaseService = new DatabaseService(_userDbConnectionString, userDbCapabilityDetector);
+            _databaseService = new DatabaseService(_userDbConnectionString, userDbCapabilityDetector, _configuration);
         }
 
         public void Dispose()

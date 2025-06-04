@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.SqlClient;
 using Core.Infrastructure.SqlClient.Interfaces;
 using FluentAssertions;
@@ -15,11 +16,15 @@ namespace UnitTests.Infrastructure.SqlClient
         private readonly Mock<IDatabaseService> _mockDatabaseService;
         private readonly DatabaseService _databaseService;
         private readonly Mock<ISqlServerCapabilityDetector> _mockCapabilityDetector;
+        private readonly DatabaseConfiguration _configuration;
         
         public DatabaseServiceExecuteQueryTests()
         {
             // Create a connection string for testing
             string connectionString = "Data Source=localhost;Initial Catalog=TestDb;Integrated Security=True;";
+            
+            // Create database configuration
+            _configuration = new DatabaseConfiguration { DefaultCommandTimeoutSeconds = 30 };
             
             // Create a mock capability detector
             _mockCapabilityDetector = new Mock<ISqlServerCapabilityDetector>();
@@ -31,7 +36,7 @@ namespace UnitTests.Infrastructure.SqlClient
                     SupportsDetailedIndexMetadata = true
                 });
                 
-            _databaseService = new DatabaseService(connectionString, _mockCapabilityDetector.Object);
+            _databaseService = new DatabaseService(connectionString, _mockCapabilityDetector.Object, _configuration);
             
             // Also create a mock for specific tests
             _mockDatabaseService = new Mock<IDatabaseService>();
@@ -42,7 +47,7 @@ namespace UnitTests.Infrastructure.SqlClient
         {
             // Act
             string? nullConnectionString = null;
-            Action act = () => new DatabaseService(nullConnectionString, _mockCapabilityDetector.Object);
+            Action act = () => new DatabaseService(nullConnectionString, _mockCapabilityDetector.Object, _configuration);
             
             // Assert
             act.Should().Throw<ArgumentNullException>()

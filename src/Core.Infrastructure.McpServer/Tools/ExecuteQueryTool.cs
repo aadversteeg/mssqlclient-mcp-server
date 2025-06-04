@@ -16,8 +16,12 @@ namespace Core.Infrastructure.McpServer.Tools
             Console.Error.WriteLine("ExecuteQueryTool constructed with database context service");
         }
 
-        [McpServerTool(Name = "execute_query"), Description("Execute a SQL query on the connected SQL Server database.")]
-        public async Task<string> ExecuteQuery(string query)
+        [McpServerTool(Name = "execute_query"), Description("Execute a SQL query on the connected SQL Server database and wait for results. Best for queries that complete quickly.")]
+        public async Task<string> ExecuteQuery(
+            [Description("The SQL query to execute")]
+            string query,
+            [Description("Optional timeout in seconds. If not specified, uses the default timeout")]
+            int? timeoutSeconds = null)
         {
             Console.Error.WriteLine($"ExecuteQuery called with query: {query}");
             
@@ -29,7 +33,7 @@ namespace Core.Infrastructure.McpServer.Tools
             try
             {
                 // Use the DatabaseContext service to execute the query
-                IAsyncDataReader reader = await _databaseContext.ExecuteQueryAsync(query);
+                IAsyncDataReader reader = await _databaseContext.ExecuteQueryAsync(query, timeoutSeconds);
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();

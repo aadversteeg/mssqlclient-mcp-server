@@ -29,9 +29,10 @@ namespace Core.Application.Interfaces
         /// Executes a SQL query in the current database.
         /// </summary>
         /// <param name="query">The SQL query to execute</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
-        Task<IAsyncDataReader> ExecuteQueryAsync(string query, CancellationToken cancellationToken = default);
+        Task<IAsyncDataReader> ExecuteQueryAsync(string query, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Lists all stored procedures in the current database.
@@ -53,8 +54,9 @@ namespace Core.Application.Interfaces
         /// </summary>
         /// <param name="procedureName">The name of the stored procedure to execute</param>
         /// <param name="parameters">Dictionary of parameter names and values</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
-        Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, CancellationToken cancellationToken = default);
+        Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
     }
 }

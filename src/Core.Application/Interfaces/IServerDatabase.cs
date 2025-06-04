@@ -47,9 +47,10 @@ namespace Core.Application.Interfaces
         /// </summary>
         /// <param name="databaseName">Name of the database to execute the query in</param>
         /// <param name="query">The SQL query to execute</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
-        Task<IAsyncDataReader> ExecuteQueryInDatabaseAsync(string databaseName, string query, CancellationToken cancellationToken = default);
+        Task<IAsyncDataReader> ExecuteQueryInDatabaseAsync(string databaseName, string query, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Lists all stored procedures in the specified database.
@@ -74,8 +75,9 @@ namespace Core.Application.Interfaces
         /// <param name="databaseName">Name of the database to execute the stored procedure in</param>
         /// <param name="procedureName">The name of the stored procedure to execute</param>
         /// <param name="parameters">Dictionary of parameter names and values</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
-        Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string databaseName, string procedureName, Dictionary<string, object?> parameters, CancellationToken cancellationToken = default);
+        Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string databaseName, string procedureName, Dictionary<string, object?> parameters, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
     }
 }

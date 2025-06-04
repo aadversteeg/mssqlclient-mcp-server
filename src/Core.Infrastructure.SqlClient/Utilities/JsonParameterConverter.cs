@@ -8,6 +8,20 @@ namespace Core.Infrastructure.SqlClient.Utilities
     public static class JsonParameterConverter
     {
         /// <summary>
+        /// Parses a JSON string into a parameter dictionary.
+        /// </summary>
+        /// <param name="parametersJson">The JSON string to parse</param>
+        /// <returns>A dictionary with converted parameter values</returns>
+        public static Dictionary<string, object?> ParseParametersFromJson(string parametersJson)
+        {
+            if (string.IsNullOrWhiteSpace(parametersJson) || parametersJson.Trim() == "{}")
+                return new Dictionary<string, object?>();
+
+            var jsonParameters = JsonSerializer.Deserialize<Dictionary<string, object?>>(parametersJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return ConvertParameters(jsonParameters ?? new Dictionary<string, object?>());
+        }
+
+        /// <summary>
         /// Converts a dictionary that may contain JsonElement values to a dictionary with
         /// corresponding .NET types that SQL Server can handle.
         /// </summary>

@@ -287,7 +287,7 @@ namespace UnitTests.Infrastructure.SqlClient
             };
             var expectedReader = new Mock<IAsyncDataReader>().Object;
             
-            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedReader);
             
             _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
@@ -298,7 +298,7 @@ namespace UnitTests.Infrastructure.SqlClient
             
             // Assert
             result.Should().Be(expectedReader);
-            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, null, It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SDS-016: ExecuteStoredProcedureAsync with empty database name throws ArgumentException")]
@@ -357,6 +357,34 @@ namespace UnitTests.Infrastructure.SqlClient
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>()
                 .WithMessage($"*Database '{databaseName}' does not exist*");
+        }
+        
+        [Fact(DisplayName = "SDS-020: ExecuteStoredProcedureAsync with timeout passes timeout to database service")]
+        public async Task SDS020()
+        {
+            // Arrange
+            var databaseName = "TestDb";
+            var procedureName = "TestProc";
+            var parameters = new Dictionary<string, object?>
+            {
+                { "Param1", 123 },
+                { "Param2", "test" }
+            };
+            int timeoutSeconds = 180;
+            var expectedReader = new Mock<IAsyncDataReader>().Object;
+            
+            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, timeoutSeconds, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(expectedReader);
+            
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+            
+            // Act
+            var result = await _serverDatabaseService.ExecuteStoredProcedureAsync(databaseName, procedureName, parameters, timeoutSeconds);
+            
+            // Assert
+            result.Should().Be(expectedReader);
+            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, timeoutSeconds, It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }

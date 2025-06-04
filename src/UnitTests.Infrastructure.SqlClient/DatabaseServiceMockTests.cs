@@ -39,6 +39,7 @@ namespace UnitTests.Infrastructure.SqlClient
             // Create a test database service with a dummy connection string and a mock capability detector
             // Just to verify that it implements the interface
             var dummyConnectionString = "Server=test;Database=dummy;Trusted_Connection=True;";
+            var configuration = new DatabaseConfiguration { DefaultCommandTimeoutSeconds = 30 };
             var mockCapabilityDetector = new Mock<ISqlServerCapabilityDetector>();
             mockCapabilityDetector.Setup(x => x.DetectCapabilitiesAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new SqlServerCapability
@@ -48,7 +49,7 @@ namespace UnitTests.Infrastructure.SqlClient
                     SupportsDetailedIndexMetadata = true
                 });
                 
-            var service = new DatabaseService(dummyConnectionString, mockCapabilityDetector.Object);
+            var service = new DatabaseService(dummyConnectionString, mockCapabilityDetector.Object, configuration);
             
             // Act & Assert
             service.Should().BeAssignableTo<IDatabaseService>();
@@ -149,7 +150,7 @@ namespace UnitTests.Infrastructure.SqlClient
             return Task.FromResult(TableSchemaResponse);
         }
         
-        public Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, CancellationToken cancellationToken = default)
+        public Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             ExecuteQueryAsyncCalled = true;
             QueryPassedToExecuteQuery = query;
@@ -176,7 +177,7 @@ namespace UnitTests.Infrastructure.SqlClient
             return Task.FromResult(StoredProcedureDefinitionResponse);
         }
         
-        public Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, CancellationToken cancellationToken = default)
+        public Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             ExecuteStoredProcedureAsyncCalled = true;
             ProcedureNamePassedToExecuteStoredProcedure = procedureName;

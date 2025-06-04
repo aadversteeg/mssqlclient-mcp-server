@@ -15,6 +15,7 @@ namespace Core.Infrastructure.SqlClient
     {
         private readonly string _connectionString;
         private readonly ISqlServerCapabilityDetector _capabilityDetector;
+        private readonly DatabaseConfiguration _configuration;
         private SqlServerCapability? _capabilities;
         private bool _capabilitiesDetected = false;
 
@@ -23,10 +24,12 @@ namespace Core.Infrastructure.SqlClient
         /// </summary>
         /// <param name="connectionString">The SQL Server connection string</param>
         /// <param name="capabilityDetector">The SQL Server capability detector</param>
-        public DatabaseService(string connectionString, ISqlServerCapabilityDetector capabilityDetector)
+        /// <param name="configuration">Database configuration with timeout settings</param>
+        public DatabaseService(string connectionString, ISqlServerCapabilityDetector capabilityDetector, DatabaseConfiguration configuration)
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
             _capabilityDetector = capabilityDetector ?? throw new ArgumentNullException(nameof(capabilityDetector));
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             // Capabilities will be detected on first use
         }
 
@@ -515,9 +518,10 @@ namespace Core.Infrastructure.SqlClient
         /// </summary>
         /// <param name="query">The SQL query to execute</param>
         /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
-        public async Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -567,7 +571,13 @@ namespace Core.Infrastructure.SqlClient
             }
             
             // Execute the query
-            var command = new SqlCommand(query, connection);
+            var command = new SqlCommand(query, connection)
+            {
+                CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds
+            };
+            
+            // Register cancellation to cancel the command if requested
+            cancellationToken.Register(() => command.Cancel());
             
             // We're returning the reader which will keep the connection open
             // The caller is responsible for disposing both the reader and the connection when done
@@ -1205,9 +1215,10 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="procedureName">The name of the stored procedure to execute</param>
         /// <param name="parameters">Dictionary of parameter names and values</param>
         /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
-        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(procedureName))
             {
@@ -1265,8 +1276,12 @@ namespace Core.Infrastructure.SqlClient
                 // Create and configure command
                 var command = new SqlCommand($"[{schemaName}].[{procNameOnly}]", connection)
                 {
-                    CommandType = CommandType.StoredProcedure
+                    CommandType = CommandType.StoredProcedure,
+                    CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds
                 };
+                
+                // Register cancellation to cancel the command if requested
+                cancellationToken.Register(() => command.Cancel());
                 
                 // Add parameters with proper type conversion
                 foreach (var metadata in procMetadata)

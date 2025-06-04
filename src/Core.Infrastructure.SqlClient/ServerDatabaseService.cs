@@ -94,9 +94,10 @@ namespace Core.Infrastructure.SqlClient
         /// </summary>
         /// <param name="databaseName">Name of the database to execute the query in</param>
         /// <param name="query">The SQL query to execute</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
-        public async Task<IAsyncDataReader> ExecuteQueryInDatabaseAsync(string databaseName, string query, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteQueryInDatabaseAsync(string databaseName, string query, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(databaseName))
                 throw new ArgumentException("Database name cannot be empty", nameof(databaseName));
@@ -109,7 +110,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not accessible");
                 
             // Use the database service with the specified database name to execute the query
-            return await _databaseService.ExecuteQueryAsync(query, databaseName, cancellationToken);
+            return await _databaseService.ExecuteQueryAsync(query, databaseName, timeoutSeconds, cancellationToken);
         }
         
         /// <summary>
@@ -160,9 +161,10 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="databaseName">Name of the database to execute the stored procedure in</param>
         /// <param name="procedureName">The name of the stored procedure to execute</param>
         /// <param name="parameters">Dictionary of parameter names and values</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
-        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string databaseName, string procedureName, Dictionary<string, object?> parameters, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string databaseName, string procedureName, Dictionary<string, object?> parameters, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(databaseName))
                 throw new ArgumentException("Database name cannot be empty", nameof(databaseName));
@@ -178,7 +180,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not accessible");
                 
             // Use the database service with the specified database name to execute the stored procedure
-            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, cancellationToken);
+            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, timeoutSeconds, cancellationToken);
         }
     }
 }
