@@ -311,9 +311,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                     Owner: "custom",
                     Parameters: new List<StoredProcedureParameterInfo>
                     {
-                        new StoredProcedureParameterInfo("@param1", 1, "int", 4, 10, 0, false, false, null),
-                        new StoredProcedureParameterInfo("@param2", 2, "varchar", 50, 0, 0, false, false, null),
-                        new StoredProcedureParameterInfo("@param3", 3, "datetime", 8, 23, 3, false, false, null)
+                        new StoredProcedureParameterInfo("@param1", "int", 4, 10, 0, false, false, null),
+                        new StoredProcedureParameterInfo("@param2", "varchar", 50, 0, 0, false, false, null),
+                        new StoredProcedureParameterInfo("@param3", "datetime", 8, 23, 3, false, false, null)
                     },
                     IsFunction: false,
                     LastExecutionTime: new DateTime(2024, 1, 1),
