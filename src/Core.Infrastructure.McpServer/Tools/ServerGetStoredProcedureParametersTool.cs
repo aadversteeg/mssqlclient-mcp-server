@@ -30,6 +30,7 @@ namespace Core.Infrastructure.McpServer.Tools
         /// <param name="procedureName">The name of the stored procedure (can include schema like 'dbo.MyProcedure')</param>
         /// <param name="databaseName">Optional database name to query. If not provided, uses the current database context.</param>
         /// <param name="format">Output format: 'table' for human-readable table (default), 'json' for JSON Schema format</param>
+        /// <param name="timeoutSeconds">Optional query timeout in seconds</param>
         /// <returns>Parameter information in the requested format</returns>
         [McpServerTool(Name = "get_stored_procedure_parameters"), 
          Description(@"Get parameter information for a stored procedure including names, types, and whether they are required.
@@ -50,7 +51,8 @@ JSON format provides JSON Schema with SQL-specific extensions for parameter vali
         public async Task<string> GetStoredProcedureParameters(
             string procedureName, 
             string? databaseName = null,
-            string format = "table")
+            string format = "table",
+            int? timeoutSeconds = null)
         {
             if (string.IsNullOrWhiteSpace(procedureName))
             {
@@ -71,7 +73,7 @@ JSON format provides JSON Schema with SQL-specific extensions for parameter vali
                 }
 
                 var parameters = await GetStoredProcedureParametersAsync(
-                    schemaName, procNameOnly, databaseName);
+                    schemaName, procNameOnly, databaseName, timeoutSeconds);
                 
                 if (!parameters.Any())
                 {
@@ -97,7 +99,8 @@ JSON format provides JSON Schema with SQL-specific extensions for parameter vali
         private async Task<List<ParameterInfo>> GetStoredProcedureParametersAsync(
             string schemaName, 
             string procedureName, 
-            string? databaseName)
+            string? databaseName,
+            int? timeoutSeconds = null)
         {
             var query = $@"
                 SELECT 
@@ -120,8 +123,8 @@ JSON format provides JSON Schema with SQL-specific extensions for parameter vali
             var parameters = new List<ParameterInfo>();
             
             var reader = databaseName != null ? 
-                await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query) :
-                await _serverDatabase.ExecuteQueryInDatabaseAsync("master", query); // fallback to master if no database specified
+                await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutSeconds) :
+                await _serverDatabase.ExecuteQueryInDatabaseAsync("master", query, timeoutSeconds); // fallback to master if no database specified
             
             try
             {

@@ -52,9 +52,10 @@ namespace Core.Infrastructure.SqlClient
         /// Lists all tables in the database with optional database context switching.
         /// </summary>
         /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of table information</returns>
-        public async Task<IEnumerable<TableInfo>> ListTablesAsync(string? databaseName = null, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<TableInfo>> ListTablesAsync(string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             var capabilities = await GetCapabilitiesAsync(cancellationToken);
             var result = new List<TableInfo>();
@@ -79,6 +80,7 @@ namespace Core.Infrastructure.SqlClient
                     string changeDbCommand = $"USE [{databaseName}]";
                     using (var command = new SqlCommand(changeDbCommand, connection))
                     {
+                        command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                         await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                 }
@@ -87,8 +89,10 @@ namespace Core.Infrastructure.SqlClient
                 string query = BuildTableListQuery(capabilities);
                 
                 using (var command = new SqlCommand(query, connection))
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                 {
+                    command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                    {
                     var fieldMap = GetReaderFieldMap(reader);
                     
                     while (await reader.ReadAsync(cancellationToken))
@@ -117,10 +121,11 @@ namespace Core.Infrastructure.SqlClient
 
                         result.Add(tableInfoBuilder.Build());
                     }
+                    }
                 }
 
                 // Enhance table information if not all data was available in the initial query
-                await EnhanceTableInfoAsync(result, connection, capabilities, cancellationToken);
+                await EnhanceTableInfoAsync(result, connection, capabilities, timeoutSeconds, cancellationToken);
                 
                 // If we switched database contexts and it's not Azure SQL, switch back to the original database
                 if (!string.IsNullOrWhiteSpace(databaseName) && !capabilities.IsAzureSqlDatabase)
@@ -133,6 +138,7 @@ namespace Core.Infrastructure.SqlClient
                         string switchBackCommand = $"USE [{originalDatabase}]";
                         using (var command = new SqlCommand(switchBackCommand, connection))
                         {
+                            command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                             await command.ExecuteNonQueryAsync(cancellationToken);
                         }
                     }
@@ -238,11 +244,13 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="tables">The list of tables to enhance</param>
         /// <param name="connection">An open SQL connection</param>
         /// <param name="capabilities">The SQL Server capabilities</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         private async Task EnhanceTableInfoAsync(
             List<TableInfo> tables, 
             SqlConnection connection,
             SqlServerCapability capabilities,
+            int? timeoutSeconds = null,
             CancellationToken cancellationToken = default)
         {
             if (tables == null || tables.Count == 0)
@@ -260,6 +268,7 @@ namespace Core.Infrastructure.SqlClient
                             string countQuery = $"SELECT COUNT(*) FROM [{table.Schema}].[{table.Name}]";
                             using (var command = new SqlCommand(countQuery, connection))
                             {
+                                command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                                 var count = await command.ExecuteScalarAsync(cancellationToken);
                                 if (count != null && count != DBNull.Value)
                                 {
@@ -300,7 +309,9 @@ namespace Core.Infrastructure.SqlClient
                                 t.schema_id, t.name";
 
                         using (var command = new SqlCommand(indexQuery, connection))
-                        using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                        {
+                            command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
+                            using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                         {
                             while (await reader.ReadAsync(cancellationToken))
                             {
@@ -322,6 +333,7 @@ namespace Core.Infrastructure.SqlClient
                                     }
                                 }
                             }
+                        }
                         }
                     }
                     catch (Exception ex)
@@ -356,6 +368,7 @@ namespace Core.Infrastructure.SqlClient
                                         
                                 using (var command = new SqlCommand(sizeQuery, connection))
                                 {
+                                    command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                                     var size = await command.ExecuteScalarAsync(cancellationToken);
                                     if (size != null && size != DBNull.Value)
                                     {
@@ -388,9 +401,10 @@ namespace Core.Infrastructure.SqlClient
         /// <summary>
         /// Lists all databases on the server.
         /// </summary>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of database information</returns>
-        public async Task<IEnumerable<DatabaseInfo>> ListDatabasesAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<DatabaseInfo>> ListDatabasesAsync(int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             var capabilities = await GetCapabilitiesAsync(cancellationToken);
             var result = new List<DatabaseInfo>();
@@ -403,7 +417,9 @@ namespace Core.Infrastructure.SqlClient
                 string query = BuildDatabaseListQuery(capabilities);
 
                 using (var command = new SqlCommand(query, connection))
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                {
+                    command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                 {
                     var fieldMap = GetReaderFieldMap(reader);
                     
@@ -434,6 +450,7 @@ namespace Core.Infrastructure.SqlClient
                             dbInfoBuilder.WithIsReadOnly(Convert.ToBoolean(reader[readOnlyIndex]));
 
                         result.Add(dbInfoBuilder.Build());
+                    }
                     }
                 }
             }
@@ -480,9 +497,10 @@ namespace Core.Infrastructure.SqlClient
         /// Checks if a database exists and is accessible.
         /// </summary>
         /// <param name="databaseName">Name of the database to check</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>True if the database exists and is accessible, otherwise false</returns>
-        public async Task<bool> DoesDatabaseExistAsync(string databaseName, CancellationToken cancellationToken = default)
+        public async Task<bool> DoesDatabaseExistAsync(string databaseName, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
@@ -496,6 +514,7 @@ namespace Core.Infrastructure.SqlClient
 
                 using (var command = new SqlCommand(query, connection))
                 {
+                    command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                     command.Parameters.AddWithValue("@DatabaseName", databaseName);
                     var result = await command.ExecuteScalarAsync(cancellationToken);
                     return Convert.ToInt32(result) > 0;
@@ -592,9 +611,10 @@ namespace Core.Infrastructure.SqlClient
         /// </summary>
         /// <param name="tableName">The name of the table to get schema for</param>
         /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>Table schema information</returns>
-        public async Task<TableSchemaInfo> GetTableSchemaAsync(string tableName, string? databaseName = null, CancellationToken cancellationToken = default)
+        public async Task<TableSchemaInfo> GetTableSchemaAsync(string tableName, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(tableName))
             {
@@ -636,6 +656,7 @@ namespace Core.Infrastructure.SqlClient
                 string currentDbQuery = "SELECT DB_NAME()";
                 using (var command = new SqlCommand(currentDbQuery, connection))
                 {
+                    command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                     currentDbName = (string?)await command.ExecuteScalarAsync(cancellationToken) ?? GetCurrentDatabaseName();
                 }
 
@@ -646,6 +667,7 @@ namespace Core.Infrastructure.SqlClient
                     string checkDbQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = @dbName AND state_desc = 'ONLINE'";
                     using (var checkCommand = new SqlCommand(checkDbQuery, connection))
                     {
+                        checkCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                         checkCommand.Parameters.AddWithValue("@dbName", databaseName);
                         int dbCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync(cancellationToken));
 
@@ -659,6 +681,7 @@ namespace Core.Infrastructure.SqlClient
                     string useDbCommand = $"USE [{databaseName}]";
                     using (var useCommand = new SqlCommand(useDbCommand, connection))
                     {
+                        useCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                         await useCommand.ExecuteNonQueryAsync(cancellationToken);
                     }
 
@@ -681,6 +704,7 @@ namespace Core.Infrastructure.SqlClient
 
                         using (var command = new SqlCommand(checkTableQuery, connection))
                         {
+                            command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                             command.Parameters.AddWithValue("@schemaName", schemaName);
                             command.Parameters.AddWithValue("@tableName", tableNameOnly);
                             int tableCount = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
@@ -698,7 +722,8 @@ namespace Core.Infrastructure.SqlClient
                 var columnMsDescriptions = await GetMsDescriptionForTableColumnsAsync(
                     connection,
                     schemaName,
-                    tableName
+                    tableName,
+                    timeoutSeconds
                     );
 
                 foreach (DataRow row in schemaTable.Rows)
@@ -723,6 +748,7 @@ namespace Core.Infrastructure.SqlClient
                         string switchBackCommand = $"USE [{originalDatabase}]";
                         using (var command = new SqlCommand(switchBackCommand, connection))
                         {
+                            command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                             await command.ExecuteNonQueryAsync(cancellationToken);
                         }
                     }
@@ -731,7 +757,8 @@ namespace Core.Infrastructure.SqlClient
                 var tableMsDescription = await GetMsDescriptionForTableAsync(
                     connection,
                     schemaName,
-                    tableName
+                    tableName,
+                    timeoutSeconds
                     );
 
                 // For the TableSchemaInfo output, use the original table name for better UX
@@ -743,9 +770,10 @@ namespace Core.Infrastructure.SqlClient
         /// Lists all stored procedures with optional database context switching.
         /// </summary>
         /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of stored procedure information</returns>
-        public async Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string? databaseName = null, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             var capabilities = await GetCapabilitiesAsync(cancellationToken);
             var result = new List<StoredProcedureInfo>();
@@ -770,6 +798,7 @@ namespace Core.Infrastructure.SqlClient
                     string changeDbCommand = $"USE [{databaseName}]";
                     using (var command = new SqlCommand(changeDbCommand, connection))
                     {
+                        command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                         await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                 }
@@ -794,7 +823,9 @@ namespace Core.Infrastructure.SqlClient
                         s.name, p.name";
                 
                 using (var command = new SqlCommand(query, connection))
-                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                {
+                    command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                 {
                     while (await reader.ReadAsync(cancellationToken))
                     {
@@ -818,6 +849,7 @@ namespace Core.Infrastructure.SqlClient
                             ExecutionCount: null,
                             AverageDurationMs: null
                         ));
+                    }
                     }
                 }
                 
@@ -855,6 +887,7 @@ namespace Core.Infrastructure.SqlClient
                         
                         using (var paramCommand = new SqlCommand(paramQuery, connection))
                         {
+                            paramCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                             paramCommand.Parameters.AddWithValue("@schemaName", proc.SchemaName);
                             paramCommand.Parameters.AddWithValue("@procName", proc.Name);
                             
@@ -923,6 +956,7 @@ namespace Core.Infrastructure.SqlClient
                                 
                         using (var statsCommand = new SqlCommand(statsQuery, connection))
                         {
+                            statsCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                             try
                             {
                                 using (var statsReader = await statsCommand.ExecuteReaderAsync(cancellationToken))
@@ -987,6 +1021,7 @@ namespace Core.Infrastructure.SqlClient
                         string switchBackCommand = $"USE [{originalDatabase}]";
                         using (var command = new SqlCommand(switchBackCommand, connection))
                         {
+                            command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                             await command.ExecuteNonQueryAsync(cancellationToken);
                         }
                     }
@@ -1001,9 +1036,10 @@ namespace Core.Infrastructure.SqlClient
         /// </summary>
         /// <param name="procedureName">The name of the stored procedure</param>
         /// <param name="databaseName">Optional database name to switch context. If null, uses current database.</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>Stored procedure definition as SQL string</returns>
-        public async Task<string> GetStoredProcedureDefinitionAsync(string procedureName, string? databaseName = null, CancellationToken cancellationToken = default)
+        public async Task<string> GetStoredProcedureDefinitionAsync(string procedureName, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(procedureName))
             {
@@ -1052,6 +1088,7 @@ namespace Core.Infrastructure.SqlClient
                     string checkDbQuery = "SELECT COUNT(*) FROM sys.databases WHERE name = @dbName AND state_desc = 'ONLINE'";
                     using (var checkCommand = new SqlCommand(checkDbQuery, connection))
                     {
+                        checkCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                         checkCommand.Parameters.AddWithValue("@dbName", databaseName);
                         int dbCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync(cancellationToken));
                         
@@ -1065,6 +1102,7 @@ namespace Core.Infrastructure.SqlClient
                     string useDbCommand = $"USE [{databaseName}]";
                     using (var useCommand = new SqlCommand(useDbCommand, connection))
                     {
+                        useCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                         await useCommand.ExecuteNonQueryAsync(cancellationToken);
                     }
                 }
@@ -1078,6 +1116,7 @@ namespace Core.Infrastructure.SqlClient
                     
                 using (var checkCommand = new SqlCommand(checkProcQuery, connection))
                 {
+                    checkCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                     checkCommand.Parameters.AddWithValue("@schemaName", schemaName);
                     checkCommand.Parameters.AddWithValue("@procName", procNameOnly);
                     int procCount = Convert.ToInt32(await checkCommand.ExecuteScalarAsync(cancellationToken));
@@ -1099,6 +1138,7 @@ namespace Core.Infrastructure.SqlClient
                     
                 using (var command = new SqlCommand(definitionQuery, connection))
                 {
+                    command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                     command.Parameters.AddWithValue("@schemaName", schemaName);
                     command.Parameters.AddWithValue("@procName", procNameOnly);
                     
@@ -1120,6 +1160,7 @@ namespace Core.Infrastructure.SqlClient
                         
                     using (var command = new SqlCommand(altDefinitionQuery, connection))
                     {
+                        command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                         command.Parameters.AddWithValue("@fullProcName", $"{schemaName}.{procNameOnly}");
                         
                         var result = await command.ExecuteScalarAsync(cancellationToken);
@@ -1142,6 +1183,7 @@ namespace Core.Infrastructure.SqlClient
                         
                     using (var command = new SqlCommand(spHelpTextQuery, connection))
                     {
+                        command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                         command.Parameters.AddWithValue("@fullProcName", $"{schemaName}.{procNameOnly}");
                         
                         try
@@ -1173,6 +1215,7 @@ namespace Core.Infrastructure.SqlClient
                         
                     using (var command = new SqlCommand(encryptedCheckQuery, connection))
                     {
+                        command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                         command.Parameters.AddWithValue("@schemaName", schemaName);
                         command.Parameters.AddWithValue("@procName", procNameOnly);
                         
@@ -1200,6 +1243,7 @@ namespace Core.Infrastructure.SqlClient
                         string switchBackCommand = $"USE [{originalDatabase}]";
                         using (var command = new SqlCommand(switchBackCommand, connection))
                         {
+                            command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                             await command.ExecuteNonQueryAsync(cancellationToken);
                         }
                     }
@@ -1515,7 +1559,8 @@ namespace Core.Infrastructure.SqlClient
         private async Task<string?> GetMsDescriptionForTableAsync(
             SqlConnection connection,
             string? schemaName,
-            string tableName
+            string tableName,
+            int? timeoutSeconds = null
             )
         {
             ArgumentNullException.ThrowIfNull(connection);
@@ -1538,6 +1583,7 @@ WHERE
 """;
             using (var command = new SqlCommand(CheckDbQuery, connection))
             {
+                command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                 command.Parameters.AddWithValue("@tableName", tableName);
                 command.Parameters.AddWithValue("@schemaName", schemaName);
 
@@ -1553,7 +1599,8 @@ WHERE
         private async Task<Dictionary<string, string?>> GetMsDescriptionForTableColumnsAsync(
             SqlConnection connection,
             string? schemaName,
-            string tableName
+            string tableName,
+            int? timeoutSeconds = null
             )
         {
             ArgumentNullException.ThrowIfNull(connection);
@@ -1582,6 +1629,7 @@ WHERE
 """;
             using (var command = new SqlCommand(CheckDbQuery, connection))
             {
+                command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                 command.Parameters.AddWithValue("@tableName", tableName);
                 command.Parameters.AddWithValue("@schemaName", schemaName);
 

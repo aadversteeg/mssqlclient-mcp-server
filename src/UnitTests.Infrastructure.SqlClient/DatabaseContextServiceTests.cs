@@ -60,7 +60,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 new TableInfo("dbo", "Table2", 5, 0.5, DateTime.Now, DateTime.Now, 1, 0, "Normal")
             };
             
-            _mockDatabaseService.Setup(x => x.ListTablesAsync(null, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ListTablesAsync(null, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedTables);
             
             // Act
@@ -68,7 +68,7 @@ namespace UnitTests.Infrastructure.SqlClient
             
             // Assert
             result.Should().BeEquivalentTo(expectedTables);
-            _mockDatabaseService.Verify(x => x.ListTablesAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ListTablesAsync(null, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-003: GetTableSchemaAsync delegates to database service with null database name")]
@@ -78,7 +78,7 @@ namespace UnitTests.Infrastructure.SqlClient
             var tableName = "TestTable";
             var expectedSchema = new TableSchemaInfo(tableName, "TestDb", string.Empty, new List<TableColumnInfo>());
             
-            _mockDatabaseService.Setup(x => x.GetTableSchemaAsync(tableName, null, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.GetTableSchemaAsync(tableName, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedSchema);
             
             // Act
@@ -86,7 +86,7 @@ namespace UnitTests.Infrastructure.SqlClient
             
             // Assert
             result.Should().BeEquivalentTo(expectedSchema);
-            _mockDatabaseService.Verify(x => x.GetTableSchemaAsync(tableName, null, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.GetTableSchemaAsync(tableName, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-004: GetTableSchemaAsync with empty table name throws ArgumentException")]
@@ -161,7 +161,7 @@ namespace UnitTests.Infrastructure.SqlClient
                     AverageDurationMs: null)
             };
             
-            _mockDatabaseService.Setup(x => x.ListStoredProceduresAsync(null, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ListStoredProceduresAsync(null, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedProcs);
             
             // Act
@@ -169,7 +169,7 @@ namespace UnitTests.Infrastructure.SqlClient
             
             // Assert
             result.Should().BeEquivalentTo(expectedProcs);
-            _mockDatabaseService.Verify(x => x.ListStoredProceduresAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ListStoredProceduresAsync(null, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-008: GetStoredProcedureDefinitionAsync delegates to database service with null database name")]
@@ -179,7 +179,7 @@ namespace UnitTests.Infrastructure.SqlClient
             var procedureName = "TestProc";
             var expectedDefinition = "CREATE PROCEDURE TestProc AS SELECT 1;";
             
-            _mockDatabaseService.Setup(x => x.GetStoredProcedureDefinitionAsync(procedureName, null, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.GetStoredProcedureDefinitionAsync(procedureName, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedDefinition);
             
             // Act
@@ -187,7 +187,7 @@ namespace UnitTests.Infrastructure.SqlClient
             
             // Assert
             result.Should().Be(expectedDefinition);
-            _mockDatabaseService.Verify(x => x.GetStoredProcedureDefinitionAsync(procedureName, null, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.GetStoredProcedureDefinitionAsync(procedureName, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-009: GetStoredProcedureDefinitionAsync with empty procedure name throws ArgumentException")]

@@ -14,33 +14,37 @@ namespace Core.Application.Interfaces
         /// Lists all tables in the specified database.
         /// </summary>
         /// <param name="databaseName">Name of the database</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of table information</returns>
-        Task<IEnumerable<TableInfo>> ListTablesAsync(string databaseName, CancellationToken cancellationToken = default);
+        Task<IEnumerable<TableInfo>> ListTablesAsync(string databaseName, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Lists all databases on the server.
         /// </summary>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of database information</returns>
-        Task<IEnumerable<DatabaseInfo>> ListDatabasesAsync(CancellationToken cancellationToken = default);
+        Task<IEnumerable<DatabaseInfo>> ListDatabasesAsync(int? timeoutSeconds = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the schema information for a specific table in the specified database.
         /// </summary>
         /// <param name="databaseName">Name of the database containing the table</param>
         /// <param name="tableName">The name of the table to get schema for</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>Table schema information</returns>
-        Task<TableSchemaInfo> GetTableSchemaAsync(string databaseName, string tableName, CancellationToken cancellationToken = default);
+        Task<TableSchemaInfo> GetTableSchemaAsync(string databaseName, string tableName, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Checks if a database exists and is accessible.
         /// </summary>
         /// <param name="databaseName">Name of the database to check</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>True if the database exists and is accessible, otherwise false</returns>
-        Task<bool> DoesDatabaseExistAsync(string databaseName, CancellationToken cancellationToken = default);
+        Task<bool> DoesDatabaseExistAsync(string databaseName, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Executes a SQL query in the specified database.
@@ -56,18 +60,20 @@ namespace Core.Application.Interfaces
         /// Lists all stored procedures in the specified database.
         /// </summary>
         /// <param name="databaseName">Name of the database</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of stored procedure information</returns>
-        Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string databaseName, CancellationToken cancellationToken = default);
+        Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string databaseName, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the definition information for a specific stored procedure in the specified database.
         /// </summary>
         /// <param name="databaseName">Name of the database containing the stored procedure</param>
         /// <param name="procedureName">The name of the stored procedure</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>Stored procedure definition as SQL string</returns>
-        Task<string> GetStoredProcedureDefinitionAsync(string databaseName, string procedureName, CancellationToken cancellationToken = default);
+        Task<string> GetStoredProcedureDefinitionAsync(string databaseName, string procedureName, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Executes a stored procedure in the specified database.

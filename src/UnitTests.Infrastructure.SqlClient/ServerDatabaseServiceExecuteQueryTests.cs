@@ -29,7 +29,7 @@ namespace UnitTests.Infrastructure.SqlClient
             string query = "SELECT * FROM Users";
             var mockDataReader = new Mock<IAsyncDataReader>();
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
                 
             _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
@@ -78,7 +78,7 @@ namespace UnitTests.Infrastructure.SqlClient
             string databaseName = "NonExistentDb";
             string query = "SELECT * FROM Users";
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
             
             // Act
@@ -98,7 +98,7 @@ namespace UnitTests.Infrastructure.SqlClient
             var cancellationToken = new CancellationToken();
             var mockDataReader = new Mock<IAsyncDataReader>();
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, cancellationToken))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), cancellationToken))
                 .ReturnsAsync(true);
                 
             _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<int?>(), cancellationToken))
@@ -108,7 +108,7 @@ namespace UnitTests.Infrastructure.SqlClient
             await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query, null, cancellationToken);
             
             // Assert
-            _mockDatabaseService.Verify(x => x.DoesDatabaseExistAsync(databaseName, cancellationToken), Times.Once);
+            _mockDatabaseService.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), cancellationToken), Times.Once);
             _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, databaseName, null, cancellationToken), Times.Once);
         }
         
@@ -121,7 +121,7 @@ namespace UnitTests.Infrastructure.SqlClient
             int timeoutSeconds = 120;
             var mockDataReader = new Mock<IAsyncDataReader>();
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
                 
             _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, databaseName, timeoutSeconds, It.IsAny<CancellationToken>()))

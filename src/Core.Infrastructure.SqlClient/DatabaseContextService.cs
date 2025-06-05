@@ -44,7 +44,7 @@ namespace Core.Infrastructure.SqlClient
         public async Task<IEnumerable<TableInfo>> ListTablesAsync(CancellationToken cancellationToken = default)
         {
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.ListTablesAsync(databaseName: null, cancellationToken);
+            return await _databaseService.ListTablesAsync(databaseName: null, timeoutSeconds: null, cancellationToken);
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new ArgumentException("Table name cannot be empty", nameof(tableName));
 
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.GetTableSchemaAsync(tableName, null, cancellationToken);
+            return await _databaseService.GetTableSchemaAsync(tableName, null, null, cancellationToken);
         }
         
         /// <summary>
@@ -86,7 +86,7 @@ namespace Core.Infrastructure.SqlClient
         public async Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(CancellationToken cancellationToken = default)
         {
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.ListStoredProceduresAsync(databaseName: null, cancellationToken);
+            return await _databaseService.ListStoredProceduresAsync(databaseName: null, timeoutSeconds: null, cancellationToken);
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new ArgumentException("Procedure name cannot be empty", nameof(procedureName));
 
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.GetStoredProcedureDefinitionAsync(procedureName, null, cancellationToken);
+            return await _databaseService.GetStoredProcedureDefinitionAsync(procedureName, null, null, cancellationToken);
         }
         
         /// <summary>
