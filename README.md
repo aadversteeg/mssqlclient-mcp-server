@@ -29,6 +29,8 @@ The MCP client operates in one of two modes:
 - **Case-Insensitive Parameters**: Flexible parameter naming with @ prefix normalization
 - **SQL Server Feature Detection**: Comprehensive capability reporting
 - **Two-Mode Architecture**: Optimized for both single-database and multi-database scenarios
+- **Configurable Timeouts**: Default and per-operation timeout control with runtime management tools
+- **Background Session Management**: Execute long-running queries and procedures with session-based monitoring
 
 ### Security & Configuration
 - Configurable tool enablement for security
@@ -179,6 +181,206 @@ This tool is useful for:
 - Understanding which query patterns will be used
 - Verifying whether you're in server or database mode
 
+#### get_command_timeout
+
+Returns current timeout configuration settings.
+
+Example request:
+```json
+{
+  "name": "get_command_timeout",
+  "parameters": {}
+}
+```
+
+Example response:
+```json
+{
+  "defaultCommandTimeoutSeconds": 30,
+  "connectionTimeoutSeconds": 15,
+  "maxConcurrentSessions": 10,
+  "sessionCleanupIntervalMinutes": 60,
+  "timestamp": "2024-12-19 10:30:45 UTC"
+}
+```
+
+#### set_command_timeout
+
+Updates the default command timeout for all new operations.
+
+Parameters:
+- `timeoutSeconds` (required): New timeout in seconds (1-3600)
+
+Example request:
+```json
+{
+  "name": "set_command_timeout",
+  "parameters": {
+    "timeoutSeconds": 120
+  }
+}
+```
+
+Example response:
+```json
+{
+  "message": "Default command timeout updated successfully",
+  "oldTimeoutSeconds": 30,
+  "newTimeoutSeconds": 120,
+  "note": "This change only affects new operations. Existing sessions will continue with their original timeout settings.",
+  "timestamp": "2024-12-19 10:31:00 UTC"
+}
+```
+
+#### Session Management Tools
+
+These tools allow management of long-running queries and stored procedures through background sessions.
+
+##### get_session_status
+
+Check the status of a running query or stored procedure session.
+
+Parameters:
+- `sessionId` (required): The session ID to check
+
+Example request:
+```json
+{
+  "name": "get_session_status",
+  "parameters": {
+    "sessionId": 12345
+  }
+}
+```
+
+Example response:
+```json
+{
+  "sessionId": 12345,
+  "type": "query",
+  "query": "SELECT * FROM LargeTable",
+  "databaseName": "Northwind",
+  "startTime": "2024-12-19 10:30:00 UTC",
+  "endTime": "2024-12-19 10:35:23 UTC",
+  "duration": "323.5 seconds",
+  "status": "completed",
+  "isRunning": false,
+  "rowCount": 1500000,
+  "error": null,
+  "timeoutSeconds": 600
+}
+```
+
+##### get_session_results
+
+Get results from a completed or running query/stored procedure session.
+
+Parameters:
+- `sessionId` (required): The session ID to get results from
+- `maxRows` (optional): Maximum number of rows to return
+
+Example request:
+```json
+{
+  "name": "get_session_results",
+  "parameters": {
+    "sessionId": 12345,
+    "maxRows": 100
+  }
+}
+```
+
+Example response:
+```json
+{
+  "sessionId": 12345,
+  "type": "query",
+  "status": "completed",
+  "rowCount": 1500000,
+  "results": "| CustomerID | CompanyName | ContactName |\n| ---------- | ----------- | ----------- |\n| ALFKI | Alfreds Futterkiste | Maria Anders |\n...\n... (showing first 100 rows of 1500000 total)",
+  "maxRowsApplied": 100
+}
+```
+
+##### stop_session
+
+Stop a running query or stored procedure session.
+
+Parameters:
+- `sessionId` (required): The session ID to stop
+
+Example request:
+```json
+{
+  "name": "stop_session",
+  "parameters": {
+    "sessionId": 12345
+  }
+}
+```
+
+Example response:
+```json
+{
+  "sessionId": 12345,
+  "status": "cancelled",
+  "message": "Session cancelled successfully",
+  "timestamp": "2024-12-19 10:32:15 UTC"
+}
+```
+
+##### list_sessions
+
+List all query and stored procedure sessions.
+
+Parameters:
+- `status` (optional): Filter by status - "all" (default), "running", or "completed"
+
+Example request:
+```json
+{
+  "name": "list_sessions",
+  "parameters": {
+    "status": "running"
+  }
+}
+```
+
+Example response:
+```json
+{
+  "filter": "running",
+  "totalSessions": 2,
+  "sessions": [
+    {
+      "sessionId": 12345,
+      "type": "query",
+      "query": "SELECT * FROM LargeTable...",
+      "databaseName": "Northwind",
+      "startTime": "2024-12-19 10:30:00 UTC",
+      "duration": "45.2 seconds",
+      "status": "running",
+      "isRunning": true,
+      "rowCount": 0,
+      "hasError": false
+    },
+    {
+      "sessionId": 12346,
+      "type": "storedprocedure",
+      "query": "GenerateMonthlyReport",
+      "databaseName": "Sales",
+      "startTime": "2024-12-19 10:25:00 UTC",
+      "duration": "320.1 seconds",
+      "status": "running",
+      "isRunning": true,
+      "rowCount": 0,
+      "hasError": false
+    }
+  ],
+  "timestamp": "2024-12-19 10:30:45 UTC"
+}
+```
+
 ## Database Mode Tools
 
 When connected with a specific database in the connection string, the following tools are available:
@@ -189,6 +391,7 @@ Executes a SQL query on the connected SQL Server database.
 
 Parameters:
 - `query` (required): The SQL query to execute.
+- `timeoutSeconds` (optional): Command timeout in seconds. Overrides the default timeout.
 
 Example request:
 ```json
@@ -442,6 +645,73 @@ Features:
 - Comprehensive error messages with parameter validation
 - Support for output parameters and return values
 
+#### start_query
+
+Start a SQL query in the background on the connected database. Returns a session ID to check progress. Best for long-running queries.
+
+Parameters:
+- `query` (required): The SQL query to execute
+- `timeoutSeconds` (optional): Optional timeout in seconds. If not specified, uses the default timeout
+
+Example request:
+```json
+{
+  "name": "start_query",
+  "parameters": {
+    "query": "SELECT * FROM LargeTable WHERE ProcessingDate >= '2024-01-01'",
+    "timeoutSeconds": 600
+  }
+}
+```
+
+Example response:
+```json
+{
+  "sessionId": 12345,
+  "startTime": "2024-12-19 10:30:00 UTC",
+  "query": "SELECT * FROM LargeTable WHERE ProcessingDate >= '2024-01-01'",
+  "databaseName": "connected database",
+  "timeoutSeconds": 600,
+  "status": "running",
+  "message": "Query started successfully. Use get_session_status to check progress."
+}
+```
+
+#### start_stored_procedure
+
+Start a stored procedure execution in the background. Returns a session ID to check progress. Best for long-running procedures.
+
+Parameters:
+- `procedureName` (required): The name of the stored procedure to execute
+- `parameters` (optional): JSON object containing the parameters for the stored procedure (default: "{}")
+- `timeoutSeconds` (optional): Optional timeout in seconds. If not specified, uses the default timeout
+
+Example request:
+```json
+{
+  "name": "start_stored_procedure",
+  "parameters": {
+    "procedureName": "GenerateMonthlyReport",
+    "parameters": "{\"Month\": 12, \"Year\": 2024, \"IncludeDetails\": true}",
+    "timeoutSeconds": 1200
+  }
+}
+```
+
+Example response:
+```json
+{
+  "sessionId": 12346,
+  "startTime": "2024-12-19 10:35:00 UTC",
+  "procedureName": "GenerateMonthlyReport",
+  "databaseName": "connected database",
+  "parameters": {"Month": 12, "Year": 2024, "IncludeDetails": true},
+  "timeoutSeconds": 1200,
+  "status": "running",
+  "message": "Stored procedure started successfully. Use get_session_status to check progress."
+}
+```
+
 ## Server Mode Tools
 
 When connected without a specific database in the connection string, the following additional tools are available:
@@ -604,6 +874,77 @@ Example request:
 }
 ```
 
+#### start_query_in_database
+
+Start a SQL query in the background for a specific database. Returns a session ID to check progress. Best for long-running queries (server mode).
+
+Parameters:
+- `databaseName` (required): The name of the database to execute the query in
+- `query` (required): The SQL query to execute
+- `timeoutSeconds` (optional): Optional timeout in seconds. If not specified, uses the default timeout
+
+Example request:
+```json
+{
+  "name": "start_query_in_database",
+  "parameters": {
+    "databaseName": "DataWarehouse",
+    "query": "EXEC sp_refreshview 'vw_SalesSummary'; SELECT * FROM vw_SalesSummary",
+    "timeoutSeconds": 900
+  }
+}
+```
+
+Example response:
+```json
+{
+  "sessionId": 12347,
+  "startTime": "2024-12-19 10:40:00 UTC",
+  "query": "EXEC sp_refreshview 'vw_SalesSummary'; SELECT * FROM vw_SalesSummary",
+  "databaseName": "DataWarehouse",
+  "timeoutSeconds": 900,
+  "status": "running",
+  "message": "Query started successfully. Use get_session_status to check progress."
+}
+```
+
+#### start_stored_procedure_in_database
+
+Start a stored procedure execution in the background for a specific database. Returns a session ID to check progress. Best for long-running procedures (server mode).
+
+Parameters:
+- `databaseName` (required): The name of the database containing the stored procedure
+- `procedureName` (required): The name of the stored procedure to execute
+- `parameters` (optional): JSON object containing the parameters for the stored procedure (default: "{}")
+- `timeoutSeconds` (optional): Optional timeout in seconds. If not specified, uses the default timeout
+
+Example request:
+```json
+{
+  "name": "start_stored_procedure_in_database",
+  "parameters": {
+    "databaseName": "Analytics",
+    "procedureName": "sp_BuildDataMart",
+    "parameters": "{\"StartDate\": \"2024-01-01\", \"EndDate\": \"2024-12-31\", \"RebuildIndexes\": true}",
+    "timeoutSeconds": 3600
+  }
+}
+```
+
+Example response:
+```json
+{
+  "sessionId": 12348,
+  "startTime": "2024-12-19 10:45:00 UTC",
+  "procedureName": "sp_BuildDataMart",
+  "databaseName": "Analytics",
+  "parameters": {"StartDate": "2024-01-01", "EndDate": "2024-12-31", "RebuildIndexes": true},
+  "timeoutSeconds": 3600,
+  "status": "running",
+  "message": "Stored procedure started successfully. Use get_session_status to check progress."
+}
+```
+
 ## Configuration
 
 ### Tool Security Configuration
@@ -618,21 +959,33 @@ By default, SQL query execution tools are disabled for security reasons. To enab
 
 By default, stored procedure execution tools are disabled for security reasons. To enable these tools, set the `EnableExecuteStoredProcedure` configuration setting to `true`.
 
+#### Session-Based Execution Security
+
+By default, session-based query execution tools are disabled for security reasons. To enable these tools, set the `EnableStartQuery` configuration setting to `true`.
+
+By default, session-based stored procedure execution tools are disabled for security reasons. To enable these tools, set the `EnableStartStoredProcedure` configuration setting to `true`.
+
 These can be configured in several ways:
 
 1. In the `appsettings.json` file:
 ```json
 {
-  "EnableExecuteQuery": true,
-  "EnableExecuteStoredProcedure": true
+  "DatabaseConfiguration": {
+    "EnableExecuteQuery": true,
+    "EnableExecuteStoredProcedure": true,
+    "EnableStartQuery": true,
+    "EnableStartStoredProcedure": true
+  }
 }
 ```
 
 2. As environment variables when running the container:
 ```bash
 docker run \
-  -e "EnableExecuteQuery=true" \
-  -e "EnableExecuteStoredProcedure=true" \
+  -e "DatabaseConfiguration__EnableExecuteQuery=true" \
+  -e "DatabaseConfiguration__EnableExecuteStoredProcedure=true" \
+  -e "DatabaseConfiguration__EnableStartQuery=true" \
+  -e "DatabaseConfiguration__EnableStartStoredProcedure=true" \
   -e "MSSQL_CONNECTIONSTRING=Server=your_server;..." \
   aadversteeg/mssqlclient-mcp-server:latest
 ```
@@ -646,13 +999,175 @@ docker run \
   ],
   "env": {
     "MSSQL_CONNECTIONSTRING": "Server=your_server;...",
-    "EnableExecuteQuery": "true",
-    "EnableExecuteStoredProcedure": "true"
+    "DatabaseConfiguration__EnableExecuteQuery": "true",
+    "DatabaseConfiguration__EnableExecuteStoredProcedure": "true",
+    "DatabaseConfiguration__EnableStartQuery": "true",
+    "DatabaseConfiguration__EnableStartStoredProcedure": "true"
   }
 }
 ```
 
 When these settings are `false` (the default), the respective execution tools will not be registered and will not be available to clients. This provides additional security layers when you only want to allow read-only operations.
+
+### Timeout Configuration
+
+The SQL Server MCP Client provides comprehensive timeout configuration at multiple levels to handle various workload requirements.
+
+#### Default Timeout Settings
+
+Configure default timeouts in `appsettings.json`:
+
+```json
+{
+  "DatabaseConfiguration": {
+    "DefaultCommandTimeoutSeconds": 30,
+    "ConnectionTimeoutSeconds": 15,
+    "MaxConcurrentSessions": 10,
+    "SessionCleanupIntervalMinutes": 60
+  }
+}
+```
+
+**Timeout settings:**
+- `DefaultCommandTimeoutSeconds`: Default timeout for SQL command execution (default: 30 seconds)
+- `ConnectionTimeoutSeconds`: Timeout for establishing SQL connections (default: 15 seconds)
+- `MaxConcurrentSessions`: Maximum number of concurrent query sessions (default: 10)
+- `SessionCleanupIntervalMinutes`: Interval for cleaning up completed sessions (default: 60 minutes)
+
+These can also be set via environment variables:
+
+```bash
+# Docker example
+docker run \
+  -e "DatabaseConfiguration__DefaultCommandTimeoutSeconds=60" \
+  -e "DatabaseConfiguration__ConnectionTimeoutSeconds=30" \
+  -e "MSSQL_CONNECTIONSTRING=Server=your_server;..." \
+  aadversteeg/mssqlclient-mcp-server:latest
+
+# Claude Desktop configuration
+"mssql": {
+  "command": "docker",
+  "args": ["run", "--rm", "-i",
+    "-e", "DatabaseConfiguration__DefaultCommandTimeoutSeconds=60",
+    "-e", "DatabaseConfiguration__ConnectionTimeoutSeconds=30",
+    "-e", "MSSQL_CONNECTIONSTRING=Server=your_server;...",
+    "aadversteeg/mssqlclient-mcp-server:latest"
+  ]
+}
+```
+
+#### Runtime Timeout Management
+
+The server provides tools to manage timeouts dynamically:
+
+##### get_command_timeout
+
+Returns current timeout configuration settings.
+
+Example request:
+```json
+{
+  "name": "get_command_timeout",
+  "parameters": {}
+}
+```
+
+Example response:
+```json
+{
+  "defaultCommandTimeoutSeconds": 30,
+  "connectionTimeoutSeconds": 15,
+  "maxConcurrentSessions": 10,
+  "sessionCleanupIntervalMinutes": 60,
+  "timestamp": "2024-12-19 10:30:45 UTC"
+}
+```
+
+##### set_command_timeout
+
+Updates the default command timeout for all new operations. Existing operations continue with their original timeout.
+
+Parameters:
+- `timeoutSeconds` (required): New timeout in seconds (1-3600)
+
+Example request:
+```json
+{
+  "name": "set_command_timeout",
+  "parameters": {
+    "timeoutSeconds": 120
+  }
+}
+```
+
+Example response:
+```json
+{
+  "message": "Default command timeout updated successfully",
+  "oldTimeoutSeconds": 30,
+  "newTimeoutSeconds": 120,
+  "note": "This change only affects new operations. Existing sessions will continue with their original timeout settings.",
+  "timestamp": "2024-12-19 10:31:00 UTC"
+}
+```
+
+#### Per-Operation Timeouts
+
+Most database operations support an optional `timeoutSeconds` parameter that overrides the default timeout for that specific operation:
+
+```json
+// Long-running query with 5-minute timeout
+{
+  "name": "execute_query",
+  "parameters": {
+    "query": "SELECT * FROM LargeTable WITH (NOLOCK)",
+    "timeoutSeconds": 300
+  }
+}
+
+// Complex stored procedure with 10-minute timeout
+{
+  "name": "execute_stored_procedure",
+  "parameters": {
+    "procedureName": "GenerateMonthlyReport",
+    "parameters": "{}",
+    "timeoutSeconds": 600
+  }
+}
+
+// Quick table list with 10-second timeout
+{
+  "name": "list_tables",
+  "parameters": {
+    "timeoutSeconds": 10
+  }
+}
+```
+
+**Tools supporting per-operation timeouts:**
+- All query execution tools (`execute_query`, `execute_query_in_database`)
+- All stored procedure tools (`execute_stored_procedure`, `execute_stored_procedure_in_database`, `get_stored_procedure_parameters`)
+- All schema discovery tools (`list_tables`, `get_table_schema`, `list_stored_procedures`)
+- Session management tools (`start_query`, `start_stored_procedure`, `start_query_in_database`, `start_stored_procedure_in_database`)
+
+#### Best Practices
+
+1. **Default Configuration**: Set reasonable defaults in `appsettings.json` based on your typical workload
+2. **Long Operations**: Use per-operation timeouts for known long-running queries or procedures
+3. **Dynamic Adjustment**: Use `set_command_timeout` when working with varying workloads throughout the day
+4. **Monitoring**: Use `get_command_timeout` to verify current settings before running critical operations
+5. **Background Operations**: For very long operations, use the session-based tools:
+   - `start_query` / `start_query_in_database` for long-running queries
+   - `start_stored_procedure` / `start_stored_procedure_in_database` for long-running procedures
+   - Monitor progress with `get_session_status`
+   - Retrieve results with `get_session_results`
+   - Cancel if needed with `stop_session`
+
+#### Timeout Limits
+
+- **Command Timeout**: 1-3600 seconds (1 hour maximum)
+- **Connection Timeout**: Configured at startup only (no runtime changes)
+- **Per-Operation Override**: Always takes precedence over default settings
 
 ### Database Connection String
 
@@ -661,17 +1176,21 @@ The SQL Server connection string is required to connect to your database. This c
 You can set the connection string using the `MSSQL_CONNECTIONSTRING` environment variable:
 
 ```bash
-# Database Mode with both execution types enabled
+# Database Mode with all execution types enabled
 docker run \
-  -e "EnableExecuteQuery=true" \
-  -e "EnableExecuteStoredProcedure=true" \
+  -e "DatabaseConfiguration__EnableExecuteQuery=true" \
+  -e "DatabaseConfiguration__EnableExecuteStoredProcedure=true" \
+  -e "DatabaseConfiguration__EnableStartQuery=true" \
+  -e "DatabaseConfiguration__EnableStartStoredProcedure=true" \
   -e "MSSQL_CONNECTIONSTRING=Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;" \
   aadversteeg/mssqlclient-mcp-server:latest
 
-# Server Mode with both execution types enabled
+# Server Mode with all execution types enabled
 docker run \
-  -e "EnableExecuteQuery=true" \
-  -e "EnableExecuteStoredProcedure=true" \
+  -e "DatabaseConfiguration__EnableExecuteQuery=true" \
+  -e "DatabaseConfiguration__EnableExecuteStoredProcedure=true" \
+  -e "DatabaseConfiguration__EnableStartQuery=true" \
+  -e "DatabaseConfiguration__EnableStartStoredProcedure=true" \
   -e "MSSQL_CONNECTIONSTRING=Server=your_server;User Id=your_user;Password=your_password;TrustServerCertificate=True;" \
   aadversteeg/mssqlclient-mcp-server:latest
 ```
@@ -718,8 +1237,10 @@ To configure Claude Desktop to use a locally installed SQL Server MCP client:
   ],
   "env": {
     "MSSQL_CONNECTIONSTRING": "Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;",
-    "EnableExecuteQuery": "true",
-    "EnableExecuteStoredProcedure": "true"
+    "DatabaseConfiguration__EnableExecuteQuery": "true",
+    "DatabaseConfiguration__EnableExecuteStoredProcedure": "true",
+    "DatabaseConfiguration__EnableStartQuery": "true",
+    "DatabaseConfiguration__EnableStartStoredProcedure": "true"
   }
 }
 ```
@@ -739,8 +1260,10 @@ To use the SQL Server MCP client from a Docker container with Claude Desktop:
     "--rm",
     "-i",
     "-e", "MSSQL_CONNECTIONSTRING=Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;",
-    "-e", "EnableExecuteQuery=true",
-    "-e", "EnableExecuteStoredProcedure=true",
+    "-e", "DatabaseConfiguration__EnableExecuteQuery=true",
+    "-e", "DatabaseConfiguration__EnableExecuteStoredProcedure=true",
+    "-e", "DatabaseConfiguration__EnableStartQuery=true",
+    "-e", "DatabaseConfiguration__EnableStartStoredProcedure=true",
     "aadversteeg/mssqlclient-mcp-server:latest"
   ]
 }

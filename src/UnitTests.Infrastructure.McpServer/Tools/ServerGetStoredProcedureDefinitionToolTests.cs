@@ -115,7 +115,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var procedureName = "TestProcedure";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
             
             var tool = new ServerGetStoredProcedureDefinitionTool(mockServerDatabase.Object);
@@ -127,7 +127,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Be($"Error: Database '{databaseName}' does not exist or is not accessible");
             
             // Verify database existence was checked
-            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SGSPDT-009: GetStoredProcedureDefinitionInDatabase returns formatted definition when procedure exists")]
@@ -139,9 +139,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedDefinition = "CREATE PROCEDURE GetUserById\n@UserId INT\nAS\nBEGIN\n    SELECT * FROM Users WHERE Id = @UserId\nEND";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
-            mockServerDatabase.Setup(x => x.GetStoredProcedureDefinitionAsync(databaseName, procedureName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.GetStoredProcedureDefinitionAsync(databaseName, procedureName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedDefinition);
             
             var tool = new ServerGetStoredProcedureDefinitionTool(mockServerDatabase.Object);
@@ -154,8 +154,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain(expectedDefinition);
             
             // Verify both database existence and definition retrieval were called
-            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
-            mockServerDatabase.Verify(x => x.GetStoredProcedureDefinitionAsync(databaseName, procedureName, It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.GetStoredProcedureDefinitionAsync(databaseName, procedureName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SGSPDT-010: GetStoredProcedureDefinitionInDatabase returns helpful message when definition is empty")]
@@ -166,9 +166,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var procedureName = "NonExistentProcedure";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
-            mockServerDatabase.Setup(x => x.GetStoredProcedureDefinitionAsync(databaseName, procedureName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.GetStoredProcedureDefinitionAsync(databaseName, procedureName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(string.Empty);
             
             var tool = new ServerGetStoredProcedureDefinitionTool(mockServerDatabase.Object);
@@ -180,8 +180,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Be($"No definition found for stored procedure '{procedureName}' in database '{databaseName}'. The procedure might not exist or you don't have permission to view its definition.");
             
             // Verify both methods were called
-            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
-            mockServerDatabase.Verify(x => x.GetStoredProcedureDefinitionAsync(databaseName, procedureName, It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.GetStoredProcedureDefinitionAsync(databaseName, procedureName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SGSPDT-011: GetStoredProcedureDefinitionInDatabase handles exception from database existence check")]
@@ -193,7 +193,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Database connection failed";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
             var tool = new ServerGetStoredProcedureDefinitionTool(mockServerDatabase.Object);
@@ -215,9 +215,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Procedure access denied";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
-            mockServerDatabase.Setup(x => x.GetStoredProcedureDefinitionAsync(databaseName, procedureName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.GetStoredProcedureDefinitionAsync(databaseName, procedureName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new UnauthorizedAccessException(expectedErrorMessage));
             
             var tool = new ServerGetStoredProcedureDefinitionTool(mockServerDatabase.Object);

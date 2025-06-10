@@ -75,6 +75,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(definition);
             
@@ -89,6 +90,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain(definition);
             mockDatabaseContext.Verify(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
         }
@@ -103,6 +105,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(emptyDefinition);
             
@@ -126,6 +129,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(whitespaceDefinition);
             
@@ -149,6 +153,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
@@ -159,6 +164,111 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             // Assert
             result.Should().Contain(expectedErrorMessage);
+        }
+        
+        [Fact(DisplayName = "GSPDT-009: GetStoredProcedureDefinition with timeout parameter passes through correctly")]
+        public async Task GSPDT009()
+        {
+            // Arrange
+            var procedureName = "dbo.GetUserDetails";
+            var timeoutSeconds = 45;
+            var definition = "CREATE PROCEDURE dbo.GetUserDetails @UserId INT AS BEGIN SELECT * FROM Users WHERE Id = @UserId END";
+            
+            var mockDatabaseContext = new Mock<IDatabaseContext>();
+            mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
+                procedureName,
+                timeoutSeconds,
+                It.IsAny<CancellationToken>()))
+                .ReturnsAsync(definition);
+            
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            
+            // Act
+            var result = await tool.GetStoredProcedureDefinition(procedureName, timeoutSeconds);
+            
+            // Assert
+            result.Should().NotBeNull();
+            result.Should().Contain($"Definition for stored procedure '{procedureName}':");
+            result.Should().Contain(definition);
+            
+            // Verify the timeout parameter was passed through correctly
+            mockDatabaseContext.Verify(x => x.GetStoredProcedureDefinitionAsync(
+                procedureName,
+                timeoutSeconds,
+                It.IsAny<CancellationToken>()), 
+                Times.Once);
+        }
+        
+        [Fact(DisplayName = "GSPDT-010: GetStoredProcedureDefinition with null timeout uses default")]
+        public async Task GSPDT010()
+        {
+            // Arrange
+            var procedureName = "dbo.DeleteUser";
+            var definition = "CREATE PROCEDURE dbo.DeleteUser @UserId INT AS BEGIN DELETE FROM Users WHERE Id = @UserId END";
+            
+            var mockDatabaseContext = new Mock<IDatabaseContext>();
+            mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
+                procedureName,
+                null,
+                It.IsAny<CancellationToken>()))
+                .ReturnsAsync(definition);
+            
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            
+            // Act
+            var result = await tool.GetStoredProcedureDefinition(procedureName, null);
+            
+            // Assert
+            result.Should().NotBeNull();
+            result.Should().Contain($"Definition for stored procedure '{procedureName}':");
+            result.Should().Contain(definition);
+            
+            // Verify null timeout was passed through
+            mockDatabaseContext.Verify(x => x.GetStoredProcedureDefinitionAsync(
+                procedureName,
+                null,
+                It.IsAny<CancellationToken>()), 
+                Times.Once);
+        }
+        
+        [Fact(DisplayName = "GSPDT-011: GetStoredProcedureDefinition verifies timeout parameter is passed through correctly")]
+        public async Task GSPDT011()
+        {
+            // Arrange
+            var procedureName = "sales.CalculateOrderTotal";
+            var specificTimeout = 120;
+            var definition = "CREATE PROCEDURE sales.CalculateOrderTotal @OrderId INT AS BEGIN SELECT SUM(Price * Quantity) FROM OrderItems WHERE OrderId = @OrderId END";
+            
+            var mockDatabaseContext = new Mock<IDatabaseContext>();
+            mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
+                procedureName,
+                specificTimeout,
+                It.IsAny<CancellationToken>()))
+                .ReturnsAsync(definition);
+            
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            
+            // Act
+            var result = await tool.GetStoredProcedureDefinition(procedureName, specificTimeout);
+            
+            // Assert
+            result.Should().NotBeNull();
+            result.Should().Contain($"Definition for stored procedure '{procedureName}':");
+            result.Should().Contain(definition);
+            
+            // Verify the exact timeout value was passed
+            mockDatabaseContext.Verify(x => x.GetStoredProcedureDefinitionAsync(
+                procedureName,
+                specificTimeout,
+                It.IsAny<CancellationToken>()), 
+                Times.Once);
+            
+            // Verify it was not called with any other timeout value
+            mockDatabaseContext.Verify(x => x.GetStoredProcedureDefinitionAsync(
+                procedureName,
+                It.Is<int?>(t => t != specificTimeout),
+                It.IsAny<CancellationToken>()), 
+                Times.Never);
         }
     }
 }

@@ -84,6 +84,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableSchema);
             
@@ -97,6 +98,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("Users");
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
         }
@@ -111,6 +113,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
@@ -121,6 +124,126 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             // Assert
             result.Should().Contain(expectedErrorMessage);
+        }
+        
+        [Fact(DisplayName = "GTST-007: GetTableSchema with timeout parameter passes through correctly")]
+        public async Task GTST007()
+        {
+            // Arrange
+            var tableName = "Users";
+            var timeoutSeconds = 45;
+            var mockDatabaseContext = new Mock<IDatabaseContext>();
+            var columns = new List<TableColumnInfo>
+            {
+                new TableColumnInfo("Id", "int", "4", "NO", "Primary key"),
+                new TableColumnInfo("Name", "varchar", "255", "YES", "User name")
+            };
+            
+            var tableSchema = new TableSchemaInfo(tableName, "TestDB", "User information table", columns);
+            
+            mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
+                tableName,
+                timeoutSeconds,
+                It.IsAny<CancellationToken>()))
+                .ReturnsAsync(tableSchema);
+            
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            
+            // Act
+            var result = await tool.GetTableSchema(tableName, timeoutSeconds);
+            
+            // Assert
+            result.Should().NotBeNull();
+            result.Should().Contain("Users");
+            
+            // Verify the timeout parameter was passed through correctly
+            mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
+                tableName,
+                timeoutSeconds,
+                It.IsAny<CancellationToken>()), 
+                Times.Once);
+        }
+        
+        [Fact(DisplayName = "GTST-008: GetTableSchema with null timeout uses default")]
+        public async Task GTST008()
+        {
+            // Arrange
+            var tableName = "Products";
+            var mockDatabaseContext = new Mock<IDatabaseContext>();
+            var columns = new List<TableColumnInfo>
+            {
+                new TableColumnInfo("ProductId", "int", "4", "NO", "Product identifier")
+            };
+            
+            var tableSchema = new TableSchemaInfo(tableName, "TestDB", "Product information", columns);
+            
+            mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
+                tableName,
+                null,
+                It.IsAny<CancellationToken>()))
+                .ReturnsAsync(tableSchema);
+            
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            
+            // Act
+            var result = await tool.GetTableSchema(tableName, null);
+            
+            // Assert
+            result.Should().NotBeNull();
+            result.Should().Contain("Products");
+            
+            // Verify null timeout was passed through
+            mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
+                tableName,
+                null,
+                It.IsAny<CancellationToken>()), 
+                Times.Once);
+        }
+        
+        [Fact(DisplayName = "GTST-009: GetTableSchema verifies timeout parameter is passed through correctly")]
+        public async Task GTST009()
+        {
+            // Arrange
+            var tableName = "Orders";
+            var specificTimeout = 90;
+            var mockDatabaseContext = new Mock<IDatabaseContext>();
+            var columns = new List<TableColumnInfo>
+            {
+                new TableColumnInfo("OrderId", "int", "4", "NO", "Order identifier"),
+                new TableColumnInfo("CustomerId", "int", "4", "NO", "Customer identifier"),
+                new TableColumnInfo("OrderDate", "datetime", "8", "NO", "Order date")
+            };
+            
+            var tableSchema = new TableSchemaInfo(tableName, "TestDB", "Order information", columns);
+            
+            mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
+                tableName,
+                specificTimeout,
+                It.IsAny<CancellationToken>()))
+                .ReturnsAsync(tableSchema);
+            
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            
+            // Act
+            var result = await tool.GetTableSchema(tableName, specificTimeout);
+            
+            // Assert
+            result.Should().NotBeNull();
+            result.Should().Contain("Orders");
+            
+            // Verify the exact timeout value was passed
+            mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
+                tableName,
+                specificTimeout,
+                It.IsAny<CancellationToken>()), 
+                Times.Once);
+            
+            // Verify it was not called with any other timeout value
+            mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
+                tableName,
+                It.Is<int?>(t => t != specificTimeout),
+                It.IsAny<CancellationToken>()), 
+                Times.Never);
         }
     }
 }

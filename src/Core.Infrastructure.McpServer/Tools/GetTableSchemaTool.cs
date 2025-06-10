@@ -16,10 +16,16 @@ namespace Core.Infrastructure.McpServer.Tools
             Console.Error.WriteLine("GetTableSchemaTool constructed with database context service");
         }
 
+        /// <summary>
+        /// Gets the schema of a table from the connected SQL Server database
+        /// </summary>
+        /// <param name="tableName">The name of the table to get schema for</param>
+        /// <param name="timeoutSeconds">The timeout in seconds for the operation (optional)</param>
+        /// <returns>Formatted string with table schema information</returns>
         [McpServerTool(Name = "get_table_schema"), Description("Get the schema of a table from the connected SQL Server database.")]
-        public async Task<string> GetTableSchema(string tableName)
+        public async Task<string> GetTableSchema(string tableName, int? timeoutSeconds = null)
         {
-            Console.Error.WriteLine($"GetTableSchema called with tableName: {tableName}");
+            Console.Error.WriteLine($"GetTableSchema called with tableName: {tableName}, timeoutSeconds: {timeoutSeconds}");
             
             if (string.IsNullOrWhiteSpace(tableName))
             {
@@ -29,7 +35,7 @@ namespace Core.Infrastructure.McpServer.Tools
             try
             {
                 // Get schema information for the table using the database context service
-                var tableSchema = await _databaseContext.GetTableSchemaAsync(tableName);
+                var tableSchema = await _databaseContext.GetTableSchemaAsync(tableName, timeoutSeconds);
                 return tableSchema.ToToolResult();
             }
             catch (Exception ex)

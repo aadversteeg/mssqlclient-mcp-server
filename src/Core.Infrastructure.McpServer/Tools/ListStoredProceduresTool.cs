@@ -17,15 +17,20 @@ namespace Core.Infrastructure.McpServer.Tools
             Console.Error.WriteLine("ListStoredProceduresTool constructed with database context service");
         }
 
+        /// <summary>
+        /// Lists all stored procedures in the connected SQL Server database
+        /// </summary>
+        /// <param name="timeoutSeconds">The timeout in seconds for the operation (optional)</param>
+        /// <returns>Formatted string with stored procedures information</returns>
         [McpServerTool(Name = "list_stored_procedures"), Description("List all stored procedures in the connected SQL Server database.")]
-        public async Task<string> ListStoredProcedures()
+        public async Task<string> ListStoredProcedures(int? timeoutSeconds = null)
         {
-            Console.Error.WriteLine("ListStoredProcedures called");
+            Console.Error.WriteLine($"ListStoredProcedures called with timeoutSeconds: {timeoutSeconds}");
             
             try
             {
                 // Use the DatabaseContext service to get the stored procedures
-                var procedures = await _databaseContext.ListStoredProceduresAsync();
+                var procedures = await _databaseContext.ListStoredProceduresAsync(timeoutSeconds);
                 
                 // No stored procedures found
                 if (!procedures.Any())

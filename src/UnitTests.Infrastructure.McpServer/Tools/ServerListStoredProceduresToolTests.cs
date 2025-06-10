@@ -74,7 +74,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var databaseName = "NonExistentDB";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
             
             var tool = new ServerListStoredProceduresTool(mockServerDatabase.Object);
@@ -86,7 +86,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Be($"Error: Database '{databaseName}' does not exist or is not accessible");
             
             // Verify database existence was checked
-            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLSPT-006: ListStoredProceduresInDatabase returns message when no procedures exist")]
@@ -97,9 +97,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var emptyProcedureList = new List<StoredProcedureInfo>();
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
-            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(emptyProcedureList);
             
             var tool = new ServerListStoredProceduresTool(mockServerDatabase.Object);
@@ -111,8 +111,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Be($"No stored procedures found in the database '{databaseName}'.");
             
             // Verify both methods were called
-            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
-            mockServerDatabase.Verify(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLSPT-007: ListStoredProceduresInDatabase returns formatted table when procedures exist")]
@@ -149,9 +149,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
-            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(procedureList);
             
             var tool = new ServerListStoredProceduresTool(mockServerDatabase.Object);
@@ -172,8 +172,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("N/A"); // For null values
             
             // Verify both methods were called
-            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
-            mockServerDatabase.Verify(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLSPT-008: ListStoredProceduresInDatabase handles exception from database existence check")]
@@ -184,7 +184,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Database connection failed";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
             var tool = new ServerListStoredProceduresTool(mockServerDatabase.Object);
@@ -205,9 +205,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Access denied to system views";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
-            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new UnauthorizedAccessException(expectedErrorMessage));
             
             var tool = new ServerListStoredProceduresTool(mockServerDatabase.Object);
@@ -242,9 +242,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
-            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(procedureList);
             
             var tool = new ServerListStoredProceduresTool(mockServerDatabase.Object);
@@ -279,9 +279,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
-            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(procedureList);
             
             var tool = new ServerListStoredProceduresTool(mockServerDatabase.Object);
@@ -323,9 +323,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
-            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(procedureList);
             
             var tool = new ServerListStoredProceduresTool(mockServerDatabase.Object);

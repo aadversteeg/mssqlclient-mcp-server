@@ -39,27 +39,29 @@ namespace Core.Infrastructure.SqlClient
         /// <summary>
         /// Lists all tables in the current database context.
         /// </summary>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of table information</returns>
-        public async Task<IEnumerable<TableInfo>> ListTablesAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<TableInfo>> ListTablesAsync(int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.ListTablesAsync(databaseName: null, timeoutSeconds: null, cancellationToken);
+            return await _databaseService.ListTablesAsync(databaseName: null, timeoutSeconds, cancellationToken);
         }
 
         /// <summary>
         /// Gets the schema information for a specific table in the current database context.
         /// </summary>
         /// <param name="tableName">The name of the table to get schema for</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>Table schema information</returns>
-        public async Task<TableSchemaInfo> GetTableSchemaAsync(string tableName, CancellationToken cancellationToken = default)
+        public async Task<TableSchemaInfo> GetTableSchemaAsync(string tableName, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(tableName))
                 throw new ArgumentException("Table name cannot be empty", nameof(tableName));
 
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.GetTableSchemaAsync(tableName, null, null, cancellationToken);
+            return await _databaseService.GetTableSchemaAsync(tableName, null, timeoutSeconds, cancellationToken);
         }
         
         /// <summary>
@@ -81,27 +83,29 @@ namespace Core.Infrastructure.SqlClient
         /// <summary>
         /// Lists all stored procedures in the current database context.
         /// </summary>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of stored procedure information</returns>
-        public async Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.ListStoredProceduresAsync(databaseName: null, timeoutSeconds: null, cancellationToken);
+            return await _databaseService.ListStoredProceduresAsync(databaseName: null, timeoutSeconds, cancellationToken);
         }
 
         /// <summary>
         /// Gets the definition information for a specific stored procedure in the current database context.
         /// </summary>
         /// <param name="procedureName">The name of the stored procedure</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>Stored procedure definition as SQL string</returns>
-        public async Task<string> GetStoredProcedureDefinitionAsync(string procedureName, CancellationToken cancellationToken = default)
+        public async Task<string> GetStoredProcedureDefinitionAsync(string procedureName, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(procedureName))
                 throw new ArgumentException("Procedure name cannot be empty", nameof(procedureName));
 
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.GetStoredProcedureDefinitionAsync(procedureName, null, null, cancellationToken);
+            return await _databaseService.GetStoredProcedureDefinitionAsync(procedureName, null, timeoutSeconds, cancellationToken);
         }
         
         /// <summary>

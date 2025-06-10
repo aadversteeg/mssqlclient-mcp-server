@@ -32,7 +32,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockServerDatabase = new Mock<IServerDatabase>();
             var emptyDatabaseList = new List<DatabaseInfo>();
             
-            mockServerDatabase.Setup(x => x.ListDatabasesAsync(It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListDatabasesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(emptyDatabaseList);
             
             var tool = new ServerListDatabasesTool(mockServerDatabase.Object);
@@ -42,7 +42,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             // Assert
             result.Should().NotBeNull();
-            mockServerDatabase.Verify(x => x.ListDatabasesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListDatabasesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLDT-003: GetDatabases returns formatted database list")]
@@ -76,7 +76,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 )
             };
             
-            mockServerDatabase.Setup(x => x.ListDatabasesAsync(It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListDatabasesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(databaseList);
             
             var tool = new ServerListDatabasesTool(mockServerDatabase.Object);
@@ -89,7 +89,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("master");
             result.Should().Contain("TestDB");
             result.Should().Contain("ONLINE");
-            mockServerDatabase.Verify(x => x.ListDatabasesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListDatabasesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLDT-004: GetDatabases handles exception from server database")]
@@ -99,7 +99,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Server connection failed";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListDatabasesAsync(It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListDatabasesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
             var tool = new ServerListDatabasesTool(mockServerDatabase.Object);
