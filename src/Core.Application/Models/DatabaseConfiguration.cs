@@ -55,5 +55,13 @@
         /// Default is 60 minutes.
         /// </summary>
         public int SessionCleanupIntervalMinutes { get; set; } = 60;
+        
+        /// <summary>
+        /// Gets or sets the total timeout in seconds for tool calls. When set, all operations
+        /// within a tool call must complete within this time limit. The remaining time is used
+        /// to calculate individual command timeouts. Default is 120 seconds. Set to null to
+        /// disable total timeout (preserves backward compatibility).
+        /// </summary>
+        public int? TotalToolCallTimeoutSeconds { get; set; } = 120;
     }
 }

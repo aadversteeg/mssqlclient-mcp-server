@@ -34,6 +34,7 @@ namespace Core.Infrastructure.McpServer.Tools
                     connectionTimeoutSeconds = _configuration.ConnectionTimeoutSeconds,
                     maxConcurrentSessions = _configuration.MaxConcurrentSessions,
                     sessionCleanupIntervalMinutes = _configuration.SessionCleanupIntervalMinutes,
+                    totalToolCallTimeoutSeconds = _configuration.TotalToolCallTimeoutSeconds,
                     timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC")
                 };
 
