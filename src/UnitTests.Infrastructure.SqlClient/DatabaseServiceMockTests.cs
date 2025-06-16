@@ -39,6 +39,7 @@ namespace UnitTests.Infrastructure.SqlClient
             // Create a test database service with a dummy connection string and a mock capability detector
             // Just to verify that it implements the interface
             var dummyConnectionString = "Server=test;Database=dummy;Trusted_Connection=True;";
+            var configuration = new DatabaseConfiguration { DefaultCommandTimeoutSeconds = 30 };
             var mockCapabilityDetector = new Mock<ISqlServerCapabilityDetector>();
             mockCapabilityDetector.Setup(x => x.DetectCapabilitiesAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new SqlServerCapability
@@ -48,7 +49,7 @@ namespace UnitTests.Infrastructure.SqlClient
                     SupportsDetailedIndexMetadata = true
                 });
                 
-            var service = new DatabaseService(dummyConnectionString, mockCapabilityDetector.Object);
+            var service = new DatabaseService(dummyConnectionString, mockCapabilityDetector.Object, configuration);
             
             // Act & Assert
             service.Should().BeAssignableTo<IDatabaseService>();
@@ -110,7 +111,7 @@ namespace UnitTests.Infrastructure.SqlClient
         public string StoredProcedureDefinitionResponse { get; set; } = "CREATE PROCEDURE Test_Proc AS SELECT 1;";
         public IAsyncDataReader? ExecuteStoredProcedureResponse { get; set; } = null;
         
-        public Task<IEnumerable<TableInfo>> ListTablesAsync(string? databaseName = null, CancellationToken cancellationToken = default)
+        public Task<IEnumerable<TableInfo>> ListTablesAsync(string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             ListTablesAsyncCalled = true;
             DatabaseNamePassedToListTables = databaseName;
@@ -118,14 +119,14 @@ namespace UnitTests.Infrastructure.SqlClient
             return Task.FromResult<IEnumerable<TableInfo>>(TablesResponse);
         }
         
-        public Task<IEnumerable<DatabaseInfo>> ListDatabasesAsync(CancellationToken cancellationToken = default)
+        public Task<IEnumerable<DatabaseInfo>> ListDatabasesAsync(int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             ListDatabasesAsyncCalled = true;
             TokenPassedToListDatabases = cancellationToken;
             return Task.FromResult<IEnumerable<DatabaseInfo>>(DatabasesResponse);
         }
         
-        public Task<bool> DoesDatabaseExistAsync(string databaseName, CancellationToken cancellationToken = default)
+        public Task<bool> DoesDatabaseExistAsync(string databaseName, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             DoesDatabaseExistAsyncCalled = true;
             DatabaseNamePassedToDatabaseExists = databaseName;
@@ -140,7 +141,7 @@ namespace UnitTests.Infrastructure.SqlClient
         }
         
         
-        public Task<TableSchemaInfo> GetTableSchemaAsync(string tableName, string? databaseName = null, CancellationToken cancellationToken = default)
+        public Task<TableSchemaInfo> GetTableSchemaAsync(string tableName, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             GetTableSchemaAsyncCalled = true;
             TableNamePassedToGetTableSchema = tableName;
@@ -149,7 +150,7 @@ namespace UnitTests.Infrastructure.SqlClient
             return Task.FromResult(TableSchemaResponse);
         }
         
-        public Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, CancellationToken cancellationToken = default)
+        public Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             ExecuteQueryAsyncCalled = true;
             QueryPassedToExecuteQuery = query;
@@ -159,7 +160,7 @@ namespace UnitTests.Infrastructure.SqlClient
         }
         
         // New methods for stored procedures
-        public Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string? databaseName = null, CancellationToken cancellationToken = default)
+        public Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             ListStoredProceduresAsyncCalled = true;
             DatabaseNamePassedToListStoredProcedures = databaseName;
@@ -167,7 +168,7 @@ namespace UnitTests.Infrastructure.SqlClient
             return Task.FromResult<IEnumerable<StoredProcedureInfo>>(StoredProceduresResponse);
         }
         
-        public Task<string> GetStoredProcedureDefinitionAsync(string procedureName, string? databaseName = null, CancellationToken cancellationToken = default)
+        public Task<string> GetStoredProcedureDefinitionAsync(string procedureName, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             GetStoredProcedureDefinitionAsyncCalled = true;
             ProcedureNamePassedToGetStoredProcedureDefinition = procedureName;
@@ -176,7 +177,7 @@ namespace UnitTests.Infrastructure.SqlClient
             return Task.FromResult(StoredProcedureDefinitionResponse);
         }
         
-        public Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, CancellationToken cancellationToken = default)
+        public Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             ExecuteStoredProcedureAsyncCalled = true;
             ProcedureNamePassedToExecuteStoredProcedure = procedureName;

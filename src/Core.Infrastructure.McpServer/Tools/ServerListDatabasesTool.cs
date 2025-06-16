@@ -21,13 +21,16 @@ namespace Core.Infrastructure.McpServer.Tools
         /// <summary>
         /// Gets a list of all databases on the SQL Server instance with their properties
         /// </summary>
+        /// <param name="timeoutSeconds">The timeout in seconds for the operation (optional)</param>
         /// <returns>Markdown formatted string with database information</returns>
         [McpServerTool(Name = "list_databases"), Description("List all databases on the SQL Server instance.")]
-        public async Task<string> GetDatabases()
+        public async Task<string> GetDatabases(int? timeoutSeconds = null)
         {
+            Console.Error.WriteLine($"GetDatabases called with timeoutSeconds: {timeoutSeconds}");
+            
             try
             {
-                var databases = await _serverDatabase.ListDatabasesAsync();
+                var databases = await _serverDatabase.ListDatabasesAsync(timeoutSeconds);
                 return databases.ToToolResult();
             }
             catch (Exception ex)

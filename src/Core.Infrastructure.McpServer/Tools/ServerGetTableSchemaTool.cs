@@ -16,10 +16,17 @@ namespace Core.Infrastructure.McpServer.Tools
             Console.Error.WriteLine("ServerGetTableSchemaTool constructed with server database service");
         }
 
+        /// <summary>
+        /// Get the schema of a table in the specified database (requires server mode).
+        /// </summary>
+        /// <param name="databaseName">The name of the database containing the table</param>
+        /// <param name="tableName">The name of the table to get schema for</param>
+        /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
+        /// <returns>A formatted string containing the table schema information</returns>
         [McpServerTool(Name = "get_table_schema_in_database"), Description("Get the schema of a table in the specified database (requires server mode).")]
-        public async Task<string> GetTableSchemaInDatabase(string databaseName, string tableName)
+        public async Task<string> GetTableSchemaInDatabase(string databaseName, string tableName, int? timeoutSeconds = null)
         {
-            Console.Error.WriteLine($"GetTableSchemaInDatabase called with databaseName: {databaseName}, tableName: {tableName}");
+            Console.Error.WriteLine($"GetTableSchemaInDatabase called with databaseName: {databaseName}, tableName: {tableName}, timeoutSeconds: {timeoutSeconds}");
 
             if (string.IsNullOrWhiteSpace(databaseName))
             {
@@ -34,7 +41,7 @@ namespace Core.Infrastructure.McpServer.Tools
             try
             {
                 // Get schema information for the table using the server database service
-                var tableSchema = await _serverDatabase.GetTableSchemaAsync(databaseName, tableName);
+                var tableSchema = await _serverDatabase.GetTableSchemaAsync(databaseName, tableName, timeoutSeconds);
                 return tableSchema.ToToolResult();
             }
             catch (Exception ex)

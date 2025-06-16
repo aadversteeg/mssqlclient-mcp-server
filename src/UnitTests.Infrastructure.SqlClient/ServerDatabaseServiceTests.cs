@@ -61,10 +61,10 @@ namespace UnitTests.Infrastructure.SqlClient
                 new TableInfo("dbo", "Table2", 5, 0.5, DateTime.Now, DateTime.Now, 1, 0, "Normal")
             };
             
-            _mockDatabaseService.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedTables);
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             
             // Act
@@ -72,7 +72,7 @@ namespace UnitTests.Infrastructure.SqlClient
             
             // Assert
             result.Should().BeEquivalentTo(expectedTables);
-            _mockDatabaseService.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SDS-004: ListTablesAsync with empty database name throws ArgumentException")]
@@ -92,7 +92,7 @@ namespace UnitTests.Infrastructure.SqlClient
             // Arrange
             var databaseName = "NonExistentDb";
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
             
             // Act
@@ -110,15 +110,15 @@ namespace UnitTests.Infrastructure.SqlClient
             var databaseName = "TestDb";
             var cancellationToken = new CancellationToken();
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, cancellationToken))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), cancellationToken))
                 .ReturnsAsync(true);
             
             // Act
-            await _serverDatabaseService.ListTablesAsync(databaseName, cancellationToken);
+            await _serverDatabaseService.ListTablesAsync(databaseName, null, cancellationToken);
             
             // Assert
-            _mockDatabaseService.Verify(x => x.DoesDatabaseExistAsync(databaseName, cancellationToken), Times.Once);
-            _mockDatabaseService.Verify(x => x.ListTablesAsync(databaseName, cancellationToken), Times.Once);
+            _mockDatabaseService.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), cancellationToken), Times.Once);
+            _mockDatabaseService.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), cancellationToken), Times.Once);
         }
         
         [Fact(DisplayName = "SDS-007: ListDatabasesAsync delegates to database service")]
@@ -131,7 +131,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 new DatabaseInfo("TestDb", "ONLINE", 50.2, "sa", "150", "SQL_Latin1_General_CP1_CI_AS", DateTime.Now, "SIMPLE", false)
             };
             
-            _mockDatabaseService.Setup(x => x.ListDatabasesAsync(It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ListDatabasesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedDatabases);
             
             // Act
@@ -139,7 +139,7 @@ namespace UnitTests.Infrastructure.SqlClient
             
             // Assert
             result.Should().BeEquivalentTo(expectedDatabases);
-            _mockDatabaseService.Verify(x => x.ListDatabasesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ListDatabasesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SDS-008: ListDatabasesAsync passes cancellation token to database service")]
@@ -149,10 +149,10 @@ namespace UnitTests.Infrastructure.SqlClient
             var cancellationToken = new CancellationToken();
             
             // Act
-            await _serverDatabaseService.ListDatabasesAsync(cancellationToken);
+            await _serverDatabaseService.ListDatabasesAsync(null, cancellationToken);
             
             // Assert
-            _mockDatabaseService.Verify(x => x.ListDatabasesAsync(cancellationToken), Times.Once);
+            _mockDatabaseService.Verify(x => x.ListDatabasesAsync(It.IsAny<int?>(), cancellationToken), Times.Once);
         }
         
         // New tests for stored procedure functionality
@@ -188,10 +188,10 @@ namespace UnitTests.Infrastructure.SqlClient
                     AverageDurationMs: null)
             };
             
-            _mockDatabaseService.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedProcs);
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             
             // Act
@@ -199,7 +199,7 @@ namespace UnitTests.Infrastructure.SqlClient
             
             // Assert
             result.Should().BeEquivalentTo(expectedProcs);
-            _mockDatabaseService.Verify(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ListStoredProceduresAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SDS-010: ListStoredProceduresAsync with empty database name throws ArgumentException")]
@@ -219,7 +219,7 @@ namespace UnitTests.Infrastructure.SqlClient
             // Arrange
             var databaseName = "NonExistentDb";
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
             
             // Act
@@ -238,10 +238,10 @@ namespace UnitTests.Infrastructure.SqlClient
             var procedureName = "TestProc";
             var expectedDefinition = "CREATE PROCEDURE TestProc AS SELECT 1;";
             
-            _mockDatabaseService.Setup(x => x.GetStoredProcedureDefinitionAsync(procedureName, databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.GetStoredProcedureDefinitionAsync(procedureName, databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedDefinition);
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             
             // Act
@@ -249,7 +249,7 @@ namespace UnitTests.Infrastructure.SqlClient
             
             // Assert
             result.Should().Be(expectedDefinition);
-            _mockDatabaseService.Verify(x => x.GetStoredProcedureDefinitionAsync(procedureName, databaseName, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.GetStoredProcedureDefinitionAsync(procedureName, databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SDS-013: GetStoredProcedureDefinitionAsync with empty database name throws ArgumentException")]
@@ -287,10 +287,10 @@ namespace UnitTests.Infrastructure.SqlClient
             };
             var expectedReader = new Mock<IAsyncDataReader>().Object;
             
-            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedReader);
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             
             // Act
@@ -298,7 +298,7 @@ namespace UnitTests.Infrastructure.SqlClient
             
             // Assert
             result.Should().Be(expectedReader);
-            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, null, It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SDS-016: ExecuteStoredProcedureAsync with empty database name throws ArgumentException")]
@@ -348,7 +348,7 @@ namespace UnitTests.Infrastructure.SqlClient
             var procedureName = "TestProc";
             var parameters = new Dictionary<string, object?>();
             
-            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
             
             // Act
@@ -357,6 +357,34 @@ namespace UnitTests.Infrastructure.SqlClient
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>()
                 .WithMessage($"*Database '{databaseName}' does not exist*");
+        }
+        
+        [Fact(DisplayName = "SDS-020: ExecuteStoredProcedureAsync with timeout passes timeout to database service")]
+        public async Task SDS020()
+        {
+            // Arrange
+            var databaseName = "TestDb";
+            var procedureName = "TestProc";
+            var parameters = new Dictionary<string, object?>
+            {
+                { "Param1", 123 },
+                { "Param2", "test" }
+            };
+            int timeoutSeconds = 180;
+            var expectedReader = new Mock<IAsyncDataReader>().Object;
+            
+            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, timeoutSeconds, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(expectedReader);
+            
+            _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+            
+            // Act
+            var result = await _serverDatabaseService.ExecuteStoredProcedureAsync(databaseName, procedureName, parameters, timeoutSeconds);
+            
+            // Assert
+            result.Should().Be(expectedReader);
+            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, timeoutSeconds, It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }

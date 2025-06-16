@@ -19,7 +19,15 @@ namespace Core.Infrastructure.McpServer.Tools
         }
 
         [McpServerTool(Name = "execute_stored_procedure_in_database"), Description("Execute a stored procedure in the specified database (requires server mode).")]
-        public async Task<string> ExecuteStoredProcedureInDatabase(string databaseName, string procedureName, string parameters)
+        public async Task<string> ExecuteStoredProcedureInDatabase(
+            [Description("The name of the database to execute the stored procedure in")]
+            string databaseName, 
+            [Description("The name of the stored procedure to execute")]
+            string procedureName, 
+            [Description("JSON object containing the parameters for the stored procedure")]
+            string parameters,
+            [Description("Optional timeout in seconds. If not specified, uses the default timeout")]
+            int? timeoutSeconds = null)
         {
             Console.Error.WriteLine($"ExecuteStoredProcedureInDatabase called with databaseName: {databaseName}, stored procedure: {procedureName}");
 
@@ -54,7 +62,7 @@ namespace Core.Infrastructure.McpServer.Tools
                 }
 
                 // Use the ServerDatabase service to execute the stored procedure in the specified database
-                IAsyncDataReader reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict);
+                IAsyncDataReader reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutSeconds);
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();

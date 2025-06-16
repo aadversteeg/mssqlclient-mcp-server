@@ -1,5 +1,6 @@
+using Core.Application;
 using Core.Application.Interfaces;
-using Core.Infrastructure.McpServer.Configuration;
+using Core.Application.Models;
 using Core.Infrastructure.McpServer.Tools;
 using Core.Infrastructure.SqlClient;
 using Core.Infrastructure.SqlClient.Interfaces;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Reflection;
 
 namespace Core.Infrastructure.McpServer
@@ -130,15 +132,75 @@ namespace Core.Infrastructure.McpServer
             bool isServerMode = IsServerMode(connectionString);
             Console.Error.WriteLine($"Using server mode: {isServerMode}");
 
-            // Register the database configuration
-            var dbConfig = new DatabaseConfiguration 
-            { 
-                ConnectionString = connectionString,
-                EnableExecuteQuery = builder.Configuration.GetValue<bool>("EnableExecuteQuery", false), // Default to false if not specified
-                EnableExecuteStoredProcedure = builder.Configuration.GetValue<bool>("EnableExecuteStoredProcedure", false) // Default to false if not specified
-            };
+            // Configure the database configuration from the configuration section
+            builder.Services.Configure<DatabaseConfiguration>(options =>
+            {
+                options.ConnectionString = connectionString;
+                builder.Configuration.GetSection("DatabaseConfiguration").Bind(options);
+                
+                // Override with legacy configuration values if they exist
+                var enableExecuteQuery = builder.Configuration.GetValue<bool?>("EnableExecuteQuery");
+                if (enableExecuteQuery.HasValue)
+                {
+                    options.EnableExecuteQuery = enableExecuteQuery.Value;
+                }
+                
+                var enableExecuteStoredProcedure = builder.Configuration.GetValue<bool?>("EnableExecuteStoredProcedure");
+                if (enableExecuteStoredProcedure.HasValue)
+                {
+                    options.EnableExecuteStoredProcedure = enableExecuteStoredProcedure.Value;
+                }
+                
+                var enableStartQuery = builder.Configuration.GetValue<bool?>("EnableStartQuery");
+                if (enableStartQuery.HasValue)
+                {
+                    options.EnableStartQuery = enableStartQuery.Value;
+                }
+                
+                var enableStartStoredProcedure = builder.Configuration.GetValue<bool?>("EnableStartStoredProcedure");
+                if (enableStartStoredProcedure.HasValue)
+                {
+                    options.EnableStartStoredProcedure = enableStartStoredProcedure.Value;
+                }
+            });
+            
+            // Also register as singleton for backward compatibility
+            var dbConfig = new DatabaseConfiguration();
+            builder.Configuration.GetSection("DatabaseConfiguration").Bind(dbConfig);
+            dbConfig.ConnectionString = connectionString;
+            
+            // Override with legacy configuration values
+            var enableExecuteQueryLegacy = builder.Configuration.GetValue<bool?>("EnableExecuteQuery");
+            if (enableExecuteQueryLegacy.HasValue)
+            {
+                dbConfig.EnableExecuteQuery = enableExecuteQueryLegacy.Value;
+            }
+            
+            var enableExecuteStoredProcedureLegacy = builder.Configuration.GetValue<bool?>("EnableExecuteStoredProcedure");
+            if (enableExecuteStoredProcedureLegacy.HasValue)
+            {
+                dbConfig.EnableExecuteStoredProcedure = enableExecuteStoredProcedureLegacy.Value;
+            }
+            
+            var enableStartQueryLegacy = builder.Configuration.GetValue<bool?>("EnableStartQuery");
+            if (enableStartQueryLegacy.HasValue)
+            {
+                dbConfig.EnableStartQuery = enableStartQueryLegacy.Value;
+            }
+            
+            var enableStartStoredProcedureLegacy = builder.Configuration.GetValue<bool?>("EnableStartStoredProcedure");
+            if (enableStartStoredProcedureLegacy.HasValue)
+            {
+                dbConfig.EnableStartStoredProcedure = enableStartStoredProcedureLegacy.Value;
+            }
+            
             Console.Error.WriteLine($"EnableExecuteQuery setting: {dbConfig.EnableExecuteQuery}");
             Console.Error.WriteLine($"EnableExecuteStoredProcedure setting: {dbConfig.EnableExecuteStoredProcedure}");
+            Console.Error.WriteLine($"EnableStartQuery setting: {dbConfig.EnableStartQuery}");
+            Console.Error.WriteLine($"EnableStartStoredProcedure setting: {dbConfig.EnableStartStoredProcedure}");
+            Console.Error.WriteLine($"DefaultCommandTimeoutSeconds: {dbConfig.DefaultCommandTimeoutSeconds}");
+            Console.Error.WriteLine($"MaxConcurrentSessions: {dbConfig.MaxConcurrentSessions}");
+            
             builder.Services.AddSingleton(dbConfig);
 
             // Register our database services
@@ -149,7 +211,13 @@ namespace Core.Infrastructure.McpServer
             
             // Then register the core database service with the capability detector
             builder.Services.AddSingleton<IDatabaseService>(provider => 
-                new DatabaseService(connectionString, provider.GetRequiredService<ISqlServerCapabilityDetector>()));
+                new DatabaseService(connectionString, provider.GetRequiredService<ISqlServerCapabilityDetector>(), provider.GetRequiredService<DatabaseConfiguration>()));
+            
+            // Register the query session manager
+            builder.Services.AddSingleton<IQuerySessionManager, QuerySessionManager>();
+            
+            // Register the session cleanup service
+            builder.Services.AddHostedService<SessionCleanupService>();
             
             if (isServerMode)
             {
@@ -221,6 +289,17 @@ namespace Core.Infrastructure.McpServer
                     Console.Error.WriteLine("ServerExecuteQueryTool registration skipped (EnableExecuteQuery is false)");
                 }
                 
+                // Only register start query tool if it's enabled in configuration
+                if (dbConfig.EnableStartQuery)
+                {
+                    mcpServerBuilder.WithTools<ServerStartQueryTool>();
+                    Console.Error.WriteLine("Registered ServerStartQueryTool");
+                }
+                else
+                {
+                    Console.Error.WriteLine("ServerStartQueryTool registration skipped (EnableStartQuery is false)");
+                }
+                
                 // Only register execute stored procedure tool if it's enabled in configuration
                 if (dbConfig.EnableExecuteStoredProcedure)
                 {
@@ -230,6 +309,31 @@ namespace Core.Infrastructure.McpServer
                 else
                 {
                     Console.Error.WriteLine("ServerExecuteStoredProcedureTool registration skipped (EnableExecuteStoredProcedure is false)");
+                }
+                
+                // Only register start stored procedure tool if it's enabled in configuration
+                if (dbConfig.EnableStartStoredProcedure)
+                {
+                    mcpServerBuilder.WithTools<ServerStartStoredProcedureTool>();
+                    Console.Error.WriteLine("Registered ServerStartStoredProcedureTool");
+                }
+                else
+                {
+                    Console.Error.WriteLine("ServerStartStoredProcedureTool registration skipped (EnableStartStoredProcedure is false)");
+                }
+                
+                // Register session management tools only if at least one session tool is enabled
+                if (dbConfig.EnableStartQuery || dbConfig.EnableStartStoredProcedure)
+                {
+                    mcpServerBuilder.WithTools<SessionManagementTools>();
+                    Console.Error.WriteLine("Registered SessionManagementTools");
+                    
+                    mcpServerBuilder.WithTools<TimeoutManagementTools>();
+                    Console.Error.WriteLine("Registered TimeoutManagementTools");
+                }
+                else
+                {
+                    Console.Error.WriteLine("Session management tools registration skipped (no session tools enabled)");
                 }
             }
             else
@@ -265,6 +369,17 @@ namespace Core.Infrastructure.McpServer
                     Console.Error.WriteLine("ExecuteQueryTool registration skipped (EnableExecuteQuery is false)");
                 }
                 
+                // Only register start query tool if it's enabled in configuration
+                if (dbConfig.EnableStartQuery)
+                {
+                    mcpServerBuilder.WithTools<StartQueryTool>();
+                    Console.Error.WriteLine("Registered StartQueryTool");
+                }
+                else
+                {
+                    Console.Error.WriteLine("StartQueryTool registration skipped (EnableStartQuery is false)");
+                }
+                
                 // Only register execute stored procedure tool if it's enabled in configuration
                 if (dbConfig.EnableExecuteStoredProcedure)
                 {
@@ -274,6 +389,31 @@ namespace Core.Infrastructure.McpServer
                 else
                 {
                     Console.Error.WriteLine("ExecuteStoredProcedureTool registration skipped (EnableExecuteStoredProcedure is false)");
+                }
+                
+                // Only register start stored procedure tool if it's enabled in configuration
+                if (dbConfig.EnableStartStoredProcedure)
+                {
+                    mcpServerBuilder.WithTools<StartStoredProcedureTool>();
+                    Console.Error.WriteLine("Registered StartStoredProcedureTool");
+                }
+                else
+                {
+                    Console.Error.WriteLine("StartStoredProcedureTool registration skipped (EnableStartStoredProcedure is false)");
+                }
+                
+                // Register session management tools only if at least one session tool is enabled
+                if (dbConfig.EnableStartQuery || dbConfig.EnableStartStoredProcedure)
+                {
+                    mcpServerBuilder.WithTools<SessionManagementTools>();
+                    Console.Error.WriteLine("Registered SessionManagementTools");
+                    
+                    mcpServerBuilder.WithTools<TimeoutManagementTools>();
+                    Console.Error.WriteLine("Registered TimeoutManagementTools");
+                }
+                else
+                {
+                    Console.Error.WriteLine("Session management tools registration skipped (no session tools enabled)");
                 }
             }
             

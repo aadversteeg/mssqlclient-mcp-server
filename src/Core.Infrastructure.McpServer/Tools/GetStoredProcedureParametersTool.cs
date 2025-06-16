@@ -29,6 +29,7 @@ namespace Core.Infrastructure.McpServer.Tools
         /// </summary>
         /// <param name="procedureName">The name of the stored procedure (can include schema like 'dbo.MyProcedure')</param>
         /// <param name="format">Output format: 'table' for human-readable table (default), 'json' for JSON Schema format</param>
+        /// <param name="timeoutSeconds">Optional query timeout in seconds</param>
         /// <returns>Parameter information in the requested format</returns>
         [McpServerTool(Name = "get_stored_procedure_parameters"), 
          Description(@"Get parameter information for a stored procedure including names, types, and whether they are required.
@@ -50,7 +51,8 @@ JSON format provides JSON Schema with SQL-specific extensions for parameter vali
 Note: This tool works within the current database context. For cross-database queries, use the server mode.")]
         public async Task<string> GetStoredProcedureParameters(
             string procedureName, 
-            string format = "table")
+            string format = "table",
+            int? timeoutSeconds = null)
         {
             if (string.IsNullOrWhiteSpace(procedureName))
             {
@@ -70,7 +72,7 @@ Note: This tool works within the current database context. For cross-database qu
                     procNameOnly = parts[1].Trim(new[] {'[', ']'});
                 }
 
-                var parameters = await GetStoredProcedureParametersAsync(schemaName, procNameOnly);
+                var parameters = await GetStoredProcedureParametersAsync(schemaName, procNameOnly, timeoutSeconds);
                 
                 if (!parameters.Any())
                 {
@@ -95,7 +97,8 @@ Note: This tool works within the current database context. For cross-database qu
         /// </summary>
         private async Task<List<ParameterInfo>> GetStoredProcedureParametersAsync(
             string schemaName, 
-            string procedureName)
+            string procedureName,
+            int? timeoutSeconds = null)
         {
             var query = $@"
                 SELECT 
@@ -117,7 +120,7 @@ Note: This tool works within the current database context. For cross-database qu
 
             var parameters = new List<ParameterInfo>();
             
-            var reader = await _databaseContext.ExecuteQueryAsync(query);
+            var reader = await _databaseContext.ExecuteQueryAsync(query, timeoutSeconds);
             
             try
             {

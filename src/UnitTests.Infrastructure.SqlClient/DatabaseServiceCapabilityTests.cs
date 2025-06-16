@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Core.Application.Models;
 using Core.Infrastructure.SqlClient;
+using Core.Application.Interfaces;
 using Core.Infrastructure.SqlClient.Interfaces;
 using FluentAssertions;
 using Microsoft.Data.SqlClient;
@@ -15,6 +16,7 @@ namespace UnitTests.Infrastructure.SqlClient
     public class DatabaseServiceCapabilityTests
     {
         private readonly string _dummyConnectionString = "Server=test;Database=dummy;Trusted_Connection=True;";
+        private readonly DatabaseConfiguration _configuration = new DatabaseConfiguration { DefaultCommandTimeoutSeconds = 30 };
 
         [Fact(DisplayName = "DSC-001: DatabaseService uses capabilities to determine feature availability")]
         public async Task DSC001()
@@ -29,7 +31,7 @@ namespace UnitTests.Infrastructure.SqlClient
                     SupportsDetailedIndexMetadata = true
                 });
                 
-            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object);
+            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object, _configuration);
             
             // Act - trigger capability detection by accessing a method
             var capability = await GetPrivateCapabilities(service);
@@ -62,7 +64,7 @@ namespace UnitTests.Infrastructure.SqlClient
 
             // We can't fully test the SQL query behavior without a real database,
             // but we can verify that the capability is checked and cached
-            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object);
+            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object, _configuration);
 
             // Act - trigger capability detection by accessing a method
             var capability = await GetPrivateCapabilities(service);
@@ -91,7 +93,7 @@ namespace UnitTests.Infrastructure.SqlClient
                     SupportsDetailedIndexMetadata = true
                 });
                 
-            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object);
+            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object, _configuration);
             
             // Act - initial capability detection
             await GetPrivateCapabilities(service);
@@ -124,7 +126,7 @@ namespace UnitTests.Infrastructure.SqlClient
             mockCapabilityDetector.Setup(x => x.DetectCapabilitiesAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(limitedCapability);
 
-            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object);
+            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object, _configuration);
 
             // Act
             var capability = await GetPrivateCapabilities(service);
@@ -154,7 +156,7 @@ namespace UnitTests.Infrastructure.SqlClient
             mockCapabilityDetector.Setup(x => x.DetectCapabilitiesAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(fullCapability);
 
-            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object);
+            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object, _configuration);
             
             // Act
             var capability = await GetPrivateCapabilities(service);
@@ -185,7 +187,7 @@ namespace UnitTests.Infrastructure.SqlClient
             mockCapabilityDetector.Setup(x => x.DetectCapabilitiesAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(azureCapability);
 
-            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object);
+            var service = new DatabaseService(_dummyConnectionString, mockCapabilityDetector.Object, _configuration);
             
             // Act
             var capability = await GetPrivateCapabilities(service);

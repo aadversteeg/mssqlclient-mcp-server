@@ -17,7 +17,13 @@ namespace Core.Infrastructure.McpServer.Tools
         }
 
         [McpServerTool(Name = "execute_query_in_database"), Description("Execute a SQL query in the specified database (requires server mode).")]
-        public async Task<string> ExecuteQueryInDatabase(string databaseName, string query)
+        public async Task<string> ExecuteQueryInDatabase(
+            [Description("The name of the database to execute the query in")]
+            string databaseName, 
+            [Description("The SQL query to execute")]
+            string query,
+            [Description("Optional timeout in seconds. If not specified, uses the default timeout")]
+            int? timeoutSeconds = null)
         {
             Console.Error.WriteLine($"ExecuteQueryInDatabase called with databaseName: {databaseName}, query: {query}");
 
@@ -34,7 +40,7 @@ namespace Core.Infrastructure.McpServer.Tools
             try
             {
                 // Use the ServerDatabase service to execute the query in the specified database
-                IAsyncDataReader reader = await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query);
+                IAsyncDataReader reader = await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutSeconds);
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();
