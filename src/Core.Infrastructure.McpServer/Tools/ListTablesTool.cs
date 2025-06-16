@@ -1,7 +1,9 @@
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.McpServer.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -9,10 +11,12 @@ namespace Core.Infrastructure.McpServer.Tools
     public class ListTablesTool
     {
         private readonly IDatabaseContext _databaseContext;
+        private readonly DatabaseConfiguration _configuration;
 
-        public ListTablesTool(IDatabaseContext databaseContext)
+        public ListTablesTool(IDatabaseContext databaseContext, IOptions<DatabaseConfiguration> configuration)
         {
             _databaseContext = databaseContext ?? throw new ArgumentNullException(nameof(databaseContext));
+            _configuration = configuration?.Value ?? throw new ArgumentNullException(nameof(configuration));
             Console.Error.WriteLine("ListTablesTool constructed with database context service");
         }
 
@@ -26,14 +30,30 @@ namespace Core.Infrastructure.McpServer.Tools
         {
             Console.Error.WriteLine($"ListTables called with timeoutSeconds: {timeoutSeconds}");
 
+            // Create timeout context and cancellation token source if total timeout is configured
+            var (timeoutContext, tokenSource) = ToolCallTimeoutFactory.CreateTimeout(_configuration);
+
             try
             {
-                var tables = await _databaseContext.ListTablesAsync(timeoutSeconds);
+                // Use timeout context if available, otherwise fall back to legacy behavior
+                var tables = timeoutContext != null
+                    ? await _databaseContext.ListTablesAsync(timeoutContext, timeoutSeconds)
+                    : await _databaseContext.ListTablesAsync(timeoutSeconds);
+                    
                 return tables.ToToolResult();
+            }
+            catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
+            {
+                // Return timeout error message instead of generic cancellation error
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
             }
             catch (Exception ex)
             {
                 return ex.ToSqlErrorResult("listing tables");
+            }
+            finally
+            {
+                tokenSource?.Dispose();
             }
         }
     }
