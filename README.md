@@ -1023,7 +1023,8 @@ Configure default timeouts in `appsettings.json`:
     "DefaultCommandTimeoutSeconds": 30,
     "ConnectionTimeoutSeconds": 15,
     "MaxConcurrentSessions": 10,
-    "SessionCleanupIntervalMinutes": 60
+    "SessionCleanupIntervalMinutes": 60,
+    "TotalToolCallTimeoutSeconds": 120
   }
 }
 ```
@@ -1033,6 +1034,7 @@ Configure default timeouts in `appsettings.json`:
 - `ConnectionTimeoutSeconds`: Timeout for establishing SQL connections (default: 15 seconds)
 - `MaxConcurrentSessions`: Maximum number of concurrent query sessions (default: 10)
 - `SessionCleanupIntervalMinutes`: Interval for cleaning up completed sessions (default: 60 minutes)
+- `TotalToolCallTimeoutSeconds`: Maximum time allowed for any tool call to complete (default: 120 seconds, set to null to disable)
 
 These can also be set via environment variables:
 
@@ -1041,6 +1043,7 @@ These can also be set via environment variables:
 docker run \
   -e "DatabaseConfiguration__DefaultCommandTimeoutSeconds=60" \
   -e "DatabaseConfiguration__ConnectionTimeoutSeconds=30" \
+  -e "DatabaseConfiguration__TotalToolCallTimeoutSeconds=180" \
   -e "MSSQL_CONNECTIONSTRING=Server=your_server;..." \
   aadversteeg/mssqlclient-mcp-server:latest
 
@@ -1050,11 +1053,41 @@ docker run \
   "args": ["run", "--rm", "-i",
     "-e", "DatabaseConfiguration__DefaultCommandTimeoutSeconds=60",
     "-e", "DatabaseConfiguration__ConnectionTimeoutSeconds=30",
+    "-e", "DatabaseConfiguration__TotalToolCallTimeoutSeconds=180",
     "-e", "MSSQL_CONNECTIONSTRING=Server=your_server;...",
     "aadversteeg/mssqlclient-mcp-server:latest"
   ]
 }
 ```
+
+#### Tool Call Timeout Management
+
+The `TotalToolCallTimeoutSeconds` setting provides a safety mechanism to prevent tools from running indefinitely:
+
+**How it works:**
+- When a tool is called, a total timeout timer starts
+- Each SQL command uses the remaining time to calculate its timeout: `Min(DefaultCommandTimeoutSeconds, RemainingTime)`
+- If the total timeout is exceeded, all operations are cancelled with a clear error message
+- Commands are guaranteed at least 1 second timeout even if total time is nearly exceeded
+
+**Configuration considerations:**
+- **MCP Client Limits**: Most MCP clients (like Claude Desktop) have connection timeouts of 2-5 minutes
+- **Best Practice**: Set `TotalToolCallTimeoutSeconds` below your client's timeout for best user experience
+- **Long Operations**: For operations requiring more time, use session-based tools (`start_query`, `start_stored_procedure`)
+- **Backward Compatibility**: Set to `null` to disable total timeout and preserve existing behavior
+
+**Example timeout scenarios:**
+```json
+{
+  "TotalToolCallTimeoutSeconds": 90,  // 1.5 minutes - good for most operations
+  "DefaultCommandTimeoutSeconds": 30  // Individual commands max 30s
+}
+```
+
+- At 0s: Command timeout = min(30, 90) = 30 seconds
+- At 70s: Command timeout = min(30, 20) = 20 seconds  
+- At 89s: Command timeout = min(30, 1) = 1 second
+- At 90s+: Operation cancelled with timeout error
 
 #### Runtime Timeout Management
 
@@ -1079,6 +1112,7 @@ Example response:
   "connectionTimeoutSeconds": 15,
   "maxConcurrentSessions": 10,
   "sessionCleanupIntervalMinutes": 60,
+  "totalToolCallTimeoutSeconds": 120,
   "timestamp": "2024-12-19 10:30:45 UTC"
 }
 ```
