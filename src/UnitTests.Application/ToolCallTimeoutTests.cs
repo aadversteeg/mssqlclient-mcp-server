@@ -1,5 +1,7 @@
 using Core.Application.Models;
 using FluentAssertions;
+using System;
+using System.Threading;
 using Xunit;
 
 namespace UnitTests.Application

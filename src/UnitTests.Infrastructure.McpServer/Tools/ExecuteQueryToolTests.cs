@@ -2,8 +2,10 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.McpServer.Tools;
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -14,21 +16,43 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         [Fact(DisplayName = "EQT-001: ExecuteQueryTool constructor with null database context throws ArgumentNullException")]
         public void EQT001()
         {
+            // Arrange
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            
             // Act
             IDatabaseContext? nullContext = null;
-            Action act = () => new ExecuteQueryTool(nullContext);
+            Action act = () => new ExecuteQueryTool(nullContext, mockOptions.Object);
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
                 .WithParameterName("databaseContext");
         }
         
-        [Fact(DisplayName = "EQT-002: ExecuteQueryTool returns error for empty query")]
-        public async Task EQT002()
+        [Fact(DisplayName = "EQT-002: ExecuteQueryTool constructor with null configuration throws ArgumentNullException")]
+        public void EQT002()
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new ExecuteQueryTool(mockDatabaseContext.Object);
+            
+            // Act
+            IOptions<DatabaseConfiguration>? nullOptions = null;
+            Action act = () => new ExecuteQueryTool(mockDatabaseContext.Object, nullOptions);
+            
+            // Assert
+            act.Should().Throw<ArgumentNullException>()
+                .WithParameterName("configuration");
+        }
+        
+        [Fact(DisplayName = "EQT-003: ExecuteQueryTool returns error for empty query")]
+        public async Task EQT003()
+        {
+            // Arrange
+            var mockDatabaseContext = new Mock<IDatabaseContext>();
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            
+            var tool = new ExecuteQueryTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ExecuteQuery(string.Empty);
@@ -37,12 +61,14 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("Error: Query cannot be empty");
         }
         
-        [Fact(DisplayName = "EQT-003: ExecuteQueryTool returns error for null query")]
-        public async Task EQT003()
+        [Fact(DisplayName = "EQT-004: ExecuteQueryTool returns error for null query")]
+        public async Task EQT004()
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new ExecuteQueryTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ExecuteQueryTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ExecuteQuery(null);
@@ -51,12 +77,14 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("Error: Query cannot be empty");
         }
         
-        [Fact(DisplayName = "EQT-004: ExecuteQueryTool returns error for whitespace query")]
-        public async Task EQT004()
+        [Fact(DisplayName = "EQT-005: ExecuteQueryTool returns error for whitespace query")]
+        public async Task EQT005()
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new ExecuteQueryTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ExecuteQueryTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ExecuteQuery("   ");
@@ -65,8 +93,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("Error: Query cannot be empty");
         }
         
-        [Fact(DisplayName = "EQT-005: ExecuteQueryTool executes query successfully")]
-        public async Task EQT005()
+        [Fact(DisplayName = "EQT-006: ExecuteQueryTool executes query successfully")]
+        public async Task EQT006()
         {
             // Arrange
             var query = "SELECT 1";
@@ -85,7 +113,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new ExecuteQueryTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ExecuteQueryTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ExecuteQuery(query);
@@ -99,8 +129,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 Times.Once);
         }
         
-        [Fact(DisplayName = "EQT-006: ExecuteQueryTool executes query with timeout")]
-        public async Task EQT006()
+        [Fact(DisplayName = "EQT-007: ExecuteQueryTool executes query with timeout")]
+        public async Task EQT007()
         {
             // Arrange
             var query = "SELECT 1";
@@ -119,7 +149,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new ExecuteQueryTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ExecuteQueryTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ExecuteQuery(query, timeout);
@@ -133,8 +165,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 Times.Once);
         }
         
-        [Fact(DisplayName = "EQT-007: ExecuteQueryTool handles exception from database context")]
-        public async Task EQT007()
+        [Fact(DisplayName = "EQT-008: ExecuteQueryTool handles exception from database context")]
+        public async Task EQT008()
         {
             // Arrange
             var query = "SELECT 1";
@@ -147,7 +179,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new ExecuteQueryTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ExecuteQueryTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ExecuteQuery(query);

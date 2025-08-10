@@ -6,6 +6,7 @@ using Core.Application.Interfaces;
 using Core.Application.Models;
 using Core.Infrastructure.McpServer.Tools;
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -16,9 +17,13 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         [Fact(DisplayName = "LTT-001: ListTablesTool constructor with null database context throws ArgumentNullException")]
         public void LTT001()
         {
+            // Arrange
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            
             // Act
             IDatabaseContext? nullContext = null;
-            Action act = () => new ListTablesTool(nullContext);
+            Action act = () => new ListTablesTool(nullContext, mockOptions.Object);
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -35,7 +40,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(emptyTableList);
             
-            var tool = new ListTablesTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null }); // Disable timeout
+            var tool = new ListTablesTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ListTables();
@@ -79,7 +86,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
-            var tool = new ListTablesTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ListTablesTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ListTables();
@@ -101,7 +110,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new ListTablesTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null }); // Disable timeout
+            var tool = new ListTablesTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ListTables();
@@ -121,7 +132,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockDatabaseContext.Setup(x => x.ListTablesAsync(timeoutSeconds, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
-            var tool = new ListTablesTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ListTablesTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ListTables(timeoutSeconds);
@@ -141,7 +154,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockDatabaseContext.Setup(x => x.ListTablesAsync(null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
-            var tool = new ListTablesTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ListTablesTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ListTables(null);
@@ -175,7 +190,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockDatabaseContext.Setup(x => x.ListTablesAsync(specificTimeout, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
-            var tool = new ListTablesTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ListTablesTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ListTables(specificTimeout);

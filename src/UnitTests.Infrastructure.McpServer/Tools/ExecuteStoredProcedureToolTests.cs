@@ -1,6 +1,8 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.McpServer.Tools;
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using Moq;
 using System.Text.Json;
 
@@ -11,9 +13,13 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         [Fact(DisplayName = "ESPT-001: ExecuteStoredProcedureTool constructor with null database context throws ArgumentNullException")]
         public void ESPT001()
         {
+            // Arrange
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            
             // Act
             IDatabaseContext? nullContext = null;
-            Action act = () => new ExecuteStoredProcedureTool(nullContext);
+            Action act = () => new ExecuteStoredProcedureTool(nullContext, mockOptions.Object);
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -25,7 +31,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new ExecuteStoredProcedureTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ExecuteStoredProcedureTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ExecuteStoredProcedure(string.Empty, "{}");
@@ -66,7 +74,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new ExecuteStoredProcedureTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ExecuteStoredProcedureTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ExecuteStoredProcedure(procedureName, parametersJson);
@@ -97,7 +107,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new ExecuteStoredProcedureTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ExecuteStoredProcedureTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ExecuteStoredProcedure(procedureName, parameters);
@@ -115,7 +127,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             
-            var tool = new ExecuteStoredProcedureTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new ExecuteStoredProcedureTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.ExecuteStoredProcedure(procedureName, invalidJson);
