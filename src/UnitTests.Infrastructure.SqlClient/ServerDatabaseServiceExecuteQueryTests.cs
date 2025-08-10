@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.SqlClient;
 using Core.Infrastructure.SqlClient.Interfaces;
 using FluentAssertions;
@@ -105,7 +106,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(mockDataReader.Object);
             
             // Act
-            await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query, null, cancellationToken);
+            await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query, null, null, cancellationToken);
             
             // Assert
             _mockDatabaseService.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), cancellationToken), Times.Once);

@@ -62,7 +62,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not accessible");
 
             // Use the database service with the specified database name to change context
-            return await _databaseService.ListTablesAsync(databaseName, effectiveTimeout, combinedToken);
+            return await _databaseService.ListTablesAsync(databaseName, null, effectiveTimeout, combinedToken);
         }
         
         /// <summary>
@@ -81,7 +81,7 @@ namespace Core.Infrastructure.SqlClient
             if (timeoutContext?.IsTimeoutExceeded == true)
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
                 
-            return await _databaseService.ListDatabasesAsync(effectiveTimeout, combinedToken);
+            return await _databaseService.ListDatabasesAsync(null, effectiveTimeout, combinedToken);
         }
 
         /// <summary>
@@ -113,7 +113,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not accessible");
 
             // Use the database service with the specified database name to get the table schema
-            return await _databaseService.GetTableSchemaAsync(tableName, databaseName, effectiveTimeout, combinedToken);
+            return await _databaseService.GetTableSchemaAsync(tableName, databaseName, null, effectiveTimeout, combinedToken);
         }
         
         /// <summary>
@@ -145,7 +145,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not accessible");
                 
             // Use the database service with the specified database name to execute the query
-            return await _databaseService.ExecuteQueryAsync(query, databaseName, effectiveTimeout, combinedToken);
+            return await _databaseService.ExecuteQueryAsync(query, databaseName, null, effectiveTimeout, combinedToken);
         }
         
         /// <summary>
@@ -173,7 +173,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not accessible");
 
             // Use the database service with the specified database name to change context
-            return await _databaseService.ListStoredProceduresAsync(databaseName, effectiveTimeout, combinedToken);
+            return await _databaseService.ListStoredProceduresAsync(databaseName, null, effectiveTimeout, combinedToken);
         }
 
         /// <summary>
@@ -205,7 +205,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not accessible");
 
             // Use the database service with the specified database name to get the stored procedure definition
-            return await _databaseService.GetStoredProcedureDefinitionAsync(procedureName, databaseName, effectiveTimeout, combinedToken);
+            return await _databaseService.GetStoredProcedureDefinitionAsync(procedureName, databaseName, null, effectiveTimeout, combinedToken);
         }
         
         /// <summary>
@@ -241,7 +241,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not accessible");
                 
             // Use the database service with the specified database name to execute the stored procedure
-            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, effectiveTimeout, combinedToken);
+            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, null, effectiveTimeout, combinedToken);
         }
         
         /// <summary>
@@ -264,7 +264,7 @@ namespace Core.Infrastructure.SqlClient
             if (timeoutContext?.IsTimeoutExceeded == true)
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
                 
-            return await _databaseService.DoesDatabaseExistAsync(databaseName, effectiveTimeout, combinedToken);
+            return await _databaseService.DoesDatabaseExistAsync(databaseName, null, effectiveTimeout, combinedToken);
         }
         
         /// <summary>

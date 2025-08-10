@@ -103,7 +103,7 @@ namespace UnitTests.Infrastructure.SqlClient
         public async Task DBS004()
         {
             // Act
-            Func<Task> act = async () => await _databaseService.ExecuteQueryAsync(string.Empty, null);
+            Func<Task> act = async () => await _databaseService.ExecuteQueryAsync(string.Empty, null, null);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()

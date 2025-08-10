@@ -51,7 +51,7 @@ namespace UnitTests.Application
                           .Returns(Task.FromResult(false)); // No data to read
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
             
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
             // Act
@@ -85,7 +85,7 @@ namespace UnitTests.Application
                           .Returns(Task.FromResult(false));
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
             
-            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
             // Act
@@ -172,7 +172,7 @@ namespace UnitTests.Application
                           .Returns(tcs.Task);
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
             
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
             var session = await _sessionManager.StartQueryAsync("SELECT * FROM Orders", "TestDB", 30);
@@ -220,7 +220,7 @@ namespace UnitTests.Application
                           .Returns(tcs2.Task); // This will keep the session running
             mockDataReader2.Setup(x => x.FieldCount).Returns(0);
             
-            _mockDatabaseService.SetupSequence(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.SetupSequence(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader1.Object)
                                .ReturnsAsync(mockDataReader2.Object);
 
@@ -253,7 +253,7 @@ namespace UnitTests.Application
                           .Returns(Task.FromResult(false));
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
             
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
             var session1 = await _sessionManager.StartQueryAsync("SELECT 1", "TestDB", 30);
@@ -281,7 +281,7 @@ namespace UnitTests.Application
                           .Returns(tcs.Task); // This will keep all sessions running
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
             
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
             
             // Create maximum number of sessions
@@ -327,7 +327,7 @@ namespace UnitTests.Application
                           .Returns(Task.FromResult(false));
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
             
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
             var session1 = await _sessionManager.StartQueryAsync("SELECT 1", "TestDB", 30);
@@ -358,10 +358,10 @@ namespace UnitTests.Application
                           .Returns(Task.FromResult(false));
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
             
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
                                
-            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
             // Act

@@ -57,7 +57,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
                 
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.ListTablesAsync(databaseName: null, effectiveTimeout, combinedToken);
+            return await _databaseService.ListTablesAsync(databaseName: null, null, effectiveTimeout, combinedToken);
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
 
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.GetTableSchemaAsync(tableName, null, effectiveTimeout, combinedToken);
+            return await _databaseService.GetTableSchemaAsync(tableName, null, null, effectiveTimeout, combinedToken);
         }
         
         /// <summary>
@@ -105,7 +105,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
                 
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.ExecuteQueryAsync(query, null, effectiveTimeout, combinedToken);
+            return await _databaseService.ExecuteQueryAsync(query, null, null, effectiveTimeout, combinedToken);
         }
         
         /// <summary>
@@ -125,7 +125,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
 
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.ListStoredProceduresAsync(databaseName: null, effectiveTimeout, combinedToken);
+            return await _databaseService.ListStoredProceduresAsync(databaseName: null, null, effectiveTimeout, combinedToken);
         }
 
         /// <summary>
@@ -149,7 +149,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
 
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.GetStoredProcedureDefinitionAsync(procedureName, null, effectiveTimeout, combinedToken);
+            return await _databaseService.GetStoredProcedureDefinitionAsync(procedureName, null, null, effectiveTimeout, combinedToken);
         }
         
         /// <summary>
@@ -174,7 +174,7 @@ namespace Core.Infrastructure.SqlClient
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
                 
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, null, effectiveTimeout, combinedToken);
+            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, null, null, effectiveTimeout, combinedToken);
         }
 
         /// <summary>

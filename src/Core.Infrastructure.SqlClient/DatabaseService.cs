@@ -55,7 +55,7 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of table information</returns>
-        public async Task<IEnumerable<TableInfo>> ListTablesAsync(string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<TableInfo>> ListTablesAsync(string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             var capabilities = await GetCapabilitiesAsync(cancellationToken);
             var result = new List<TableInfo>();
@@ -404,7 +404,7 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of database information</returns>
-        public async Task<IEnumerable<DatabaseInfo>> ListDatabasesAsync(int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<DatabaseInfo>> ListDatabasesAsync(ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             var capabilities = await GetCapabilitiesAsync(cancellationToken);
             var result = new List<DatabaseInfo>();
@@ -500,7 +500,7 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>True if the database exists and is accessible, otherwise false</returns>
-        public async Task<bool> DoesDatabaseExistAsync(string databaseName, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<bool> DoesDatabaseExistAsync(string databaseName, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
@@ -540,7 +540,7 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
-        public async Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -614,7 +614,7 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>Table schema information</returns>
-        public async Task<TableSchemaInfo> GetTableSchemaAsync(string tableName, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<TableSchemaInfo> GetTableSchemaAsync(string tableName, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(tableName))
             {
@@ -773,7 +773,7 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>A collection of stored procedure information</returns>
-        public async Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<StoredProcedureInfo>> ListStoredProceduresAsync(string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             var capabilities = await GetCapabilitiesAsync(cancellationToken);
             var result = new List<StoredProcedureInfo>();
@@ -1039,7 +1039,7 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>Stored procedure definition as SQL string</returns>
-        public async Task<string> GetStoredProcedureDefinitionAsync(string procedureName, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<string> GetStoredProcedureDefinitionAsync(string procedureName, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(procedureName))
             {
@@ -1262,7 +1262,7 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
-        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(procedureName))
             {

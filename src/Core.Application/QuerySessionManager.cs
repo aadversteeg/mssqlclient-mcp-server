@@ -192,6 +192,7 @@ namespace Core.Application
                 using var reader = await _databaseService.ExecuteQueryAsync(
                     session.Query, 
                     session.DatabaseName, 
+                    null,
                     session.TimeoutSeconds,
                     session.CancellationToken?.Token ?? CancellationToken.None);
                 
@@ -275,6 +276,7 @@ namespace Core.Application
                     session.Query, 
                     session.Parameters ?? new Dictionary<string, object?>(), 
                     session.DatabaseName, 
+                    null,
                     session.TimeoutSeconds,
                     session.CancellationToken?.Token ?? CancellationToken.None);
                 
