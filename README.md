@@ -35,13 +35,14 @@ The MCP client operates in one of two modes:
 ### Security & Configuration
 - Configurable tool enablement for security
 - Environment-based configuration
-- Comprehensive error handling and validation
+- Comprehensive error handling with standardized error messages
+- Input validation against SQL Server metadata
 
 ## Getting Started
 
 ### Prerequisites
 
-- .NET 9.0 (for local development/deployment)
+- .NET 9.0 SDK (for local development/deployment)
 - Docker (for container deployment)
 
 ### Build Instructions (for development)
@@ -53,19 +54,19 @@ If you want to build the project from source:
    git clone https://github.com/aadversteeg/mssqlclient-mcp-server.git
    ```
 
-2. Navigate to the project root directory:
+2. Navigate to the source directory:
    ```bash
-   cd mssqlclient-mcp-server
+   cd mssqlclient-mcp-server/src
    ```
 
-3. Build the project using:
+3. Build the project:
    ```bash
-   dotnet build src/mssqlclient.sln
+   dotnet build
    ```
 
 4. Run the tests:
    ```bash
-   dotnet test src/mssqlclient.sln
+   dotnet test
    ```
 
 ## Docker Support
@@ -200,6 +201,7 @@ Example response:
   "connectionTimeoutSeconds": 15,
   "maxConcurrentSessions": 10,
   "sessionCleanupIntervalMinutes": 60,
+  "totalToolCallTimeoutSeconds": 120,
   "timestamp": "2024-12-19 10:30:45 UTC"
 }
 ```
@@ -234,7 +236,7 @@ Example response:
 
 #### Session Management Tools
 
-These tools allow management of long-running queries and stored procedures through background sessions.
+These tools allow management of long-running queries and stored procedures through background sessions. They are particularly useful when operations would exceed the `TotalToolCallTimeoutSeconds` limit or when you need to run multiple operations concurrently.
 
 ##### get_session_status
 
@@ -1065,29 +1067,29 @@ docker run \
 The `TotalToolCallTimeoutSeconds` setting provides a safety mechanism to prevent tools from running indefinitely:
 
 **How it works:**
-- When a tool is called, a total timeout timer starts
-- Each SQL command uses the remaining time to calculate its timeout: `Min(DefaultCommandTimeoutSeconds, RemainingTime)`
-- If the total timeout is exceeded, all operations are cancelled with a clear error message
-- Commands are guaranteed at least 1 second timeout even if total time is nearly exceeded
+- Sets a maximum time limit for any single tool call to complete
+- If exceeded, the operation is cancelled with a clear timeout error message
+- Helps prevent hanging operations and ensures responsive behavior
+- Works in conjunction with per-operation timeouts for fine-grained control
 
 **Configuration considerations:**
 - **MCP Client Limits**: Most MCP clients (like Claude Desktop) have connection timeouts of 2-5 minutes
-- **Best Practice**: Set `TotalToolCallTimeoutSeconds` below your client's timeout for best user experience
+- **Best Practice**: Set `TotalToolCallTimeoutSeconds` below your client's timeout for best user experience (typically 90-120 seconds)
 - **Long Operations**: For operations requiring more time, use session-based tools (`start_query`, `start_stored_procedure`)
-- **Backward Compatibility**: Set to `null` to disable total timeout and preserve existing behavior
+- **Disable if needed**: Set to `null` to disable the total timeout limit
 
-**Example timeout scenarios:**
+**Example configuration:**
 ```json
 {
   "TotalToolCallTimeoutSeconds": 90,  // 1.5 minutes - good for most operations
-  "DefaultCommandTimeoutSeconds": 30  // Individual commands max 30s
+  "DefaultCommandTimeoutSeconds": 30  // Default timeout for individual SQL commands
 }
 ```
 
-- At 0s: Command timeout = min(30, 90) = 30 seconds
-- At 70s: Command timeout = min(30, 20) = 20 seconds  
-- At 89s: Command timeout = min(30, 1) = 1 second
-- At 90s+: Operation cancelled with timeout error
+This configuration ensures:
+- No tool call runs longer than 90 seconds total
+- Individual SQL commands default to 30 seconds timeout
+- Long-running operations should use session-based tools instead
 
 #### Runtime Timeout Management
 
@@ -1187,15 +1189,17 @@ Most database operations support an optional `timeoutSeconds` parameter that ove
 #### Best Practices
 
 1. **Default Configuration**: Set reasonable defaults in `appsettings.json` based on your typical workload
-2. **Long Operations**: Use per-operation timeouts for known long-running queries or procedures
-3. **Dynamic Adjustment**: Use `set_command_timeout` when working with varying workloads throughout the day
-4. **Monitoring**: Use `get_command_timeout` to verify current settings before running critical operations
-5. **Background Operations**: For very long operations, use the session-based tools:
+2. **Total Timeout**: Set `TotalToolCallTimeoutSeconds` to 90-120 seconds for optimal MCP client compatibility
+3. **Long Operations**: Use per-operation timeouts for known long-running queries or procedures
+4. **Dynamic Adjustment**: Use `set_command_timeout` when working with varying workloads throughout the day
+5. **Monitoring**: Use `get_command_timeout` to verify current settings before running critical operations
+6. **Background Operations**: For operations that exceed timeout limits, use the session-based tools:
    - `start_query` / `start_query_in_database` for long-running queries
    - `start_stored_procedure` / `start_stored_procedure_in_database` for long-running procedures
    - Monitor progress with `get_session_status`
    - Retrieve results with `get_session_results`
    - Cancel if needed with `stop_session`
+   - These tools bypass the `TotalToolCallTimeoutSeconds` limit and run in the background
 
 #### Timeout Limits
 
@@ -1254,7 +1258,7 @@ Server=database.example.com,1433;User Id=sa;Password=YourPassword;TrustServerCer
 
 If no connection string is provided, the server will return an error message when attempting to use the tools.
 
-> Integrated security will not work from a docker container!
+> **Note:** Integrated Security (Windows Authentication) is not supported when running in Docker containers. Use SQL Server authentication instead.
 
 ## Configuring Claude Desktop
 
@@ -1307,6 +1311,34 @@ To use the SQL Server MCP client from a Docker container with Claude Desktop:
 
 ## Architecture
 
+### Interface Design
+
+The server implements a three-tier interface architecture for clean separation of concerns:
+
+1. **IDatabaseService** (Core Layer)
+   - Low-level database operations without timeout context
+   - Direct SQL Server communication
+   - Connection and command management
+
+2. **IServerDatabase** (Server Mode Layer)
+   - Server-wide operations across databases
+   - Includes timeout context management
+   - Database switching and cross-database queries
+
+3. **IDatabaseContext** (Database Mode Layer)
+   - Database-scoped operations
+   - Simplified interface for single-database scenarios
+   - Includes timeout context management
+
+### Timeout Management
+
+The server uses a unified timeout management system:
+
+- **ToolCallTimeoutContext**: Nullable parameter in all high-level interfaces
+- **Simplified API**: Single method signature with optional timeout context
+- **Clean Design**: No method overloading - nullable parameters provide flexibility
+- **Consistent Error Handling**: Standardized error format: `"Error: SQL error while {operation}: {message}"`
+
 ### Type System
 
 The server includes a sophisticated type mapping system that converts JSON values to appropriate SQL Server types based on stored procedure parameter metadata:
@@ -1327,10 +1359,19 @@ The server includes a sophisticated type mapping system that converts JSON value
 
 The server implements a multi-layered security approach:
 
-1. **Tool-Level Security**: Individual tools can be enabled/disabled
+1. **Tool-Level Security**: Individual tools can be enabled/disabled via configuration
 2. **Parameter Validation**: All inputs are validated against SQL Server metadata
 3. **SQL Injection Protection**: Uses parameterized queries throughout
 4. **Connection Security**: Supports all SQL Server authentication methods
+
+### Technology Stack
+
+- **Framework**: .NET 9.0 with C# 13
+- **Language Features**: Nullable reference types, async/await, records
+- **Database Access**: Microsoft.Data.SqlClient
+- **MCP SDK**: Model Context Protocol C# SDK
+- **Testing**: xUnit with Moq for comprehensive unit testing
+- **Containerization**: Multi-stage Docker builds for optimized images
 
 ## License
 
