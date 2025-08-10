@@ -18,7 +18,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Act
             IServerDatabase? nullServerDatabase = null;
-            Action act = () => new ServerListTablesTool(nullServerDatabase);
+            var configuration = TestHelpers.CreateConfiguration();
+            Action act = () => new ServerListTablesTool(nullServerDatabase, configuration);
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -30,7 +31,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(string.Empty);
@@ -44,7 +46,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(null);
@@ -58,7 +61,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase("   ");
@@ -99,13 +103,14 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
             // Mock the ToToolResult extension method behavior
             var expectedResult = $"Tables in database '{databaseName}':\ndbo.Users (1000 rows)\nsales.Orders (5000 rows)";
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName);
@@ -114,7 +119,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().NotBeNull();
             
             // Verify the server database was called with correct parameters
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLTT-006: ListTablesInDatabase returns empty list message when no tables exist")]
@@ -125,10 +130,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var emptyTableList = new List<TableInfo>();
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(emptyTableList);
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName);
@@ -137,7 +143,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().NotBeNull();
             
             // Verify the server database was called
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLTT-007: ListTablesInDatabase handles exception from server database")]
@@ -148,10 +154,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Database not found";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName);
@@ -161,7 +168,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("listing tables");
             
             // Verify the server database was called
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLTT-008: ListTablesInDatabase handles database access exception")]
@@ -172,10 +179,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Access denied to database";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new UnauthorizedAccessException(expectedErrorMessage));
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName);
@@ -185,7 +193,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("listing tables");
             
             // Verify the server database was called
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLTT-009: ListTablesInDatabase handles SQL connection timeout")]
@@ -196,10 +204,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Connection timeout";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new TimeoutException(expectedErrorMessage));
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName);
@@ -209,7 +218,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("listing tables");
             
             // Verify the server database was called
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLTT-010: ListTablesInDatabase works with different database names")]
@@ -233,10 +242,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName);
@@ -245,7 +255,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().NotBeNull();
             
             // Verify the server database was called with the custom database name
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLTT-011: ListTablesInDatabase handles tables with special characters in names")]
@@ -280,10 +290,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName);
@@ -292,7 +303,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().NotBeNull();
             
             // Verify the server database was called
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLTT-012: ListTablesInDatabase handles tables with zero rows")]
@@ -316,10 +327,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName);
@@ -328,7 +340,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().NotBeNull();
             
             // Verify the server database was called
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLTT-013: ListTablesInDatabase with timeout parameter passes through correctly")]
@@ -353,10 +365,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, timeoutSeconds, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), timeoutSeconds, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName, timeoutSeconds);
@@ -366,7 +379,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("TestTable");
             
             // Verify the timeout parameter was passed through correctly
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, timeoutSeconds, It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), timeoutSeconds, It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLTT-014: ListTablesInDatabase with null timeout uses default")]
@@ -377,10 +390,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var tableList = new List<TableInfo>();
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, null, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName, null);
@@ -389,7 +403,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().NotBeNull();
             
             // Verify null timeout was passed through
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, null, It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), null, It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SLTT-015: ListTablesInDatabase verifies timeout parameter is passed through correctly")]
@@ -414,10 +428,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, specificTimeout, It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), specificTimeout, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
-            var tool = new ServerListTablesTool(mockServerDatabase.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new ServerListTablesTool(mockServerDatabase.Object, configuration);
             
             // Act
             var result = await tool.ListTablesInDatabase(databaseName, specificTimeout);
@@ -427,10 +442,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("TimeoutTestTable");
             
             // Verify the exact timeout value was passed
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, specificTimeout, It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), specificTimeout, It.IsAny<CancellationToken>()), Times.Once);
             
             // Verify it was not called with any other timeout value
-            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.Is<int?>(t => t != specificTimeout), It.IsAny<CancellationToken>()), Times.Never);
+            mockServerDatabase.Verify(x => x.ListTablesAsync(databaseName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.Is<int?>(t => t != specificTimeout), It.IsAny<CancellationToken>()), Times.Never);
         }
     }
 }
+
+

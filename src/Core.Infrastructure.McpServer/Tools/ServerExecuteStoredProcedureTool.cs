@@ -1,9 +1,11 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using Core.Infrastructure.McpServer.Extensions;
 using System.Text.Json;
 using System.Collections.Generic;
+using Microsoft.Extensions.Options;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -11,10 +13,12 @@ namespace Core.Infrastructure.McpServer.Tools
     public class ServerExecuteStoredProcedureTool
     {
         private readonly IServerDatabase _serverDatabase;
+        private readonly DatabaseConfiguration _configuration;
 
-        public ServerExecuteStoredProcedureTool(IServerDatabase serverDatabase)
+        public ServerExecuteStoredProcedureTool(IServerDatabase serverDatabase, IOptions<DatabaseConfiguration> configuration)
         {
             _serverDatabase = serverDatabase ?? throw new ArgumentNullException(nameof(serverDatabase));
+            _configuration = configuration?.Value ?? throw new ArgumentNullException(nameof(configuration));
             Console.Error.WriteLine("ServerExecuteStoredProcedureTool constructed with server database service");
         }
 
@@ -41,6 +45,9 @@ namespace Core.Infrastructure.McpServer.Tools
                 return "Error: Procedure name cannot be empty.";
             }
 
+            // Create timeout context and cancellation token source if total timeout is configured
+            var (timeoutContext, tokenSource) = ToolCallTimeoutFactory.CreateTimeout(_configuration);
+
             try
             {
                 // Parse the parameters from JSON
@@ -61,15 +68,32 @@ namespace Core.Infrastructure.McpServer.Tools
                     return $"Error parsing parameters: {ex.Message}. Parameters must be a valid JSON object with parameter names as keys.";
                 }
 
-                // Use the ServerDatabase service to execute the stored procedure in the specified database
-                IAsyncDataReader reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutSeconds);
+                // Use timeout context if available, otherwise fall back to legacy behavior
+                IAsyncDataReader reader;
+                if (timeoutContext != null)
+                {
+                    reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutContext, timeoutSeconds);
+                }
+                else
+                {
+                    reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutSeconds);
+                }
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();
             }
+            catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
+            {
+                // Return timeout error message instead of generic cancellation error
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
+            }
             catch (Exception ex)
             {
                 return ex.ToSqlErrorResult("executing stored procedure");
+            }
+            finally
+            {
+                tokenSource?.Dispose();
             }
         }
     }

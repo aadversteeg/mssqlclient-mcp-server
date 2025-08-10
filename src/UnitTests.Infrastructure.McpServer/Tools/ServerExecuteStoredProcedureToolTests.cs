@@ -14,7 +14,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Act
             IServerDatabase? nullServerDb = null;
-            Action act = () => new ServerExecuteStoredProcedureTool(nullServerDb);
+            Action act = () => new ServerExecuteStoredProcedureTool(nullServerDb, TestHelpers.CreateConfiguration());
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -26,7 +26,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteStoredProcedureInDatabase(string.Empty, "TestProc", "{}", null);
@@ -40,7 +40,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteStoredProcedureInDatabase("TestDb", string.Empty, "{}", null);
@@ -79,11 +79,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                     p.ContainsKey("Param1") && 
                     p.ContainsKey("Param2")
                 ),
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, parametersJson, null);
@@ -94,6 +95,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 databaseName,
                 procedureName,
                 It.IsAny<Dictionary<string, object?>>(),
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 null,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -113,17 +115,18 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 databaseName,
                 procedureName, 
                 It.IsAny<Dictionary<string, object?>>(),
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, parameters, null);
             
             // Assert
-            result.Should().Contain(expectedErrorMessage);
+            result.Should().Be($"Error: SQL error while executing stored procedure: {expectedErrorMessage}");
         }
         
         [Fact(DisplayName = "SESPT-006: ServerExecuteStoredProcedureTool handles invalid JSON for parameters")]
@@ -136,7 +139,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             var mockServerDatabase = new Mock<IServerDatabase>();
             
-            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, invalidJson, null);
@@ -162,11 +165,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                     databaseName,
                     procedureName,
                     It.IsAny<Dictionary<string, object?>>(),
+                    It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                     timeoutSeconds,
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteStoredProcedureTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteStoredProcedureInDatabase(databaseName, procedureName, parametersJson, timeoutSeconds);
@@ -177,9 +181,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 databaseName,
                 procedureName,
                 It.IsAny<Dictionary<string, object?>>(),
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeoutSeconds,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         }
     }
 }
+
+

@@ -1,4 +1,6 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using Core.Infrastructure.McpServer.Extensions;
@@ -10,10 +12,12 @@ namespace Core.Infrastructure.McpServer.Tools
     public class ServerListStoredProceduresTool
     {
         private readonly IServerDatabase _serverDatabase;
+        private readonly DatabaseConfiguration _configuration;
 
-        public ServerListStoredProceduresTool(IServerDatabase serverDatabase)
+        public ServerListStoredProceduresTool(IServerDatabase serverDatabase, IOptions<DatabaseConfiguration> configuration)
         {
             _serverDatabase = serverDatabase ?? throw new ArgumentNullException(nameof(serverDatabase));
+            _configuration = configuration?.Value ?? throw new ArgumentNullException(nameof(configuration));
             Console.Error.WriteLine("ServerListStoredProceduresTool constructed with server database service");
         }
 
@@ -33,16 +37,37 @@ namespace Core.Infrastructure.McpServer.Tools
                 return "Error: Database name cannot be empty";
             }
             
+            // Create timeout context
+            var (timeoutContext, tokenSource) = ToolCallTimeoutFactory.CreateTimeout(_configuration);
+            
             try
             {
                 // First check if the database exists
-                if (!await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutSeconds))
+                bool databaseExists;
+                if (timeoutContext != null)
+                {
+                    databaseExists = await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutContext, timeoutSeconds);
+                }
+                else
+                {
+                    databaseExists = await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutSeconds);
+                }
+                
+                if (!databaseExists)
                 {
                     return $"Error: Database '{databaseName}' does not exist or is not accessible";
                 }
                 
                 // Use the ServerDatabase service to get the stored procedures in the specified database
-                var procedures = await _serverDatabase.ListStoredProceduresAsync(databaseName, timeoutSeconds);
+                IEnumerable<StoredProcedureInfo> procedures;
+                if (timeoutContext != null)
+                {
+                    procedures = await _serverDatabase.ListStoredProceduresAsync(databaseName, timeoutContext, timeoutSeconds);
+                }
+                else
+                {
+                    procedures = await _serverDatabase.ListStoredProceduresAsync(databaseName, timeoutSeconds);
+                }
                 
                 // No stored procedures found
                 if (!procedures.Any())
@@ -74,9 +99,17 @@ namespace Core.Infrastructure.McpServer.Tools
                 
                 return sb.ToString();
             }
+            catch (OperationCanceledException ex) when (timeoutContext?.IsTimeoutExceeded == true)
+            {
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
+            }
             catch (Exception ex)
             {
                 return ex.ToSqlErrorResult($"listing stored procedures in database '{databaseName}'");
+            }
+            finally
+            {
+                tokenSource?.Dispose();
             }
         }
     }

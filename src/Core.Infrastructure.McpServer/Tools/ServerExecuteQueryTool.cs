@@ -1,7 +1,9 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using Core.Infrastructure.McpServer.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -9,10 +11,12 @@ namespace Core.Infrastructure.McpServer.Tools
     public class ServerExecuteQueryTool
     {
         private readonly IServerDatabase _serverDatabase;
+        private readonly DatabaseConfiguration _configuration;
 
-        public ServerExecuteQueryTool(IServerDatabase serverDatabase)
+        public ServerExecuteQueryTool(IServerDatabase serverDatabase, IOptions<DatabaseConfiguration> configuration)
         {
             _serverDatabase = serverDatabase ?? throw new ArgumentNullException(nameof(serverDatabase));
+            _configuration = configuration?.Value ?? throw new ArgumentNullException(nameof(configuration));
             Console.Error.WriteLine("ServerExecuteQueryTool constructed with server database service");
         }
 
@@ -37,17 +41,37 @@ namespace Core.Infrastructure.McpServer.Tools
                 return "Error: Query cannot be empty.";
             }
 
+            // Create timeout context and cancellation token source if total timeout is configured
+            var (timeoutContext, tokenSource) = ToolCallTimeoutFactory.CreateTimeout(_configuration);
+
             try
             {
-                // Use the ServerDatabase service to execute the query in the specified database
-                IAsyncDataReader reader = await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutSeconds);
+                // Use timeout context if available, otherwise fall back to legacy behavior
+                IAsyncDataReader reader;
+                if (timeoutContext != null)
+                {
+                    reader = await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutContext, timeoutSeconds);
+                }
+                else
+                {
+                    reader = await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutSeconds);
+                }
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();
             }
+            catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
+            {
+                // Return timeout error message instead of generic cancellation error
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
+            }
             catch (Exception ex)
             {
                 return ex.ToSqlErrorResult("executing query");
+            }
+            finally
+            {
+                tokenSource?.Dispose();
             }
         }
     }

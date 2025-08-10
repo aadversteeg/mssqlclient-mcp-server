@@ -1,9 +1,11 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.McpServer.Extensions;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -14,14 +16,17 @@ namespace Core.Infrastructure.McpServer.Tools
     public class ServerGetStoredProcedureParametersTool
     {
         private readonly IServerDatabase _serverDatabase;
+        private readonly DatabaseConfiguration _configuration;
 
         /// <summary>
         /// Initializes a new instance of the ServerGetStoredProcedureParametersTool class.
         /// </summary>
         /// <param name="serverDatabase">The server database service</param>
-        public ServerGetStoredProcedureParametersTool(IServerDatabase serverDatabase)
+        /// <param name="configuration">Database configuration</param>
+        public ServerGetStoredProcedureParametersTool(IServerDatabase serverDatabase, IOptions<DatabaseConfiguration> configuration)
         {
             _serverDatabase = serverDatabase ?? throw new ArgumentNullException(nameof(serverDatabase));
+            _configuration = configuration?.Value ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         /// <summary>
@@ -122,9 +127,35 @@ JSON format provides JSON Schema with SQL-specific extensions for parameter vali
 
             var parameters = new List<ParameterInfo>();
             
-            var reader = databaseName != null ? 
-                await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutSeconds) :
-                await _serverDatabase.ExecuteQueryInDatabaseAsync("master", query, timeoutSeconds); // fallback to master if no database specified
+            // Create timeout context and cancellation token source if total timeout is configured
+            var (timeoutContext, tokenSource) = ToolCallTimeoutFactory.CreateTimeout(_configuration);
+            
+            IAsyncDataReader reader;
+            try
+            {
+                if (timeoutContext != null)
+                {
+                    reader = databaseName != null ? 
+                        await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutContext, timeoutSeconds) :
+                        await _serverDatabase.ExecuteQueryInDatabaseAsync("master", query, timeoutContext, timeoutSeconds);
+                }
+                else
+                {
+                    reader = databaseName != null ? 
+                        await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutSeconds) :
+                        await _serverDatabase.ExecuteQueryInDatabaseAsync("master", query, timeoutSeconds);
+                }
+            }
+            catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
+            {
+                tokenSource?.Dispose();
+                throw new InvalidOperationException(timeoutContext.CreateTimeoutExceededMessage(), ex);
+            }
+            catch
+            {
+                tokenSource?.Dispose();
+                throw;
+            }
             
             try
             {
@@ -166,6 +197,7 @@ JSON format provides JSON Schema with SQL-specific extensions for parameter vali
             finally
             {
                 reader.Dispose();
+                tokenSource?.Dispose();
             }
 
             return parameters;
