@@ -4,13 +4,13 @@ EXPOSE 5000
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ["src/Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj", "Core.Infrastructure.McpServer/"]
-COPY ["src/Core.Infrastructure.SqlClient/Core.Infrastructure.SqlClient.csproj", "Core.Infrastructure.SqlClient/"]
-COPY ["src/Core.Application/Core.Application.csproj", "Core.Application/"]
+COPY ["Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj", "Core.Infrastructure.McpServer/"]
+COPY ["Core.Infrastructure.SqlClient/Core.Infrastructure.SqlClient.csproj", "Core.Infrastructure.SqlClient/"]
+COPY ["Core.Application/Core.Application.csproj", "Core.Application/"]
 RUN dotnet restore "Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj"
-COPY ["src/Core.Infrastructure.McpServer/", "Core.Infrastructure.McpServer/"]
-COPY ["src/Core.Infrastructure.SqlClient/", "Core.Infrastructure.SqlClient/"]
-COPY ["src/Core.Application/", "Core.Application/"]
+COPY ["Core.Infrastructure.McpServer/", "Core.Infrastructure.McpServer/"]
+COPY ["Core.Infrastructure.SqlClient/", "Core.Infrastructure.SqlClient/"]
+COPY ["Core.Application/", "Core.Application/"]
 WORKDIR "/src/Core.Infrastructure.McpServer"
 RUN dotnet build "Core.Infrastructure.McpServer.csproj" -c Release -o /app/build
 

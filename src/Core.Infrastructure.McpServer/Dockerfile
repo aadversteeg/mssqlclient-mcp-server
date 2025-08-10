@@ -10,9 +10,9 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:8.0-noble AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj", "Core.Infrastructure.McpServer/"]
-COPY ["src/Core.Application/Core.Application.csproj", "Core.Application/"]
-COPY ["src/Core.Infrastructure.SqlClient/Core.Infrastructure.SqlClient.csproj", "Core.Infrastructure.SqlClient/"]
+COPY ["Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj", "Core.Infrastructure.McpServer/"]
+COPY ["Core.Application/Core.Application.csproj", "Core.Application/"]
+COPY ["Core.Infrastructure.SqlClient/Core.Infrastructure.SqlClient.csproj", "Core.Infrastructure.SqlClient/"]
 RUN dotnet restore "./Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj"
 COPY . .
 WORKDIR "/src/Core.Infrastructure.McpServer"
