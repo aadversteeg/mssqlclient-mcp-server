@@ -37,7 +37,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             var emptyTableList = new List<TableInfo>();
             
-            mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(emptyTableList);
             
             var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
@@ -49,7 +49,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             // Assert
             result.Should().NotBeNull();
-            mockDatabaseContext.Verify(x => x.ListTablesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockDatabaseContext.Verify(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "LTT-003: ListTables returns formatted table list")]
@@ -83,7 +83,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 )
             };
             
-            mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
             var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
@@ -97,7 +97,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().NotBeNull();
             result.Should().Contain("Users");
             result.Should().Contain("Orders");
-            mockDatabaseContext.Verify(x => x.ListTablesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockDatabaseContext.Verify(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "LTT-004: ListTables handles exception from database context")]
@@ -107,7 +107,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Database connection failed";
             
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
             var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
@@ -129,7 +129,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             var tableList = new List<TableInfo>();
             
-            mockDatabaseContext.Setup(x => x.ListTablesAsync(timeoutSeconds, It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), timeoutSeconds, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
             var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
@@ -141,7 +141,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             // Assert
             result.Should().NotBeNull();
-            mockDatabaseContext.Verify(x => x.ListTablesAsync(timeoutSeconds, It.IsAny<CancellationToken>()), Times.Once);
+            mockDatabaseContext.Verify(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), timeoutSeconds, It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "LTT-006: ListTables with null timeout uses default")]
@@ -151,7 +151,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             var tableList = new List<TableInfo>();
             
-            mockDatabaseContext.Setup(x => x.ListTablesAsync(null, It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
             var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
@@ -163,7 +163,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             // Assert
             result.Should().NotBeNull();
-            mockDatabaseContext.Verify(x => x.ListTablesAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+            mockDatabaseContext.Verify(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), null, It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "LTT-007: ListTables verifies timeout parameter is passed through correctly")]
@@ -187,7 +187,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 )
             };
             
-            mockDatabaseContext.Setup(x => x.ListTablesAsync(specificTimeout, It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), specificTimeout, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableList);
             
             var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
@@ -202,10 +202,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("TestTable");
             
             // Verify the exact timeout value was passed
-            mockDatabaseContext.Verify(x => x.ListTablesAsync(specificTimeout, It.IsAny<CancellationToken>()), Times.Once);
+            mockDatabaseContext.Verify(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), specificTimeout, It.IsAny<CancellationToken>()), Times.Once);
             
             // Verify it was not called with any other timeout value
-            mockDatabaseContext.Verify(x => x.ListTablesAsync(It.Is<int?>(t => t != specificTimeout), It.IsAny<CancellationToken>()), Times.Never);
+            mockDatabaseContext.Verify(x => x.ListTablesAsync(It.IsAny<ToolCallTimeoutContext?>(), It.Is<int?>(t => t != specificTimeout), It.IsAny<CancellationToken>()), Times.Never);
         }
     }
 }

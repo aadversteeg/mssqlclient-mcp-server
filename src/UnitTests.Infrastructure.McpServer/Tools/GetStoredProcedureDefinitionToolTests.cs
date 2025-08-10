@@ -16,7 +16,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Act
             IDatabaseContext? nullContext = null;
-            Action act = () => new GetStoredProcedureDefinitionTool(nullContext);
+            Action act = () => new GetStoredProcedureDefinitionTool(nullContext, TestHelpers.CreateConfiguration());
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -28,7 +28,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetStoredProcedureDefinition(string.Empty);
@@ -42,7 +42,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetStoredProcedureDefinition(null);
@@ -56,7 +56,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetStoredProcedureDefinition("   ");
@@ -75,11 +75,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(definition);
             
-            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetStoredProcedureDefinition(procedureName);
@@ -90,6 +91,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain(definition);
             mockDatabaseContext.Verify(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -105,11 +107,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(emptyDefinition);
             
-            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetStoredProcedureDefinition(procedureName);
@@ -129,11 +132,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(whitespaceDefinition);
             
-            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetStoredProcedureDefinition(procedureName);
@@ -153,11 +157,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetStoredProcedureDefinition(procedureName);
@@ -177,11 +182,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeoutSeconds,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(definition);
             
-            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetStoredProcedureDefinition(procedureName, timeoutSeconds);
@@ -194,6 +200,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify the timeout parameter was passed through correctly
             mockDatabaseContext.Verify(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeoutSeconds,
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -209,11 +216,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 null,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(definition);
             
-            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetStoredProcedureDefinition(procedureName, null);
@@ -226,6 +234,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify null timeout was passed through
             mockDatabaseContext.Verify(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 null,
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -242,11 +251,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 specificTimeout,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(definition);
             
-            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object);
+            var tool = new GetStoredProcedureDefinitionTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetStoredProcedureDefinition(procedureName, specificTimeout);
@@ -259,6 +269,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify the exact timeout value was passed
             mockDatabaseContext.Verify(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 specificTimeout,
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -266,6 +277,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify it was not called with any other timeout value
             mockDatabaseContext.Verify(x => x.GetStoredProcedureDefinitionAsync(
                 procedureName,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.Is<int?>(t => t != specificTimeout),
                 It.IsAny<CancellationToken>()), 
                 Times.Never);

@@ -58,7 +58,7 @@ namespace UnitTests.Infrastructure.SqlClient
         public async Task DBSEQ002()
         {
             // Act
-            Func<Task> act = async () => await _databaseService.ExecuteQueryAsync(string.Empty);
+            Func<Task> act = async () => await _databaseService.ExecuteQueryAsync(string.Empty, null);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()

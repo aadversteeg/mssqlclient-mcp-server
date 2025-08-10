@@ -39,16 +39,7 @@ namespace Core.Infrastructure.McpServer.Tools
             
             try
             {
-                // Use timeout context if available, otherwise fall back to legacy behavior
-                IAsyncDataReader reader;
-                if (timeoutContext != null)
-                {
-                    reader = await _databaseContext.ExecuteQueryAsync(query, timeoutContext, timeoutSeconds);
-                }
-                else
-                {
-                    reader = await _databaseContext.ExecuteQueryAsync(query, timeoutSeconds);
-                }
+                var reader = await _databaseContext.ExecuteQueryAsync(query, timeoutContext, timeoutSeconds);
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();

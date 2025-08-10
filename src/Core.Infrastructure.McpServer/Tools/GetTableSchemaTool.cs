@@ -41,10 +41,7 @@ namespace Core.Infrastructure.McpServer.Tools
 
             try
             {
-                // Use timeout context if available, otherwise fall back to legacy behavior
-                var tableSchema = timeoutContext != null
-                    ? await _databaseContext.GetTableSchemaAsync(tableName, timeoutContext, timeoutSeconds)
-                    : await _databaseContext.GetTableSchemaAsync(tableName, timeoutSeconds);
+                var tableSchema = await _databaseContext.GetTableSchemaAsync(tableName, timeoutContext, timeoutSeconds);
                     
                 return tableSchema.ToToolResult();
             }

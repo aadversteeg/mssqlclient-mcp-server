@@ -48,15 +48,7 @@ namespace Core.Infrastructure.McpServer.Tools
             try
             {
                 // First check if the database exists
-                bool databaseExists;
-                if (timeoutContext != null)
-                {
-                    databaseExists = await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutContext, timeoutSeconds);
-                }
-                else
-                {
-                    databaseExists = await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutSeconds);
-                }
+                bool databaseExists = await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutContext, timeoutSeconds);
                 
                 if (!databaseExists)
                 {
@@ -64,15 +56,7 @@ namespace Core.Infrastructure.McpServer.Tools
                 }
                 
                 // Use the ServerDatabase service to get the stored procedure definition in the specified database
-                string definition;
-                if (timeoutContext != null)
-                {
-                    definition = await _serverDatabase.GetStoredProcedureDefinitionAsync(databaseName, procedureName, timeoutContext, timeoutSeconds);
-                }
-                else
-                {
-                    definition = await _serverDatabase.GetStoredProcedureDefinitionAsync(databaseName, procedureName, timeoutSeconds);
-                }
+                string definition = await _serverDatabase.GetStoredProcedureDefinitionAsync(databaseName, procedureName, timeoutContext, timeoutSeconds);
                 
                 // If the definition is empty, return a helpful message
                 if (string.IsNullOrWhiteSpace(definition))

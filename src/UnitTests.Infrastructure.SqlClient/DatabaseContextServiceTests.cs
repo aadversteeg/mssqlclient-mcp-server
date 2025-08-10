@@ -64,7 +64,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(expectedTables);
             
             // Act
-            var result = await _databaseContextService.ListTablesAsync();
+            var result = await _databaseContextService.ListTablesAsync(null);
             
             // Assert
             result.Should().BeEquivalentTo(expectedTables);
@@ -82,7 +82,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(expectedSchema);
             
             // Act
-            var result = await _databaseContextService.GetTableSchemaAsync(tableName);
+            var result = await _databaseContextService.GetTableSchemaAsync(tableName, null);
             
             // Assert
             result.Should().BeEquivalentTo(expectedSchema);
@@ -93,7 +93,7 @@ namespace UnitTests.Infrastructure.SqlClient
         public async Task DCS004()
         {
             // Act
-            Func<Task> act = async () => await _databaseContextService.GetTableSchemaAsync(string.Empty);
+            Func<Task> act = async () => await _databaseContextService.GetTableSchemaAsync(string.Empty, null);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()
@@ -111,7 +111,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(expectedReader);
             
             // Act
-            var result = await _databaseContextService.ExecuteQueryAsync(query);
+            var result = await _databaseContextService.ExecuteQueryAsync(query, null);
             
             // Assert
             result.Should().Be(expectedReader);
@@ -122,7 +122,7 @@ namespace UnitTests.Infrastructure.SqlClient
         public async Task DCS006()
         {
             // Act
-            Func<Task> act = async () => await _databaseContextService.ExecuteQueryAsync(string.Empty);
+            Func<Task> act = async () => await _databaseContextService.ExecuteQueryAsync(string.Empty, null);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()
@@ -165,7 +165,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(expectedProcs);
             
             // Act
-            var result = await _databaseContextService.ListStoredProceduresAsync();
+            var result = await _databaseContextService.ListStoredProceduresAsync(null);
             
             // Assert
             result.Should().BeEquivalentTo(expectedProcs);
@@ -183,7 +183,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(expectedDefinition);
             
             // Act
-            var result = await _databaseContextService.GetStoredProcedureDefinitionAsync(procedureName);
+            var result = await _databaseContextService.GetStoredProcedureDefinitionAsync(procedureName, null);
             
             // Assert
             result.Should().Be(expectedDefinition);
@@ -194,7 +194,7 @@ namespace UnitTests.Infrastructure.SqlClient
         public async Task DCS009()
         {
             // Act
-            Func<Task> act = async () => await _databaseContextService.GetStoredProcedureDefinitionAsync(string.Empty);
+            Func<Task> act = async () => await _databaseContextService.GetStoredProcedureDefinitionAsync(string.Empty, null);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()
@@ -217,7 +217,7 @@ namespace UnitTests.Infrastructure.SqlClient
                 .ReturnsAsync(expectedReader);
             
             // Act
-            var result = await _databaseContextService.ExecuteStoredProcedureAsync(procedureName, parameters);
+            var result = await _databaseContextService.ExecuteStoredProcedureAsync(procedureName, parameters, null);
             
             // Assert
             result.Should().Be(expectedReader);
@@ -231,7 +231,7 @@ namespace UnitTests.Infrastructure.SqlClient
             var parameters = new Dictionary<string, object?>();
             
             // Act
-            Func<Task> act = async () => await _databaseContextService.ExecuteStoredProcedureAsync(string.Empty, parameters);
+            Func<Task> act = async () => await _databaseContextService.ExecuteStoredProcedureAsync(string.Empty, parameters, null);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()

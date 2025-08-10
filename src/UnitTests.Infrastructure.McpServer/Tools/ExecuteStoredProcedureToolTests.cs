@@ -70,6 +70,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                     p.ContainsKey("Param1") && 
                     p.ContainsKey("Param2")
                 ), 
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
@@ -86,6 +87,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockDatabaseContext.Verify(x => x.ExecuteStoredProcedureAsync(
                 procedureName,
                 It.IsAny<Dictionary<string, object?>>(),
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -103,6 +105,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockDatabaseContext.Setup(x => x.ExecuteStoredProcedureAsync(
                 procedureName, 
                 It.IsAny<Dictionary<string, object?>>(), 
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));

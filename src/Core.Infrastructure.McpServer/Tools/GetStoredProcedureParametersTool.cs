@@ -1,5 +1,7 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.McpServer.Extensions;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text;
@@ -14,14 +16,17 @@ namespace Core.Infrastructure.McpServer.Tools
     public class GetStoredProcedureParametersTool
     {
         private readonly IDatabaseContext _databaseContext;
+        private readonly DatabaseConfiguration _configuration;
 
         /// <summary>
         /// Initializes a new instance of the GetStoredProcedureParametersTool class.
         /// </summary>
         /// <param name="databaseContext">The database context service</param>
-        public GetStoredProcedureParametersTool(IDatabaseContext databaseContext)
+        /// <param name="configuration">Database configuration</param>
+        public GetStoredProcedureParametersTool(IDatabaseContext databaseContext, IOptions<DatabaseConfiguration> configuration)
         {
             _databaseContext = databaseContext ?? throw new ArgumentNullException(nameof(databaseContext));
+            _configuration = configuration?.Value ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         /// <summary>
@@ -120,7 +125,24 @@ Note: This tool works within the current database context. For cross-database qu
 
             var parameters = new List<ParameterInfo>();
             
-            var reader = await _databaseContext.ExecuteQueryAsync(query, timeoutSeconds);
+            // Create timeout context
+            var (timeoutContext, tokenSource) = ToolCallTimeoutFactory.CreateTimeout(_configuration);
+            
+            IAsyncDataReader reader;
+            try
+            {
+                reader = await _databaseContext.ExecuteQueryAsync(query, timeoutContext, timeoutSeconds);
+            }
+            catch (OperationCanceledException ex) when (timeoutContext?.IsTimeoutExceeded == true)
+            {
+                tokenSource?.Dispose();
+                throw new InvalidOperationException(timeoutContext.CreateTimeoutExceededMessage(), ex);
+            }
+            catch
+            {
+                tokenSource?.Dispose();
+                throw;
+            }
             
             try
             {
@@ -162,6 +184,7 @@ Note: This tool works within the current database context. For cross-database qu
             finally
             {
                 reader.Dispose();
+                tokenSource?.Dispose();
             }
 
             return parameters;

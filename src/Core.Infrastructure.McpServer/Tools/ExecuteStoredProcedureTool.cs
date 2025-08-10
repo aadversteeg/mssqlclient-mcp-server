@@ -74,16 +74,7 @@ Use 'get_stored_procedure_parameters' tool first to see what parameters are expe
                     return $"Error parsing parameters: {ex.Message}. Parameters must be a valid JSON object with parameter names as keys.";
                 }
                 
-                // Use timeout context if available, otherwise fall back to legacy behavior
-                IAsyncDataReader reader;
-                if (timeoutContext != null)
-                {
-                    reader = await _databaseContext.ExecuteStoredProcedureAsync(procedureName, paramDict, timeoutContext, timeoutSeconds);
-                }
-                else
-                {
-                    reader = await _databaseContext.ExecuteStoredProcedureAsync(procedureName, paramDict, timeoutSeconds);
-                }
+                var reader = await _databaseContext.ExecuteStoredProcedureAsync(procedureName, paramDict, timeoutContext, timeoutSeconds);
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();

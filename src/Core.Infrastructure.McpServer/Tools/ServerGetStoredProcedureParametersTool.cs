@@ -133,18 +133,9 @@ JSON format provides JSON Schema with SQL-specific extensions for parameter vali
             IAsyncDataReader reader;
             try
             {
-                if (timeoutContext != null)
-                {
-                    reader = databaseName != null ? 
-                        await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutContext, timeoutSeconds) :
-                        await _serverDatabase.ExecuteQueryInDatabaseAsync("master", query, timeoutContext, timeoutSeconds);
-                }
-                else
-                {
-                    reader = databaseName != null ? 
-                        await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutSeconds) :
-                        await _serverDatabase.ExecuteQueryInDatabaseAsync("master", query, timeoutSeconds);
-                }
+                reader = databaseName != null ? 
+                    await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutContext, timeoutSeconds) :
+                    await _serverDatabase.ExecuteQueryInDatabaseAsync("master", query, timeoutContext, timeoutSeconds);
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
             {

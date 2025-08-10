@@ -95,6 +95,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableSchema);
@@ -111,6 +112,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("Users");
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -126,6 +128,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
@@ -158,6 +161,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 timeoutSeconds,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableSchema);
@@ -176,6 +180,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify the timeout parameter was passed through correctly
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 timeoutSeconds,
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -196,6 +201,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 null,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableSchema);
@@ -214,6 +220,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify null timeout was passed through
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 null,
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -237,6 +244,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 specificTimeout,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableSchema);
@@ -255,6 +263,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify the exact timeout value was passed
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 specificTimeout,
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -262,6 +271,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify it was not called with any other timeout value
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.Is<int?>(t => t != specificTimeout),
                 It.IsAny<CancellationToken>()), 
                 Times.Never);

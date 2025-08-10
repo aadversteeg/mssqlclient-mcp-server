@@ -48,15 +48,7 @@ namespace Core.Infrastructure.McpServer.Tools
             try
             {
                 // Get schema information for the table using the server database service
-                Core.Application.Models.TableSchemaInfo tableSchema;
-                if (timeoutContext != null)
-                {
-                    tableSchema = await _serverDatabase.GetTableSchemaAsync(databaseName, tableName, timeoutContext, timeoutSeconds);
-                }
-                else
-                {
-                    tableSchema = await _serverDatabase.GetTableSchemaAsync(databaseName, tableName, timeoutSeconds);
-                }
+                Core.Application.Models.TableSchemaInfo tableSchema = await _serverDatabase.GetTableSchemaAsync(databaseName, tableName, timeoutContext, timeoutSeconds);
                 return tableSchema.ToToolResult();
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)

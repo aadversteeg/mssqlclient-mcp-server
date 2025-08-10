@@ -37,9 +37,7 @@ namespace Core.Infrastructure.McpServer.Tools
             
             try
             {
-                var databases = timeoutContext != null
-                    ? await _serverDatabase.ListDatabasesAsync(timeoutContext, timeoutSeconds)
-                    : await _serverDatabase.ListDatabasesAsync(timeoutSeconds);
+                var databases = await _serverDatabase.ListDatabasesAsync(timeoutContext, timeoutSeconds);
                 return databases.ToToolResult();
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)

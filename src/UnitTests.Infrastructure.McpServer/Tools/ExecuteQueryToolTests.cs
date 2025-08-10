@@ -109,6 +109,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
                 query, 
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
@@ -124,6 +125,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().NotBeNull();
             mockDatabaseContext.Verify(x => x.ExecuteQueryAsync(
                 query,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -145,6 +147,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
                 query, 
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeout,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
@@ -160,6 +163,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().NotBeNull();
             mockDatabaseContext.Verify(x => x.ExecuteQueryAsync(
                 query,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeout,
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -175,6 +179,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
                 query, 
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));

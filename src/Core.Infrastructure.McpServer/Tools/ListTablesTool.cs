@@ -35,10 +35,7 @@ namespace Core.Infrastructure.McpServer.Tools
 
             try
             {
-                // Use timeout context if available, otherwise fall back to legacy behavior
-                var tables = timeoutContext != null
-                    ? await _databaseContext.ListTablesAsync(timeoutContext, timeoutSeconds)
-                    : await _databaseContext.ListTablesAsync(timeoutSeconds);
+                var tables = await _databaseContext.ListTablesAsync(timeoutContext, timeoutSeconds);
                     
                 return tables.ToToolResult();
             }

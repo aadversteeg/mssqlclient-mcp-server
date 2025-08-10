@@ -68,16 +68,8 @@ namespace Core.Infrastructure.McpServer.Tools
                     return $"Error parsing parameters: {ex.Message}. Parameters must be a valid JSON object with parameter names as keys.";
                 }
 
-                // Use timeout context if available, otherwise fall back to legacy behavior
-                IAsyncDataReader reader;
-                if (timeoutContext != null)
-                {
-                    reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutContext, timeoutSeconds);
-                }
-                else
-                {
-                    reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutSeconds);
-                }
+                // Use server database service with timeout context
+                IAsyncDataReader reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutContext, timeoutSeconds);
                 
                 // Format results into a readable table
                 return await reader.ToToolResult();

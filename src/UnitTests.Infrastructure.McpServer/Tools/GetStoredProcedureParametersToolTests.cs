@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.McpServer.Tools;
 using FluentAssertions;
 using Moq;
@@ -16,7 +17,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Act
             IDatabaseContext? nullContext = null;
-            Action act = () => new GetStoredProcedureParametersTool(nullContext);
+            var configuration = TestHelpers.CreateConfiguration();
+            Action act = () => new GetStoredProcedureParametersTool(nullContext, configuration);
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -28,7 +30,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object, configuration);
             
             // Act
             var result = await tool.GetStoredProcedureParameters(string.Empty);
@@ -42,7 +45,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object, configuration);
             
             // Act
             var result = await tool.GetStoredProcedureParameters(null);
@@ -56,7 +60,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object, configuration);
             
             // Act
             var result = await tool.GetStoredProcedureParameters("   ");
@@ -79,11 +84,13 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(), 
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object, configuration);
             
             // Act
             var result = await tool.GetStoredProcedureParameters(procedureName);
@@ -145,11 +152,13 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(), 
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object, configuration);
             
             // Act
             var result = await tool.GetStoredProcedureParameters(procedureName);
@@ -175,11 +184,13 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(), 
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object, configuration);
             
             // Act
             var result = await tool.GetStoredProcedureParameters(procedureName, "json");
@@ -218,11 +229,13 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(), 
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object, configuration);
             
             // Act
             var result = await tool.GetStoredProcedureParameters(procedureName, "invalidformat");
@@ -241,11 +254,13 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(), 
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object);
+            var configuration = TestHelpers.CreateConfiguration();
+            var tool = new GetStoredProcedureParametersTool(mockDatabaseContext.Object, configuration);
             
             // Act
             var result = await tool.GetStoredProcedureParameters(procedureName);

@@ -43,15 +43,7 @@ namespace Core.Infrastructure.McpServer.Tools
             try
             {
                 // First check if the database exists
-                bool databaseExists;
-                if (timeoutContext != null)
-                {
-                    databaseExists = await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutContext, timeoutSeconds);
-                }
-                else
-                {
-                    databaseExists = await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutSeconds);
-                }
+                bool databaseExists = await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutContext, timeoutSeconds);
                 
                 if (!databaseExists)
                 {
@@ -59,15 +51,7 @@ namespace Core.Infrastructure.McpServer.Tools
                 }
                 
                 // Use the ServerDatabase service to get the stored procedures in the specified database
-                IEnumerable<StoredProcedureInfo> procedures;
-                if (timeoutContext != null)
-                {
-                    procedures = await _serverDatabase.ListStoredProceduresAsync(databaseName, timeoutContext, timeoutSeconds);
-                }
-                else
-                {
-                    procedures = await _serverDatabase.ListStoredProceduresAsync(databaseName, timeoutSeconds);
-                }
+                IEnumerable<StoredProcedureInfo> procedures = await _serverDatabase.ListStoredProceduresAsync(databaseName, timeoutContext, timeoutSeconds);
                 
                 // No stored procedures found
                 if (!procedures.Any())
