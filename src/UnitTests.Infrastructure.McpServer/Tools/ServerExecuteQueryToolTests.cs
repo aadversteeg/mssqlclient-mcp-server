@@ -12,7 +12,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Act
             IServerDatabase? nullServerDb = null;
-            Action act = () => new ServerExecuteQueryTool(nullServerDb);
+            Action act = () => new ServerExecuteQueryTool(nullServerDb, TestHelpers.CreateConfiguration());
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -24,7 +24,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerExecuteQueryTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteQueryTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteQueryInDatabase(string.Empty, "SELECT 1", null);
@@ -38,7 +38,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerExecuteQueryTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteQueryTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteQueryInDatabase("TestDb", string.Empty, null);
@@ -64,11 +64,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(
                 databaseName,
                 query,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new ServerExecuteQueryTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteQueryTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteQueryInDatabase(databaseName, query, null);
@@ -78,6 +79,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockServerDatabase.Verify(x => x.ExecuteQueryInDatabaseAsync(
                 databaseName,
                 query,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 null,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -95,17 +97,18 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(
                 databaseName,
                 query,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new ServerExecuteQueryTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteQueryTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteQueryInDatabase(databaseName, query, null);
             
             // Assert
-            result.Should().Contain(expectedErrorMessage);
+            result.Should().Be($"Error: SQL error while executing query: {expectedErrorMessage}");
         }
         
         [Fact(DisplayName = "SEQT-006: ServerExecuteQueryTool passes timeout to server database")]
@@ -126,11 +129,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(
                 databaseName,
                 query,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeoutSeconds,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
-            var tool = new ServerExecuteQueryTool(mockServerDatabase.Object);
+            var tool = new ServerExecuteQueryTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ExecuteQueryInDatabase(databaseName, query, timeoutSeconds);
@@ -140,9 +144,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockServerDatabase.Verify(x => x.ExecuteQueryInDatabaseAsync(
                 databaseName,
                 query,
+                It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeoutSeconds,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         }
     }
 }
+
+

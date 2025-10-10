@@ -1,7 +1,10 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using Core.Infrastructure.McpServer.Extensions;
+using Microsoft.Data.SqlClient;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -9,10 +12,12 @@ namespace Core.Infrastructure.McpServer.Tools
     public class ServerGetStoredProcedureDefinitionTool
     {
         private readonly IServerDatabase _serverDatabase;
+        private readonly DatabaseConfiguration _configuration;
 
-        public ServerGetStoredProcedureDefinitionTool(IServerDatabase serverDatabase)
+        public ServerGetStoredProcedureDefinitionTool(IServerDatabase serverDatabase, IOptions<DatabaseConfiguration> configuration)
         {
             _serverDatabase = serverDatabase ?? throw new ArgumentNullException(nameof(serverDatabase));
+            _configuration = configuration?.Value ?? throw new ArgumentNullException(nameof(configuration));
             Console.Error.WriteLine("ServerGetStoredProcedureDefinitionTool constructed with server database service");
         }
 
@@ -38,16 +43,21 @@ namespace Core.Infrastructure.McpServer.Tools
                 return "Error: Procedure name cannot be empty";
             }
             
+            // Create timeout context
+            var (timeoutContext, tokenSource) = ToolCallTimeoutFactory.CreateTimeout(_configuration);
+            
             try
             {
                 // First check if the database exists
-                if (!await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutSeconds))
+                bool databaseExists = await _serverDatabase.DoesDatabaseExistAsync(databaseName, timeoutContext, timeoutSeconds);
+                
+                if (!databaseExists)
                 {
                     return $"Error: Database '{databaseName}' does not exist or is not accessible";
                 }
                 
                 // Use the ServerDatabase service to get the stored procedure definition in the specified database
-                string definition = await _serverDatabase.GetStoredProcedureDefinitionAsync(databaseName, procedureName, timeoutSeconds);
+                string definition = await _serverDatabase.GetStoredProcedureDefinitionAsync(databaseName, procedureName, timeoutContext, timeoutSeconds);
                 
                 // If the definition is empty, return a helpful message
                 if (string.IsNullOrWhiteSpace(definition))
@@ -58,10 +68,22 @@ namespace Core.Infrastructure.McpServer.Tools
                 // Return the definition with a header
                 return $"Definition for stored procedure '{procedureName}' in database '{databaseName}':\n\n{definition}";
             }
+            catch (OperationCanceledException ex) when (timeoutContext?.IsTimeoutExceeded == true)
+            {
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
+            }
+            catch (SqlException ex) when (timeoutContext?.IsTimeoutExceeded == true && SqlExceptionHelper.IsTimeoutError(ex))
+            {
+                // SQL Server throws SqlException when cancelled - show custom timeout message
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
+            }
             catch (Exception ex)
             {
                 return ex.ToSqlErrorResult($"getting definition for stored procedure '{procedureName}' in database '{databaseName}'");
             }
-        }
-    }
+            finally
+            {
+                tokenSource?.Dispose();
+            }
+        }    }
 }

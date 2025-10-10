@@ -11,6 +11,8 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0-noble AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj", "Core.Infrastructure.McpServer/"]
+COPY ["Core.Application/Core.Application.csproj", "Core.Application/"]
+COPY ["Core.Infrastructure.SqlClient/Core.Infrastructure.SqlClient.csproj", "Core.Infrastructure.SqlClient/"]
 RUN dotnet restore "./Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj"
 COPY . .
 WORKDIR "/src/Core.Infrastructure.McpServer"

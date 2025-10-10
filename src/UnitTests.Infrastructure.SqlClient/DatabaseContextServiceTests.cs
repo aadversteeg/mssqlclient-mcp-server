@@ -60,15 +60,15 @@ namespace UnitTests.Infrastructure.SqlClient
                 new TableInfo("dbo", "Table2", 5, 0.5, DateTime.Now, DateTime.Now, 1, 0, "Normal")
             };
             
-            _mockDatabaseService.Setup(x => x.ListTablesAsync(null, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ListTablesAsync(null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedTables);
             
             // Act
-            var result = await _databaseContextService.ListTablesAsync();
+            var result = await _databaseContextService.ListTablesAsync(null);
             
             // Assert
             result.Should().BeEquivalentTo(expectedTables);
-            _mockDatabaseService.Verify(x => x.ListTablesAsync(null, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ListTablesAsync(null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-003: GetTableSchemaAsync delegates to database service with null database name")]
@@ -78,22 +78,22 @@ namespace UnitTests.Infrastructure.SqlClient
             var tableName = "TestTable";
             var expectedSchema = new TableSchemaInfo(tableName, "TestDb", string.Empty, new List<TableColumnInfo>());
             
-            _mockDatabaseService.Setup(x => x.GetTableSchemaAsync(tableName, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.GetTableSchemaAsync(tableName, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedSchema);
             
             // Act
-            var result = await _databaseContextService.GetTableSchemaAsync(tableName);
+            var result = await _databaseContextService.GetTableSchemaAsync(tableName, null);
             
             // Assert
             result.Should().BeEquivalentTo(expectedSchema);
-            _mockDatabaseService.Verify(x => x.GetTableSchemaAsync(tableName, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.GetTableSchemaAsync(tableName, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-004: GetTableSchemaAsync with empty table name throws ArgumentException")]
         public async Task DCS004()
         {
             // Act
-            Func<Task> act = async () => await _databaseContextService.GetTableSchemaAsync(string.Empty);
+            Func<Task> act = async () => await _databaseContextService.GetTableSchemaAsync(string.Empty, null);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()
@@ -107,22 +107,22 @@ namespace UnitTests.Infrastructure.SqlClient
             var query = "SELECT * FROM TestTable";
             var expectedReader = new Mock<IAsyncDataReader>().Object;
             
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedReader);
             
             // Act
-            var result = await _databaseContextService.ExecuteQueryAsync(query);
+            var result = await _databaseContextService.ExecuteQueryAsync(query, null);
             
             // Assert
             result.Should().Be(expectedReader);
-            _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-006: ExecuteQueryAsync with empty query throws ArgumentException")]
         public async Task DCS006()
         {
             // Act
-            Func<Task> act = async () => await _databaseContextService.ExecuteQueryAsync(string.Empty);
+            Func<Task> act = async () => await _databaseContextService.ExecuteQueryAsync(string.Empty, null);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()
@@ -161,15 +161,15 @@ namespace UnitTests.Infrastructure.SqlClient
                     AverageDurationMs: null)
             };
             
-            _mockDatabaseService.Setup(x => x.ListStoredProceduresAsync(null, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ListStoredProceduresAsync(null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedProcs);
             
             // Act
-            var result = await _databaseContextService.ListStoredProceduresAsync();
+            var result = await _databaseContextService.ListStoredProceduresAsync(null);
             
             // Assert
             result.Should().BeEquivalentTo(expectedProcs);
-            _mockDatabaseService.Verify(x => x.ListStoredProceduresAsync(null, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ListStoredProceduresAsync(null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-008: GetStoredProcedureDefinitionAsync delegates to database service with null database name")]
@@ -179,22 +179,22 @@ namespace UnitTests.Infrastructure.SqlClient
             var procedureName = "TestProc";
             var expectedDefinition = "CREATE PROCEDURE TestProc AS SELECT 1;";
             
-            _mockDatabaseService.Setup(x => x.GetStoredProcedureDefinitionAsync(procedureName, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.GetStoredProcedureDefinitionAsync(procedureName, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedDefinition);
             
             // Act
-            var result = await _databaseContextService.GetStoredProcedureDefinitionAsync(procedureName);
+            var result = await _databaseContextService.GetStoredProcedureDefinitionAsync(procedureName, null);
             
             // Assert
             result.Should().Be(expectedDefinition);
-            _mockDatabaseService.Verify(x => x.GetStoredProcedureDefinitionAsync(procedureName, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.GetStoredProcedureDefinitionAsync(procedureName, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-009: GetStoredProcedureDefinitionAsync with empty procedure name throws ArgumentException")]
         public async Task DCS009()
         {
             // Act
-            Func<Task> act = async () => await _databaseContextService.GetStoredProcedureDefinitionAsync(string.Empty);
+            Func<Task> act = async () => await _databaseContextService.GetStoredProcedureDefinitionAsync(string.Empty, null);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()
@@ -213,15 +213,15 @@ namespace UnitTests.Infrastructure.SqlClient
             };
             var expectedReader = new Mock<IAsyncDataReader>().Object;
             
-            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedReader);
             
             // Act
-            var result = await _databaseContextService.ExecuteStoredProcedureAsync(procedureName, parameters);
+            var result = await _databaseContextService.ExecuteStoredProcedureAsync(procedureName, parameters, null);
             
             // Assert
             result.Should().Be(expectedReader);
-            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, null, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-011: ExecuteStoredProcedureAsync with empty procedure name throws ArgumentException")]
@@ -231,7 +231,7 @@ namespace UnitTests.Infrastructure.SqlClient
             var parameters = new Dictionary<string, object?>();
             
             // Act
-            Func<Task> act = async () => await _databaseContextService.ExecuteStoredProcedureAsync(string.Empty, parameters);
+            Func<Task> act = async () => await _databaseContextService.ExecuteStoredProcedureAsync(string.Empty, parameters, null);
             
             // Assert
             await act.Should().ThrowAsync<ArgumentException>()

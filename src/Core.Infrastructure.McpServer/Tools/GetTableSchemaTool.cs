@@ -1,7 +1,10 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using Core.Infrastructure.McpServer.Extensions;
+using Microsoft.Extensions.Options;
+using Microsoft.Data.SqlClient;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -9,10 +12,12 @@ namespace Core.Infrastructure.McpServer.Tools
     public class GetTableSchemaTool
     {
         private readonly IDatabaseContext _databaseContext;
+        private readonly DatabaseConfiguration _configuration;
 
-        public GetTableSchemaTool(IDatabaseContext databaseContext)
+        public GetTableSchemaTool(IDatabaseContext databaseContext, IOptions<DatabaseConfiguration> configuration)
         {
             _databaseContext = databaseContext ?? throw new ArgumentNullException(nameof(databaseContext));
+            _configuration = configuration?.Value ?? throw new ArgumentNullException(nameof(configuration));
             Console.Error.WriteLine("GetTableSchemaTool constructed with database context service");
         }
 
@@ -32,15 +37,32 @@ namespace Core.Infrastructure.McpServer.Tools
                 return "Error: Table name cannot be empty";
             }
 
+            // Create timeout context and cancellation token source if total timeout is configured
+            var (timeoutContext, tokenSource) = ToolCallTimeoutFactory.CreateTimeout(_configuration);
+
             try
             {
-                // Get schema information for the table using the database context service
-                var tableSchema = await _databaseContext.GetTableSchemaAsync(tableName, timeoutSeconds);
+                var tableSchema = await _databaseContext.GetTableSchemaAsync(tableName, timeoutContext, timeoutSeconds);
+                    
                 return tableSchema.ToToolResult();
+            }
+            catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
+            {
+                // Return timeout error message instead of generic cancellation error
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
+            }
+            catch (SqlException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded && SqlExceptionHelper.IsTimeoutError(ex))
+            {
+                // SQL Server throws SqlException when cancelled - show custom timeout message
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
             }
             catch (Exception ex)
             {
                 return ex.ToSqlErrorResult("getting table schema");
+            }
+            finally
+            {
+                tokenSource?.Dispose();
             }
         }
     }

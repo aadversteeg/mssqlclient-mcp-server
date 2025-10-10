@@ -18,7 +18,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Act
             IServerDatabase? nullServerDatabase = null;
-            Action act = () => new ServerGetTableSchemaTool(nullServerDatabase);
+            Action act = () => new ServerGetTableSchemaTool(nullServerDatabase, TestHelpers.CreateConfiguration());
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -30,7 +30,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase(string.Empty, "TestTable");
@@ -44,7 +44,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase(null, "TestTable");
@@ -58,7 +58,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase("   ", "TestTable");
@@ -72,7 +72,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase("TestDB", string.Empty);
@@ -86,7 +86,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase("TestDB", null);
@@ -100,7 +100,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockServerDatabase = new Mock<IServerDatabase>();
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase("TestDB", "   ");
@@ -127,10 +127,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             );
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(schemaInfo);
             
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase(databaseName, tableName);
@@ -142,7 +142,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain(databaseName);
             
             // Verify the server database was called with correct parameters
-            mockServerDatabase.Verify(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SGTST-009: GetTableSchemaInDatabase handles exception from server database")]
@@ -154,10 +154,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Table not found";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase(databaseName, tableName);
@@ -167,7 +167,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("getting table schema");
             
             // Verify the server database was called
-            mockServerDatabase.Verify(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SGTST-010: GetTableSchemaInDatabase handles database access exception")]
@@ -179,10 +179,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Access denied to database";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new UnauthorizedAccessException(expectedErrorMessage));
             
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase(databaseName, tableName);
@@ -192,7 +192,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("getting table schema");
             
             // Verify the server database was called
-            mockServerDatabase.Verify(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SGTST-011: GetTableSchemaInDatabase handles SQL connection exception")]
@@ -204,10 +204,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Database connection timeout";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new TimeoutException(expectedErrorMessage));
             
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase(databaseName, tableName);
@@ -217,7 +217,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("getting table schema");
             
             // Verify the server database was called
-            mockServerDatabase.Verify(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SGTST-012: GetTableSchemaInDatabase works with qualified table names")]
@@ -238,10 +238,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             );
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(schemaInfo);
             
-            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object);
+            var tool = new ServerGetTableSchemaTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.GetTableSchemaInDatabase(databaseName, tableName);
@@ -253,7 +253,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain(databaseName);
             
             // Verify the server database was called with the qualified table name
-            mockServerDatabase.Verify(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.GetTableSchemaAsync(databaseName, tableName, It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }
+
+

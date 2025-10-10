@@ -103,7 +103,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                     It.IsAny<EventId>(),
                     It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Default command timeout changed")),
                     It.IsAny<Exception>(),
-                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()), 
                 Times.Once);
         }
         

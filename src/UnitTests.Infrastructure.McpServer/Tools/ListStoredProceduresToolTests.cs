@@ -18,7 +18,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Act
             IDatabaseContext? nullContext = null;
-            Action act = () => new ListStoredProceduresTool(nullContext);
+            Action act = () => new ListStoredProceduresTool(nullContext, TestHelpers.CreateConfiguration());
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -32,17 +32,17 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             var emptyProcedureList = new List<StoredProcedureInfo>();
             
-            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(emptyProcedureList);
             
-            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object);
+            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ListStoredProcedures();
             
             // Assert
             result.Should().Contain("No stored procedures found");
-            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "LSPT-003: ListStoredProcedures returns formatted procedure list")]
@@ -84,10 +84,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 )
             };
             
-            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(procedureList);
             
-            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object);
+            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ListStoredProcedures();
@@ -97,7 +97,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("GetUser");
             result.Should().Contain("CreateUser");
             result.Should().Contain("Available Stored Procedures:");
-            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "LSPT-004: ListStoredProcedures handles exception from database context")]
@@ -107,10 +107,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Database connection failed";
             
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object);
+            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ListStoredProcedures();
@@ -146,10 +146,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 )
             };
             
-            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(timeoutSeconds, It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), timeoutSeconds, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(procedureList);
             
-            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object);
+            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ListStoredProcedures(timeoutSeconds);
@@ -159,7 +159,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("GetUserById");
             
             // Verify the timeout parameter was passed through correctly
-            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(timeoutSeconds, It.IsAny<CancellationToken>()), Times.Once);
+            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), timeoutSeconds, It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "LSPT-006: ListStoredProcedures with null timeout uses default")]
@@ -169,10 +169,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             var procedureList = new List<StoredProcedureInfo>();
             
-            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(null, It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), null, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(procedureList);
             
-            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object);
+            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ListStoredProcedures(null);
@@ -181,7 +181,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().NotBeNull();
             
             // Verify null timeout was passed through
-            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), null, It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "LSPT-007: ListStoredProcedures verifies timeout parameter is passed through correctly")]
@@ -212,10 +212,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 )
             };
             
-            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(specificTimeout, It.IsAny<CancellationToken>()))
+            mockDatabaseContext.Setup(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), specificTimeout, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(procedureList);
             
-            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object);
+            var tool = new ListStoredProceduresTool(mockDatabaseContext.Object, TestHelpers.CreateConfiguration());
             
             // Act
             var result = await tool.ListStoredProcedures(specificTimeout);
@@ -225,10 +225,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("UpdateOrderStatus");
             
             // Verify the exact timeout value was passed
-            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(specificTimeout, It.IsAny<CancellationToken>()), Times.Once);
+            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), specificTimeout, It.IsAny<CancellationToken>()), Times.Once);
             
             // Verify it was not called with any other timeout value
-            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(It.Is<int?>(t => t != specificTimeout), It.IsAny<CancellationToken>()), Times.Never);
+            mockDatabaseContext.Verify(x => x.ListStoredProceduresAsync(It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.Is<int?>(t => t != specificTimeout), It.IsAny<CancellationToken>()), Times.Never);
         }
     }
 }

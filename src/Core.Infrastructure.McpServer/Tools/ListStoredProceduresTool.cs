@@ -1,8 +1,11 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using Core.Infrastructure.McpServer.Extensions;
 using System.Text;
+using Microsoft.Data.SqlClient;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -10,10 +13,12 @@ namespace Core.Infrastructure.McpServer.Tools
     public class ListStoredProceduresTool
     {
         private readonly IDatabaseContext _databaseContext;
+        private readonly DatabaseConfiguration _configuration;
 
-        public ListStoredProceduresTool(IDatabaseContext databaseContext)
+        public ListStoredProceduresTool(IDatabaseContext databaseContext, IOptions<DatabaseConfiguration> configuration)
         {
             _databaseContext = databaseContext ?? throw new ArgumentNullException(nameof(databaseContext));
+            _configuration = configuration?.Value ?? throw new ArgumentNullException(nameof(configuration));
             Console.Error.WriteLine("ListStoredProceduresTool constructed with database context service");
         }
 
@@ -27,10 +32,13 @@ namespace Core.Infrastructure.McpServer.Tools
         {
             Console.Error.WriteLine($"ListStoredProcedures called with timeoutSeconds: {timeoutSeconds}");
             
+            // Create timeout context
+            var (timeoutContext, tokenSource) = ToolCallTimeoutFactory.CreateTimeout(_configuration);
+            
             try
             {
                 // Use the DatabaseContext service to get the stored procedures
-                var procedures = await _databaseContext.ListStoredProceduresAsync(timeoutSeconds);
+                var procedures = await _databaseContext.ListStoredProceduresAsync(timeoutContext, timeoutSeconds);
                 
                 // No stored procedures found
                 if (!procedures.Any())
@@ -62,10 +70,22 @@ namespace Core.Infrastructure.McpServer.Tools
                 
                 return sb.ToString();
             }
+            catch (OperationCanceledException ex) when (timeoutContext?.IsTimeoutExceeded == true)
+            {
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
+            }
+            catch (SqlException ex) when (timeoutContext?.IsTimeoutExceeded == true && SqlExceptionHelper.IsTimeoutError(ex))
+            {
+                // SQL Server throws SqlException when cancelled - show custom timeout message
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
+            }
             catch (Exception ex)
             {
                 return ex.ToSqlErrorResult("listing stored procedures");
             }
-        }
-    }
+            finally
+            {
+                tokenSource?.Dispose();
+            }
+        }    }
 }

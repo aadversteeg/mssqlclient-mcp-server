@@ -6,6 +6,7 @@ using Core.Application.Interfaces;
 using Core.Application.Models;
 using Core.Infrastructure.McpServer.Tools;
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -16,9 +17,13 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         [Fact(DisplayName = "GTST-001: GetTableSchemaTool constructor with null database context throws ArgumentNullException")]
         public void GTST001()
         {
+            // Arrange
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            
             // Act
             IDatabaseContext? nullContext = null;
-            Action act = () => new GetTableSchemaTool(nullContext);
+            Action act = () => new GetTableSchemaTool(nullContext, mockOptions.Object);
             
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -30,7 +35,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.GetTableSchema(string.Empty);
@@ -44,7 +51,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.GetTableSchema(null);
@@ -58,7 +67,9 @@ namespace UnitTests.Infrastructure.McpServer.Tools
         {
             // Arrange
             var mockDatabaseContext = new Mock<IDatabaseContext>();
-            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.GetTableSchema("   ");
@@ -84,11 +95,14 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableSchema);
             
-            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.GetTableSchema(tableName);
@@ -98,6 +112,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("Users");
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -113,11 +128,14 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
-            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.GetTableSchema(tableName);
@@ -143,11 +161,14 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 timeoutSeconds,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableSchema);
             
-            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.GetTableSchema(tableName, timeoutSeconds);
@@ -159,6 +180,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify the timeout parameter was passed through correctly
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 timeoutSeconds,
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -179,11 +201,14 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 null,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableSchema);
             
-            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.GetTableSchema(tableName, null);
@@ -195,6 +220,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify null timeout was passed through
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 null,
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -218,11 +244,14 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             mockDatabaseContext.Setup(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 specificTimeout,
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(tableSchema);
             
-            var tool = new GetTableSchemaTool(mockDatabaseContext.Object);
+            var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
+            mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
+            var tool = new GetTableSchemaTool(mockDatabaseContext.Object, mockOptions.Object);
             
             // Act
             var result = await tool.GetTableSchema(tableName, specificTimeout);
@@ -234,6 +263,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify the exact timeout value was passed
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 specificTimeout,
                 It.IsAny<CancellationToken>()), 
                 Times.Once);
@@ -241,6 +271,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Verify it was not called with any other timeout value
             mockDatabaseContext.Verify(x => x.GetTableSchemaAsync(
                 tableName,
+                It.IsAny<ToolCallTimeoutContext?>(),
                 It.Is<int?>(t => t != specificTimeout),
                 It.IsAny<CancellationToken>()), 
                 Times.Never);
