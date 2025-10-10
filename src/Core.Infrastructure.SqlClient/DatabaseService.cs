@@ -261,7 +261,7 @@ namespace Core.Infrastructure.SqlClient
                 // Get row counts if supported
                 if (capabilities.SupportsExactRowCount)
                 {
-                    foreach (var table in tables)
+                    foreach (var table in tables.ToList())
                     {
                         try
                         {
@@ -347,25 +347,25 @@ namespace Core.Infrastructure.SqlClient
                 {
                     try
                     {
-                        foreach (var table in tables)
+                        foreach (var table in tables.ToList())
                         {
                             try
                             {
                                 // This query works on SQL Server 2012 and above
                                 string sizeQuery = $@"
-                                    SELECT 
+                                    SELECT
                                         SUM(p.used_page_count) * 8.0 / 1024 AS TotalSizeMB
-                                    FROM 
+                                    FROM
                                         sys.dm_db_partition_stats p
-                                    JOIN 
+                                    JOIN
                                         sys.tables t ON p.object_id = t.object_id
-                                    JOIN 
+                                    JOIN
                                         sys.schemas s ON t.schema_id = s.schema_id
-                                    WHERE 
+                                    WHERE
                                         s.name = '{table.Schema}' AND t.name = '{table.Name}'
-                                    GROUP BY 
+                                    GROUP BY
                                         s.name, t.name";
-                                        
+
                                 using (var command = new SqlCommand(sizeQuery, connection))
                                 {
                                     command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
