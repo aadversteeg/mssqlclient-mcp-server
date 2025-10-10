@@ -6,6 +6,7 @@ using Core.Infrastructure.McpServer.Extensions;
 using System.Text.Json;
 using System.Collections.Generic;
 using Microsoft.Extensions.Options;
+using Microsoft.Data.SqlClient;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -82,6 +83,11 @@ Use 'get_stored_procedure_parameters' tool first to see what parameters are expe
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
             {
                 // Return timeout error message instead of generic cancellation error
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
+            }
+            catch (SqlException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded && SqlExceptionHelper.IsTimeoutError(ex))
+            {
+                // SQL Server throws SqlException when cancelled - show custom timeout message
                 return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
             }
             catch (Exception ex)

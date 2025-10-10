@@ -6,6 +6,7 @@ using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Data.SqlClient;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -138,12 +139,18 @@ Note: This tool works within the current database context. For cross-database qu
                 tokenSource?.Dispose();
                 throw new InvalidOperationException(timeoutContext.CreateTimeoutExceededMessage(), ex);
             }
+            catch (SqlException ex) when (timeoutContext?.IsTimeoutExceeded == true && SqlExceptionHelper.IsTimeoutError(ex))
+            {
+                // SQL Server throws SqlException when cancelled - show custom timeout message
+                tokenSource?.Dispose();
+                throw new InvalidOperationException(timeoutContext.CreateTimeoutExceededMessage(), ex);
+            }
             catch
             {
                 tokenSource?.Dispose();
                 throw;
             }
-            
+
             try
             {
                 while (await reader.ReadAsync())

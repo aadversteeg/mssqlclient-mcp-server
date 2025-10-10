@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using Core.Infrastructure.McpServer.Extensions;
+using Microsoft.Data.SqlClient;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -71,6 +72,11 @@ namespace Core.Infrastructure.McpServer.Tools
             {
                 return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
             }
+            catch (SqlException ex) when (timeoutContext?.IsTimeoutExceeded == true && SqlExceptionHelper.IsTimeoutError(ex))
+            {
+                // SQL Server throws SqlException when cancelled - show custom timeout message
+                return $"Error: {timeoutContext.CreateTimeoutExceededMessage()}";
+            }
             catch (Exception ex)
             {
                 return ex.ToSqlErrorResult($"getting definition for stored procedure '{procedureName}' in database '{databaseName}'");
@@ -79,6 +85,5 @@ namespace Core.Infrastructure.McpServer.Tools
             {
                 tokenSource?.Dispose();
             }
-        }
-    }
+        }    }
 }

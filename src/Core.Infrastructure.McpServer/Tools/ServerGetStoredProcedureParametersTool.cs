@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Microsoft.Data.SqlClient;
 
 namespace Core.Infrastructure.McpServer.Tools
 {
@@ -139,6 +140,12 @@ JSON format provides JSON Schema with SQL-specific extensions for parameter vali
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
             {
+                tokenSource?.Dispose();
+                throw new InvalidOperationException(timeoutContext.CreateTimeoutExceededMessage(), ex);
+            }
+            catch (SqlException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded && SqlExceptionHelper.IsTimeoutError(ex))
+            {
+                // SQL Server throws SqlException when cancelled - show custom timeout message
                 tokenSource?.Dispose();
                 throw new InvalidOperationException(timeoutContext.CreateTimeoutExceededMessage(), ex);
             }
@@ -514,6 +521,5 @@ JSON format provides JSON Schema with SQL-specific extensions for parameter vali
             public string ExampleValue { get; set; } = "";
             
             public string Direction => IsOutput ? "OUTPUT" : "INPUT";
-        }
-    }
+        }    }
 }
