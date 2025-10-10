@@ -1311,6 +1311,8 @@ To use the SQL Server MCP client from a Docker container with Claude Desktop:
 
 2. Save the file and restart Claude Desktop
 
+> **Note for Windows Users with Local SQL Server:** When using Docker Desktop on Windows to connect to a local SQL Server instance, ensure that TCP/IP is enabled in SQL Server Configuration Manager (SQL Server Network Configuration → Protocols for MSSQLSERVER → TCP/IP) and that SQL Server is configured to listen on port 1433 (TCP/IP Properties → IP Addresses → IPAll → TCP Port: 1433). Restart the SQL Server service after making these changes.
+
 ## Architecture
 
 ### Interface Design
