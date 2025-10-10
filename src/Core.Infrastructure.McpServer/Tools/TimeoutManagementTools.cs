@@ -62,7 +62,7 @@ namespace Core.Infrastructure.McpServer.Tools
             }
         }
 
-        [McpServerTool(Name = "set_command_timeout"), Description("Sets the default command timeout for all subsequent SQL operations (note: this only affects new operations, not existing sessions)")]
+        [McpServerTool(Name = "set_command_timeout"), Description("Sets the default command timeout for all subsequent SQL operations. Note: When TotalToolCallTimeoutSeconds is configured, the effective timeout will be the minimum of this value and the remaining total timeout. This only affects new operations, not existing sessions.")]
         public string SetCommandTimeout(
             [Description("Timeout in seconds")]
             int timeoutSeconds)

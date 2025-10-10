@@ -210,6 +210,8 @@ Example response:
 
 Updates the default command timeout for all new operations.
 
+**Note:** When `TotalToolCallTimeoutSeconds` is configured, the effective timeout will be the minimum of this value and the remaining total timeout. This ensures operations complete within the total tool call timeout limit.
+
 Parameters:
 - `timeoutSeconds` (required): New timeout in seconds (1-3600)
 
