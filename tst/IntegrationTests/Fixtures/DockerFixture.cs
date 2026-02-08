@@ -218,75 +218,10 @@ namespace IntegrationTests.Fixtures
                 SqlServerConnectionString.Replace("Password=", "Password=***"));
         }
         
-        public async Task DisposeAsync()
+        public Task DisposeAsync()
         {
-            _logger.LogInformation("Cleaning up Docker test environment");
-            
-            // Always keep containers around until all tests have completed
-            // This prevents the issue where containers are removed while tests are still running
-            if (true || _configuration.GetValue<bool>("IntegrationTests:UseExistingContainers"))
-            {
-                _logger.LogInformation("Keeping containers to ensure all tests complete successfully");
-                return;
-            }
-            
-            try
-            {
-                // Stop containers
-                await StopContainersAsync();
-                
-                // Also look for directly started containers and clean them up
-                try 
-                {
-                    // Find containers using the mssql image
-                    var findInfo = new ProcessStartInfo
-                    {
-                        FileName = "docker",
-                        Arguments = "ps -q --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest",
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-                    
-                    using var findProcess = new Process { StartInfo = findInfo };
-                    findProcess.Start();
-                    string containerIds = await findProcess.StandardOutput.ReadToEndAsync();
-                    await findProcess.WaitForExitAsync();
-                    
-                    // Kill each container
-                    foreach (var containerId in containerIds.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
-                    {
-                        _logger.LogInformation("Stopping SQL Server container: {ContainerId}", containerId);
-                        
-                        var killInfo = new ProcessStartInfo
-                        {
-                            FileName = "docker",
-                            Arguments = $"rm -f {containerId}",
-                            RedirectStandardOutput = true,
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        };
-                        
-                        using var killProcess = new Process { StartInfo = killInfo };
-                        killProcess.Start();
-                        await killProcess.WaitForExitAsync();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to cleanup directly started containers");
-                }
-                
-                // Release ports
-                _portManager.ReleasePort(SqlServerPort);
-                _portManager.ReleasePort(McpServerPort);
-                
-                _logger.LogInformation("Docker test environment cleaned up successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during container cleanup");
-            }
+            _logger.LogInformation("Keeping containers to ensure all tests complete successfully");
+            return Task.CompletedTask;
         }
         
         private async Task StartContainersAsync(Dictionary<string, string> environment)
