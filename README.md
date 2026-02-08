@@ -1,5 +1,13 @@
 # SQL Server MCP Client
 
+> **Breaking Change in 0.0.5:** Query and stored procedure execution tools are now **disabled by default** for security. If you were relying on the previous defaults, you must now explicitly enable them by setting the corresponding environment variables to `"true"`:
+> - `DatabaseConfiguration__EnableExecuteQuery`
+> - `DatabaseConfiguration__EnableExecuteStoredProcedure`
+> - `DatabaseConfiguration__EnableStartQuery`
+> - `DatabaseConfiguration__EnableStartStoredProcedure`
+>
+> See [Configuring Claude Desktop / Claude Code](#configuring-claude-desktop--claude-code) for examples.
+
 A comprehensive Microsoft SQL Server client implementing the Model Context Protocol (MCP). This server provides extensive SQL Server capabilities including query execution, schema discovery, and stored procedure management through a simple MCP interface.
 
 ## Overview
