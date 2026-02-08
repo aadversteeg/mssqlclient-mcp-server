@@ -42,7 +42,7 @@ The MCP client operates in one of two modes:
 
 ### Prerequisites
 
-- .NET 9.0 SDK (for local development/deployment)
+- .NET 10.0 SDK (for local development/deployment)
 - Docker (for container deployment)
 
 ### Build Instructions (for development)
@@ -1370,7 +1370,7 @@ The server implements a multi-layered security approach:
 
 ### Technology Stack
 
-- **Framework**: .NET 9.0 with C# 13
+- **Framework**: .NET 10.0 with C# 14
 - **Language Features**: Nullable reference types, async/await, records
 - **Database Access**: Microsoft.Data.SqlClient
 - **MCP SDK**: Model Context Protocol C# SDK
