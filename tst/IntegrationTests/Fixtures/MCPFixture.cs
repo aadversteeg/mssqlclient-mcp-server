@@ -125,7 +125,7 @@ namespace IntegrationTests.Fixtures
     }
     
     [CollectionDefinition("MCP Tests")]
-    public class McpTestCollection : ICollectionFixture<McpFixture>
+    public class McpTestCollection : ICollectionFixture<McpFixture>, ICollectionFixture<DockerFixture>
     {
         // This class has no code, and is never created.
         // Its purpose is to be the place to apply [CollectionDefinition] and

@@ -79,23 +79,14 @@ If you want to build the project from source:
 
 ### Running Integration Tests
 
-Integration tests verify the MCP server against a real SQL Server instance. They require Docker to be running.
+Integration tests verify the MCP server against a real SQL Server instance. The test framework automatically manages Docker containers: it finds a free port (in the 14330–14339 range), starts a SQL Server container with a unique name, runs all tests, and removes the container when done.
 
-1. Start a SQL Server container:
-   ```bash
-   docker run --name sql-test -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=IntegrationTest!123" -p 14330:1433 -d mcr.microsoft.com/mssql/server:2022-latest
-   ```
+The only prerequisite is that Docker is running:
 
-2. Wait ~30 seconds for SQL Server to initialize, then run the tests:
-   ```bash
-   cd tst
-   dotnet test --filter "TestType=Integration"
-   ```
-
-3. Clean up when done:
-   ```bash
-   docker rm -f sql-test
-   ```
+```bash
+cd tst
+dotnet test --filter "TestType=Integration"
+```
 
 The integration tests cover both **database mode** (connection string with `Database=`) and **server mode** (connection string without `Database=`), including tool metadata verification and functional tests for query execution, table listing, and schema retrieval.
 

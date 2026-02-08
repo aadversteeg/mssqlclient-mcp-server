@@ -44,21 +44,21 @@ namespace IntegrationTests.Helpers
         /// <summary>
         /// Gets the default connection string for SQL Server tests
         /// </summary>
+        /// <param name="port">The SQL Server port to connect to</param>
         /// <returns>Default connection string for SQL Server</returns>
-        public static string GetDefaultConnectionString()
+        public static string GetDefaultConnectionString(int port = 14330)
         {
-            // In MCP tests, we need to use localhost,14330 instead of "sql-server" hostname
-            // because the MCP server runs outside Docker network
-            return "Server=localhost,14330;Database=master;User Id=sa;Password=IntegrationTest!123;TrustServerCertificate=true;";
+            return $"Server=localhost,{port};Database=master;User Id=sa;Password=IntegrationTest!123;TrustServerCertificate=true;";
         }
 
         /// <summary>
         /// Gets a connection string without a Database parameter, which triggers server mode
         /// </summary>
+        /// <param name="port">The SQL Server port to connect to</param>
         /// <returns>Server-mode connection string for SQL Server</returns>
-        public static string GetServerModeConnectionString()
+        public static string GetServerModeConnectionString(int port = 14330)
         {
-            return "Server=localhost,14330;User Id=sa;Password=IntegrationTest!123;TrustServerCertificate=true;";
+            return $"Server=localhost,{port};User Id=sa;Password=IntegrationTest!123;TrustServerCertificate=true;";
         }
         
         /// <summary>
