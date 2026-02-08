@@ -48,6 +48,10 @@ jobs:
         echo "SQL Server did not become ready in time"
         exit 1
 
+    - name: Create TestDb database
+      run: |
+        docker exec ${{ job.services.sql-server.id }} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'IntegrationTest!123' -C -Q 'CREATE DATABASE TestDb'
+
     - name: Install dependencies
       run: |
         cd src
