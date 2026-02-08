@@ -140,6 +140,91 @@ If you have pushed the image to local registry running on port 5000, you can pul
 docker pull localhost:5000/mssqlclient-mcp-server:latest
 ```
 
+## .NET Tool
+
+The SQL Server MCP Client is available as a .NET global tool on NuGet.
+
+### Installation
+
+```bash
+dotnet tool install --global Ave.McpServer.MsSqlClient
+```
+
+### Running
+
+```bash
+ave-mcpserver-mssqlclient
+```
+
+### One-shot execution (without permanent installation)
+
+With .NET 10 SDK, you can run the tool without installing it globally using `dotnet tool exec`:
+
+```bash
+dotnet tool exec -y ave.mcpserver.mssqlclient
+```
+
+The `-y` flag accepts prompts automatically. The tool is cached locally but not added to your PATH.
+
+### Configuring Claude Desktop / Claude Code
+
+Add the server configuration to the `mcpServers` section in your configuration file.
+
+By default, only read-only tools are enabled (listing tables, viewing schemas, listing stored procedures). To enable query and stored procedure execution, add the corresponding environment variables set to `"true"`:
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `DatabaseConfiguration__EnableExecuteQuery` | Enable `execute_query` / `execute_query_in_database` tools | `false` |
+| `DatabaseConfiguration__EnableExecuteStoredProcedure` | Enable `execute_stored_procedure` / `execute_stored_procedure_in_database` tools | `false` |
+| `DatabaseConfiguration__EnableStartQuery` | Enable `start_query` / `start_query_in_database` session tools | `false` |
+| `DatabaseConfiguration__EnableStartStoredProcedure` | Enable `start_stored_procedure` / `start_stored_procedure_in_database` session tools | `false` |
+
+#### Using .NET Tool
+
+Requires .NET 10 SDK. This approach automatically downloads the tool on first use and updates to the latest version on subsequent runs.
+
+```json
+"mssql": {
+  "command": "dotnet",
+  "args": [
+    "tool",
+    "exec",
+    "-y",
+    "ave.mcpserver.mssqlclient"
+  ],
+  "env": {
+    "MSSQL_CONNECTIONSTRING": "Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;",
+    "DatabaseConfiguration__EnableExecuteQuery": "true",
+    "DatabaseConfiguration__EnableExecuteStoredProcedure": "true",
+    "DatabaseConfiguration__EnableStartQuery": "true",
+    "DatabaseConfiguration__EnableStartStoredProcedure": "true"
+  }
+}
+```
+
+#### Using Global Installation
+
+Requires .NET 10 SDK. Install the tool once, then use it directly.
+
+```bash
+dotnet tool install --global Ave.McpServer.MsSqlClient
+```
+
+```json
+"mssql": {
+  "command": "ave-mcpserver-mssqlclient",
+  "env": {
+    "MSSQL_CONNECTIONSTRING": "Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;",
+    "DatabaseConfiguration__EnableExecuteQuery": "true",
+    "DatabaseConfiguration__EnableExecuteStoredProcedure": "true",
+    "DatabaseConfiguration__EnableStartQuery": "true",
+    "DatabaseConfiguration__EnableStartStoredProcedure": "true"
+  }
+}
+```
+
+To update: `dotnet tool update --global Ave.McpServer.MsSqlClient`
+
 ## MCP Protocol Usage
 
 ### Client Integration
@@ -1286,36 +1371,10 @@ If no connection string is provided, the server will return an error message whe
 
 > **Note:** Integrated Security (Windows Authentication) is not supported when running in Docker containers. Use SQL Server authentication instead.
 
-## Configuring Claude Desktop
+#### Using Docker
 
-### Using Local Installation
+Does not require .NET 10 SDK.
 
-To configure Claude Desktop to use a locally installed SQL Server MCP client:
-
-1. Add the server configuration to the `mcpServers` section in your Claude Desktop configuration:
-```json
-"mssql": {
-  "command": "dotnet",
-  "args": [
-    "YOUR_PATH_TO_DLL\\Core.Infrastructure.McpServer.dll"
-  ],
-  "env": {
-    "MSSQL_CONNECTIONSTRING": "Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;",
-    "DatabaseConfiguration__EnableExecuteQuery": "true",
-    "DatabaseConfiguration__EnableExecuteStoredProcedure": "true",
-    "DatabaseConfiguration__EnableStartQuery": "true",
-    "DatabaseConfiguration__EnableStartStoredProcedure": "true"
-  }
-}
-```
-
-2. Save the file and restart Claude Desktop
-
-### Using Docker Container
-
-To use the SQL Server MCP client from a Docker container with Claude Desktop:
-
-1. Add the server configuration to the `mcpServers` section in your Claude Desktop configuration:
 ```json
 "mssql": {
   "command": "docker",
@@ -1331,9 +1390,6 @@ To use the SQL Server MCP client from a Docker container with Claude Desktop:
     "aadversteeg/mssqlclient-mcp-server:latest"
   ]
 }
-```
-
-2. Save the file and restart Claude Desktop
 
 > **Note for Windows Users with Local SQL Server:** When using Docker Desktop on Windows to connect to a local SQL Server instance, ensure that TCP/IP is enabled in SQL Server Configuration Manager (SQL Server Network Configuration → Protocols for MSSQLSERVER → TCP/IP) and that SQL Server is configured to listen on port 1433 (TCP/IP Properties → IP Addresses → IPAll → TCP Port: 1433). Restart the SQL Server service after making these changes.
 

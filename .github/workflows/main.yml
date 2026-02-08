@@ -1,4 +1,4 @@
-name: Publish MSSQLClient Mcp Server to Dockerhub and GitHub Releases
+name: Publish MSSQLClient Mcp Server to Dockerhub, NuGet, and GitHub Releases
 
 on:
   push:
@@ -44,7 +44,16 @@ jobs:
           
       - name: Build application
         run: dotnet build src/mssqlclient.sln --configuration Release
-        
+
+      - name: Pack NuGet tool
+        run: dotnet pack src/Core.Infrastructure.McpServer/Core.Infrastructure.McpServer.csproj --configuration Release --no-build --output ./packages
+
+      - name: Debug Package Output
+        run: ls -la ./packages/
+
+      - name: Push to NuGet
+        run: dotnet nuget push "./packages/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
       - name: Create binaries directory
         run: |
           mkdir -p ./bin-output
@@ -94,4 +103,6 @@ jobs:
           files: |
             mssqlclient-mcp-server-${{ steps.get_version.outputs.VERSION }}-bin.zip
             mssqlclient-mcp-server-${{ steps.get_version.outputs.VERSION }}-src.zip
+            packages/*.nupkg
+            packages/*.snupkg
           generate_release_notes: true
