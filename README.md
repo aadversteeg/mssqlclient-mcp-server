@@ -201,7 +201,7 @@ Requires .NET 10 SDK. This approach automatically downloads the tool on first us
     "ave.mcpserver.mssqlclient"
   ],
   "env": {
-    "MSSQL_CONNECTIONSTRING": "Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;",
+    "MSSQL_CONNECTIONSTRING": "Data Source=localhost;Integrated Security=True;MultipleActiveResultSets=True;TrustServerCertificate=True;",
     "DatabaseConfiguration__EnableExecuteQuery": "true",
     "DatabaseConfiguration__EnableExecuteStoredProcedure": "true",
     "DatabaseConfiguration__EnableStartQuery": "true",
@@ -222,7 +222,7 @@ dotnet tool install --global Ave.McpServer.MsSqlClient
 "mssql": {
   "command": "ave-mcpserver-mssqlclient",
   "env": {
-    "MSSQL_CONNECTIONSTRING": "Server=your_server;Database=your_db;User Id=your_user;Password=your_password;TrustServerCertificate=True;",
+    "MSSQL_CONNECTIONSTRING": "Data Source=localhost;Integrated Security=True;MultipleActiveResultSets=True;TrustServerCertificate=True;",
     "DatabaseConfiguration__EnableExecuteQuery": "true",
     "DatabaseConfiguration__EnableExecuteStoredProcedure": "true",
     "DatabaseConfiguration__EnableStartQuery": "true",
