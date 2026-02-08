@@ -10,51 +10,70 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      sql-server:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: IntegrationTest!123
+        ports:
+          - 14330:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'IntegrationTest!123' -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 30s
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 10.0.x
-    
+
+    - name: Wait for SQL Server to be ready
+      run: |
+        echo "Waiting for SQL Server to accept connections..."
+        for i in $(seq 1 30); do
+          if docker exec ${{ job.services.sql-server.id }} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'IntegrationTest!123' -C -Q 'SELECT 1' > /dev/null 2>&1; then
+            echo "SQL Server is ready"
+            exit 0
+          fi
+          echo "Attempt $i/30 - SQL Server not ready yet..."
+          sleep 2
+        done
+        echo "SQL Server did not become ready in time"
+        exit 1
+
     - name: Install dependencies
       run: |
         cd src
         dotnet restore
-    
+
     - name: Build
       run: |
         cd src
         dotnet build --no-restore
-    
+
     - name: Build test project
       run: |
         cd tst
         dotnet build
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-    
+
     - name: Run integration tests
       run: |
         cd tst
         dotnet test -v n
       env:
-        # Set environment variables for integration tests
+        IntegrationTests__UseExistingContainers: true
         IntegrationTests__SqlServer__PortRange: 14330-14339
         IntegrationTests__McpServer__PortRange: 5100-5110
         IntegrationTests__SqlServer__Password: IntegrationTest!123
-    
+
     - name: Print Docker logs on failure
       if: ${{ failure() }}
       run: |
-        docker ps
-        docker logs $(docker ps -q --filter "name=mssql-test-") || true
-        docker-compose -f tst/IntegrationTests/Docker/docker-compose.yml -p mssqlclient-integration-tests down -v || true
-    
-    - name: Clean up Docker resources
-      if: ${{ always() }}
-      run: |
-        docker-compose -f tst/IntegrationTests/Docker/docker-compose.yml -p mssqlclient-integration-tests down -v || true
-        docker system prune -f || true
+        docker ps -a
+        docker logs ${{ job.services.sql-server.id }} 2>&1 | tail -50 || true
