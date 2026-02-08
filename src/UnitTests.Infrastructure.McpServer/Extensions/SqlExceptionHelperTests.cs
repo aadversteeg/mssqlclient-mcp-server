@@ -93,27 +93,26 @@ namespace UnitTests.Infrastructure.McpServer.Extensions
                 nonPublic: true) as SqlErrorCollection;
 
             // Try different constructor signatures for SqlError based on version
-            // Version 6.0+ uses: int, byte, byte, string, string, string, int, uint, Exception
             SqlError? error = null;
 
             try
             {
-                // Try newer constructor signature (v6.0+): errorNumber, errorState, errorClass, server, errorMessage, procedure, lineNumber, win32ErrorCode, innerException
+                // Try v6.1+ constructor signature: infoNumber, errorState, errorClass, server, errorMessage, procedure, lineNumber, exception, batchIndex
+                error = Activator.CreateInstance(
+                    typeof(SqlError),
+                    bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+                    binder: null,
+                    args: new object?[] { errorNumber, (byte)0, (byte)0, "server", "error message", "procedure", 0, null, 0 },
+                    culture: null) as SqlError;
+            }
+            catch
+            {
+                // Fallback to v6.0 signature: errorNumber, errorState, errorClass, server, errorMessage, procedure, lineNumber, win32ErrorCode, innerException
                 error = Activator.CreateInstance(
                     typeof(SqlError),
                     bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
                     binder: null,
                     args: new object?[] { errorNumber, (byte)0, (byte)0, "server", "error message", "procedure", 0, (uint)0, null },
-                    culture: null) as SqlError;
-            }
-            catch
-            {
-                // Fallback to older signature if the newer one doesn't work
-                error = Activator.CreateInstance(
-                    typeof(SqlError),
-                    bindingAttr: System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-                    binder: null,
-                    args: new object[] { errorNumber, (byte)0, (byte)0, "", "", "", 0 },
                     culture: null) as SqlError;
             }
 

@@ -42,7 +42,7 @@ The MCP client operates in one of two modes:
 
 ### Prerequisites
 
-- .NET 9.0 SDK (for local development/deployment)
+- .NET 10.0 SDK (for local development/deployment)
 - Docker (for container deployment)
 
 ### Build Instructions (for development)
@@ -64,10 +64,34 @@ If you want to build the project from source:
    dotnet build
    ```
 
-4. Run the tests:
+4. Run the unit tests:
    ```bash
    dotnet test
    ```
+
+### Running Integration Tests
+
+Integration tests verify the MCP server against a real SQL Server instance. They require Docker to be running.
+
+1. Start a SQL Server container:
+   ```bash
+   docker run --name sql-test -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=IntegrationTest!123" -p 14330:1433 -d mcr.microsoft.com/mssql/server:2022-latest
+   ```
+
+2. Wait ~30 seconds for SQL Server to initialize, then run the tests:
+   ```bash
+   cd tst
+   dotnet test --filter "TestType=Integration"
+   ```
+
+3. Clean up when done:
+   ```bash
+   docker rm -f sql-test
+   ```
+
+The integration tests cover both **database mode** (connection string with `Database=`) and **server mode** (connection string without `Database=`), including tool metadata verification and functional tests for query execution, table listing, and schema retrieval.
+
+Integration tests also run automatically in CI via the **Integration Tests** workflow, which can be triggered manually from the GitHub Actions tab.
 
 ## Docker Support
 
@@ -1370,7 +1394,7 @@ The server implements a multi-layered security approach:
 
 ### Technology Stack
 
-- **Framework**: .NET 9.0 with C# 13
+- **Framework**: .NET 10.0 with C# 14
 - **Language Features**: Nullable reference types, async/await, records
 - **Database Access**: Microsoft.Data.SqlClient
 - **MCP SDK**: Model Context Protocol C# SDK

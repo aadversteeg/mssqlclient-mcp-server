@@ -51,6 +51,15 @@ namespace IntegrationTests.Helpers
             // because the MCP server runs outside Docker network
             return "Server=localhost,14330;Database=master;User Id=sa;Password=IntegrationTest!123;TrustServerCertificate=true;";
         }
+
+        /// <summary>
+        /// Gets a connection string without a Database parameter, which triggers server mode
+        /// </summary>
+        /// <returns>Server-mode connection string for SQL Server</returns>
+        public static string GetServerModeConnectionString()
+        {
+            return "Server=localhost,14330;User Id=sa;Password=IntegrationTest!123;TrustServerCertificate=true;";
+        }
         
         /// <summary>
         /// Merges provided variables with system environment variables 
