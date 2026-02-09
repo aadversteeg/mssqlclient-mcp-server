@@ -59,6 +59,7 @@ namespace IntegrationTests.Fixtures
 
                 string password = _configuration["IntegrationTests:SqlServer:Password"] ?? "IntegrationTest!123";
                 string database = _configuration["IntegrationTests:SqlServer:DatabaseName"] ?? "master";
+                SqlServerPort = _portRangeStart;
 
                 if (_configuration.GetValue<bool>("IntegrationTests:UseLocalSqlServer"))
                 {
@@ -67,7 +68,7 @@ namespace IntegrationTests.Fixtures
                 }
                 else
                 {
-                    SqlServerConnectionString = $"Server=localhost,14330;Database={database};User Id=sa;Password={password};TrustServerCertificate=True;";
+                    SqlServerConnectionString = $"Server=localhost,{SqlServerPort};Database={database};User Id=sa;Password={password};TrustServerCertificate=True;";
                 }
 
                 return;
