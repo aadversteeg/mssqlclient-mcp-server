@@ -13,11 +13,13 @@ namespace IntegrationTests.Tests
     public class TimeoutIntegrationTests
     {
         private readonly McpFixture _fixture;
+        private readonly DockerFixture _dockerFixture;
         private readonly ILogger<TimeoutIntegrationTests> _logger;
 
-        public TimeoutIntegrationTests(McpFixture fixture)
+        public TimeoutIntegrationTests(McpFixture fixture, DockerFixture dockerFixture)
         {
             _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
+            _dockerFixture = dockerFixture ?? throw new ArgumentNullException(nameof(dockerFixture));
 
             var loggerFactory = LoggerFactory.Create(builder =>
             {
@@ -52,7 +54,7 @@ namespace IntegrationTests.Tests
             // With no total timeout set, queries should work without restrictions.
             var envVars = new Dictionary<string, string>
             {
-                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString() },
+                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString(_dockerFixture.SqlServerPort) },
                 { "DatabaseConfiguration__TotalToolCallTimeoutSeconds", "" },
                 { "DatabaseConfiguration__EnableExecuteQuery", "true" },
                 { "DatabaseConfiguration__EnableStartQuery", "true" }
@@ -84,7 +86,7 @@ namespace IntegrationTests.Tests
             // Arrange - Use a short total timeout that the query will exceed
             var envVars = new Dictionary<string, string>
             {
-                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString() },
+                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString(_dockerFixture.SqlServerPort) },
                 { "DatabaseConfiguration__TotalToolCallTimeoutSeconds", "2" },
                 { "DatabaseConfiguration__DefaultCommandTimeoutSeconds", "30" },
                 { "DatabaseConfiguration__EnableExecuteQuery", "true" },
@@ -115,7 +117,7 @@ namespace IntegrationTests.Tests
             // Arrange - Configure specific timeout values
             var envVars = new Dictionary<string, string>
             {
-                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString() },
+                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString(_dockerFixture.SqlServerPort) },
                 { "DatabaseConfiguration__TotalToolCallTimeoutSeconds", "90" },
                 { "DatabaseConfiguration__DefaultCommandTimeoutSeconds", "45" },
                 { "DatabaseConfiguration__EnableStartQuery", "true" }
@@ -146,7 +148,7 @@ namespace IntegrationTests.Tests
             // Arrange - Use reasonable timeout for multiple operations
             var envVars = new Dictionary<string, string>
             {
-                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString() },
+                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString(_dockerFixture.SqlServerPort) },
                 { "DatabaseConfiguration__TotalToolCallTimeoutSeconds", "30" },
                 { "DatabaseConfiguration__DefaultCommandTimeoutSeconds", "10" },
                 { "DatabaseConfiguration__EnableExecuteQuery", "true" },
@@ -190,7 +192,7 @@ namespace IntegrationTests.Tests
             // so the effective command timeout should be capped by the remaining total time
             var envVars = new Dictionary<string, string>
             {
-                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString() },
+                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString(_dockerFixture.SqlServerPort) },
                 { "DatabaseConfiguration__TotalToolCallTimeoutSeconds", "10" },
                 { "DatabaseConfiguration__DefaultCommandTimeoutSeconds", "60" },
                 { "DatabaseConfiguration__EnableExecuteQuery", "true" },

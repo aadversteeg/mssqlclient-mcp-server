@@ -13,11 +13,13 @@ namespace IntegrationTests.Tests
     public class McpIntegrationTests
     {
         private readonly McpFixture _fixture;
+        private readonly DockerFixture _dockerFixture;
         private readonly ILogger<McpIntegrationTests> _logger;
 
-        public McpIntegrationTests(McpFixture fixture)
+        public McpIntegrationTests(McpFixture fixture, DockerFixture dockerFixture)
         {
             _fixture = fixture ?? throw new ArgumentNullException(nameof(fixture));
+            _dockerFixture = dockerFixture ?? throw new ArgumentNullException(nameof(dockerFixture));
 
             var loggerFactory = LoggerFactory.Create(builder =>
             {
@@ -31,7 +33,7 @@ namespace IntegrationTests.Tests
         {
             var envVars = new Dictionary<string, string>
             {
-                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString() },
+                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetDefaultConnectionString(_dockerFixture.SqlServerPort) },
                 { "DatabaseConfiguration__EnableExecuteQuery", "true" }
             };
 
@@ -48,7 +50,7 @@ namespace IntegrationTests.Tests
         {
             var envVars = new Dictionary<string, string>
             {
-                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetServerModeConnectionString() },
+                { "MSSQL_CONNECTIONSTRING", EnvironmentVariableHelper.GetServerModeConnectionString(_dockerFixture.SqlServerPort) },
                 { "DatabaseConfiguration__EnableExecuteQuery", "true" }
             };
 
