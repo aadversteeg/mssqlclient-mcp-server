@@ -1,4 +1,5 @@
 using Core.Application.Interfaces;
+using Core.Infrastructure.McpServer.Extensions;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
@@ -49,6 +50,15 @@ namespace Core.Infrastructure.McpServer.Tools
 
                 var duration = (session.EndTime ?? DateTime.UtcNow) - session.StartTime;
                 var status = session.IsRunning ? "running" : (session.Error != null ? "failed" : "completed");
+                var serverTiming = session.InfoMessages != null
+                    ? StatisticsTimeParser.Parse(session.InfoMessages)
+                    : null;
+                var ioStats = session.InfoMessages != null
+                    ? StatisticsIoParser.Parse(session.InfoMessages)
+                    : null;
+                var rowsAffected = session.InfoMessages != null
+                    ? RowsAffectedParser.Parse(session.InfoMessages)
+                    : null;
 
                 var result = new
                 {
@@ -63,13 +73,24 @@ namespace Core.Infrastructure.McpServer.Tools
                     isRunning = session.IsRunning,
                     rowCount = session.RowCount,
                     error = session.Error,
-                    timeoutSeconds = session.TimeoutSeconds
+                    timeoutSeconds = session.TimeoutSeconds,
+                    serverElapsedTimeMs = serverTiming?.ElapsedMs,
+                    serverCpuTimeMs = serverTiming?.CpuMs,
+                    rowsAffected = rowsAffected,
+                    ioStats = ioStats?.Select(io => new
+                    {
+                        table = io.TableName,
+                        logicalReads = io.LogicalReads,
+                        physicalReads = io.PhysicalReads,
+                        readAheadReads = io.ReadAheadReads
+                    }),
+                    executionPlanXml = session.ExecutionPlanXml
                 };
 
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions 
-                { 
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions
+                {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true 
+                    WriteIndented = true
                 });
             }
             catch (Exception ex)
@@ -128,6 +149,15 @@ namespace Core.Infrastructure.McpServer.Tools
 
                 var duration = (session.EndTime ?? DateTime.UtcNow) - session.StartTime;
                 var status = session.IsRunning ? "running" : (session.Error != null ? "failed" : "completed");
+                var serverTiming = session.InfoMessages != null
+                    ? StatisticsTimeParser.Parse(session.InfoMessages)
+                    : null;
+                var ioStats = session.InfoMessages != null
+                    ? StatisticsIoParser.Parse(session.InfoMessages)
+                    : null;
+                var rowsAffected = session.InfoMessages != null
+                    ? RowsAffectedParser.Parse(session.InfoMessages)
+                    : null;
 
                 var result = new
                 {
@@ -143,13 +173,24 @@ namespace Core.Infrastructure.McpServer.Tools
                     rowCount = session.RowCount,
                     error = session.Error,
                     results = resultsText,
-                    maxRowsApplied = maxRows
+                    maxRowsApplied = maxRows,
+                    serverElapsedTimeMs = serverTiming?.ElapsedMs,
+                    serverCpuTimeMs = serverTiming?.CpuMs,
+                    rowsAffected = rowsAffected,
+                    ioStats = ioStats?.Select(io => new
+                    {
+                        table = io.TableName,
+                        logicalReads = io.LogicalReads,
+                        physicalReads = io.PhysicalReads,
+                        readAheadReads = io.ReadAheadReads
+                    }),
+                    executionPlanXml = session.ExecutionPlanXml
                 };
 
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions 
-                { 
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions
+                {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true 
+                    WriteIndented = true
                 });
             }
             catch (Exception ex)

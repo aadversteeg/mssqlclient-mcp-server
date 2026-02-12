@@ -1,4 +1,5 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.McpServer.Tools;
 using Core.Infrastructure.McpServer.Extensions;
 using FluentAssertions;
@@ -68,19 +69,26 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Setup reader to return a simple result
             mockReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => false); // No rows to read
+            mockReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
             mockReader.Setup(x => x.FieldCount)
                 .Returns(0);
-            
+            mockReader.Setup(x => x.GetColumnNames())
+                .Returns(Array.Empty<string>());
+            mockReader.Setup(x => x.InfoMessages)
+                .Returns(new List<string>());
+
             mockServerDatabase.Setup(x => x.ExecuteStoredProcedureAsync(
                 databaseName,
-                procedureName, 
-                It.Is<Dictionary<string, object?>>(p => 
-                    p.Count == parameters.Count && 
-                    p.ContainsKey("Param1") && 
+                procedureName,
+                It.Is<Dictionary<string, object?>>(p =>
+                    p.Count == parameters.Count &&
+                    p.ContainsKey("Param1") &&
                     p.ContainsKey("Param2")
                 ),
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
@@ -97,6 +105,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<Dictionary<string, object?>>(),
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 null,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         }
@@ -113,10 +122,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockServerDatabase = new Mock<IServerDatabase>();
             mockServerDatabase.Setup(x => x.ExecuteStoredProcedureAsync(
                 databaseName,
-                procedureName, 
+                procedureName,
                 It.IsAny<Dictionary<string, object?>>(),
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
@@ -158,7 +168,17 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var timeoutSeconds = 300;
             
             var mockReader = new Mock<IAsyncDataReader>();
-            
+            mockReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
+            mockReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
+            mockReader.Setup(x => x.FieldCount)
+                .Returns(0);
+            mockReader.Setup(x => x.GetColumnNames())
+                .Returns(Array.Empty<string>());
+            mockReader.Setup(x => x.InfoMessages)
+                .Returns(new List<string>());
+
             var mockServerDatabase = new Mock<IServerDatabase>();
             mockServerDatabase
                 .Setup(x => x.ExecuteStoredProcedureAsync(
@@ -167,6 +187,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                     It.IsAny<Dictionary<string, object?>>(),
                     It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                     timeoutSeconds,
+                    It.IsAny<QueryStatisticsOptions?>(),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
@@ -183,6 +204,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<Dictionary<string, object?>>(),
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeoutSeconds,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         }

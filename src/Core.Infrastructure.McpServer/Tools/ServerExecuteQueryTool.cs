@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Core.Application.Interfaces;
 using Core.Application.Models;
 using ModelContextProtocol.Server;
@@ -28,7 +29,11 @@ namespace Core.Infrastructure.McpServer.Tools
             [Description("The SQL query to execute")]
             string query,
             [Description("Optional timeout in seconds. If not specified, uses the default timeout")]
-            int? timeoutSeconds = null)
+            int? timeoutSeconds = null,
+            [Description("Include per-table IO statistics (logical reads, physical reads, read-ahead reads). Default is false")]
+            bool includeIoStats = false,
+            [Description("Include the actual XML execution plan. Default is false")]
+            bool includeExecutionPlan = false)
         {
             Console.Error.WriteLine($"ExecuteQueryInDatabase called with databaseName: {databaseName}, query: {query}");
 
@@ -47,11 +52,14 @@ namespace Core.Infrastructure.McpServer.Tools
 
             try
             {
+                var stopwatch = Stopwatch.StartNew();
+
                 // Use timeout context if available, otherwise fall back to legacy behavior
-                IAsyncDataReader reader = await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutContext, timeoutSeconds);
-                
+                var statisticsOptions = new QueryStatisticsOptions(includeIoStats, includeExecutionPlan);
+                IAsyncDataReader reader = await _serverDatabase.ExecuteQueryInDatabaseAsync(databaseName, query, timeoutContext, timeoutSeconds, statisticsOptions);
+
                 // Format results into a readable table
-                return await reader.ToToolResult();
+                return await reader.ToToolResult(stopwatch);
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
             {

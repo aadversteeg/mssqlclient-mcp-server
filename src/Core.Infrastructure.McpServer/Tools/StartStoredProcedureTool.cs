@@ -38,7 +38,11 @@ namespace Core.Infrastructure.McpServer.Tools
             [Description("Optional database name to execute the procedure in")]
             string? databaseName = null,
             [Description("Optional timeout in seconds. If not specified, uses the default timeout")]
-            int? timeoutSeconds = null)
+            int? timeoutSeconds = null,
+            [Description("Include per-table IO statistics (logical reads, physical reads, read-ahead reads). Default is false")]
+            bool includeIoStats = false,
+            [Description("Include the actual XML execution plan. Default is false")]
+            bool includeExecutionPlan = false)
         {
             try
             {
@@ -63,7 +67,8 @@ namespace Core.Infrastructure.McpServer.Tools
                 _logger.LogInformation("Starting stored procedure session for procedure: {ProcedureName} in connected database, timeout: {TimeoutSeconds}s", 
                     procedureName, effectiveTimeout);
 
-                var session = await _sessionManager.StartStoredProcedureAsync(procedureName, parameterDict, null, effectiveTimeout);
+                var statisticsOptions = new QueryStatisticsOptions(includeIoStats, includeExecutionPlan);
+                var session = await _sessionManager.StartStoredProcedureAsync(procedureName, parameterDict, null, effectiveTimeout, statisticsOptions);
 
                 var result = new
                 {

@@ -71,5 +71,20 @@ namespace Core.Application.Models
         /// Command timeout for this specific session.
         /// </summary>
         public int TimeoutSeconds { get; set; }
+
+        /// <summary>
+        /// Informational messages from SQL Server (e.g. SET STATISTICS TIME ON output).
+        /// </summary>
+        public IReadOnlyList<string>? InfoMessages { get; set; }
+
+        /// <summary>
+        /// Statistics options that were used for this session's query execution.
+        /// </summary>
+        public QueryStatisticsOptions? StatisticsOptions { get; set; }
+
+        /// <summary>
+        /// Actual XML execution plan captured from SET STATISTICS XML ON output.
+        /// </summary>
+        public string? ExecutionPlanXml { get; set; }
     }
 }

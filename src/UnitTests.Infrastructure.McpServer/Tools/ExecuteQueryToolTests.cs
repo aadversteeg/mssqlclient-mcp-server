@@ -104,33 +104,41 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Setup reader to return a simple result
             mockReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => false); // No rows to read
+            mockReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
             mockReader.Setup(x => x.FieldCount)
                 .Returns(0);
-            
+            mockReader.Setup(x => x.GetColumnNames())
+                .Returns(Array.Empty<string>());
+            mockReader.Setup(x => x.InfoMessages)
+                .Returns(new List<string>());
+
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
-                query, 
+                query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
-            
+
             var mockOptions = new Mock<IOptions<DatabaseConfiguration>>();
             mockOptions.Setup(o => o.Value).Returns(new DatabaseConfiguration { TotalToolCallTimeoutSeconds = null });
             var tool = new ExecuteQueryTool(mockDatabaseContext.Object, mockOptions.Object);
-            
+
             // Act
             var result = await tool.ExecuteQuery(query);
-            
+
             // Assert
             result.Should().NotBeNull();
             mockDatabaseContext.Verify(x => x.ExecuteQueryAsync(
                 query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
-                It.IsAny<CancellationToken>()), 
+                It.IsAny<QueryStatisticsOptions?>(),
+                It.IsAny<CancellationToken>()),
                 Times.Once);
         }
-        
+
         [Fact(DisplayName = "EQT-007: ExecuteQueryTool executes query with timeout")]
         public async Task EQT007()
         {
@@ -139,16 +147,23 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var timeout = 30;
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             var mockReader = new Mock<IAsyncDataReader>();
-            
+
             mockReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => false);
+            mockReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
             mockReader.Setup(x => x.FieldCount)
                 .Returns(0);
+            mockReader.Setup(x => x.GetColumnNames())
+                .Returns(Array.Empty<string>());
+            mockReader.Setup(x => x.InfoMessages)
+                .Returns(new List<string>());
             
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
-                query, 
+                query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeout,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
@@ -165,7 +180,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeout,
-                It.IsAny<CancellationToken>()), 
+                It.IsAny<QueryStatisticsOptions?>(),
+                It.IsAny<CancellationToken>()),
                 Times.Once);
         }
         
@@ -178,9 +194,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
-                query, 
+                query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             

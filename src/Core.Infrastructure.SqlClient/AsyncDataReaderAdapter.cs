@@ -10,10 +10,12 @@ namespace Core.Infrastructure.SqlClient
     public class AsyncDataReaderAdapter : IAsyncDataReader
     {
         private readonly DbDataReader _reader;
+        private readonly IReadOnlyList<string> _infoMessages;
 
-        public AsyncDataReaderAdapter(DbDataReader reader)
+        public AsyncDataReaderAdapter(DbDataReader reader, List<string> infoMessages)
         {
             _reader = reader ?? throw new ArgumentNullException(nameof(reader));
+            _infoMessages = infoMessages ?? throw new ArgumentNullException(nameof(infoMessages));
         }
 
         // Core async methods
@@ -55,6 +57,8 @@ namespace Core.Infrastructure.SqlClient
             }
         }
         
+        public IReadOnlyList<string> InfoMessages => _infoMessages;
+
         public void Close() => _reader.Close();
 
         // IDisposable implementation

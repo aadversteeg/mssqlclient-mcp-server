@@ -62,7 +62,7 @@ namespace Core.Application.Interfaces
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
-        Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
+        Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Lists all stored procedures with optional database context switching.
@@ -95,6 +95,6 @@ namespace Core.Application.Interfaces
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
-        Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default);
+        Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default);
     }
 }

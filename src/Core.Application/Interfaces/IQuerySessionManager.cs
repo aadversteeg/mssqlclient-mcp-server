@@ -15,7 +15,7 @@ namespace Core.Application.Interfaces
         /// <param name="timeoutSeconds">Timeout in seconds for the query execution</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>The created query session</returns>
-        Task<QuerySession> StartQueryAsync(string query, string? databaseName, int timeoutSeconds, CancellationToken cancellationToken = default);
+        Task<QuerySession> StartQueryAsync(string query, string? databaseName, int timeoutSeconds, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Starts a new stored procedure execution session in the background.
@@ -26,7 +26,7 @@ namespace Core.Application.Interfaces
         /// <param name="timeoutSeconds">Timeout in seconds for the procedure execution</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>The created query session</returns>
-        Task<QuerySession> StartStoredProcedureAsync(string procedureName, Dictionary<string, object?>? parameters, string? databaseName, int timeoutSeconds, CancellationToken cancellationToken = default);
+        Task<QuerySession> StartStoredProcedureAsync(string procedureName, Dictionary<string, object?>? parameters, string? databaseName, int timeoutSeconds, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Gets a session by its ID.

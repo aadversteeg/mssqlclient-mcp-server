@@ -163,34 +163,36 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             mockSessionManager.Setup(x => x.StartStoredProcedureAsync(
-                procedureName, 
+                procedureName,
                 It.IsAny<Dictionary<string, object?>>(),
-                null, 
-                defaultTimeout, 
+                null,
+                defaultTimeout,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(session);
-            
+
             var tool = new StartStoredProcedureTool(mockSessionManager.Object, mockLogger.Object, mockConfiguration.Object);
-            
+
             // Act
             var result = await tool.StartStoredProcedure(procedureName);
-            
+
             // Assert
             result.Should().NotBeNull();
-            
+
             // Verify it's valid JSON
             var jsonDoc = JsonDocument.Parse(result);
             jsonDoc.RootElement.GetProperty("sessionId").GetInt32().Should().Be(sessionId);
             jsonDoc.RootElement.GetProperty("procedureName").GetString().Should().Be(procedureName);
             jsonDoc.RootElement.GetProperty("timeoutSeconds").GetInt32().Should().Be(defaultTimeout);
             jsonDoc.RootElement.GetProperty("status").GetString().Should().Be("running");
-            
+
             mockSessionManager.Verify(x => x.StartStoredProcedureAsync(
-                procedureName, 
+                procedureName,
                 It.IsAny<Dictionary<string, object?>>(),
-                null, 
-                defaultTimeout, 
-                It.IsAny<CancellationToken>()), 
+                null,
+                defaultTimeout,
+                It.IsAny<QueryStatisticsOptions?>(),
+                It.IsAny<CancellationToken>()),
                 Times.Once);
         }
         
@@ -226,34 +228,36 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             mockSessionManager.Setup(x => x.StartStoredProcedureAsync(
-                procedureName, 
+                procedureName,
                 It.Is<Dictionary<string, object?>>(p => p.ContainsKey("UserId") && p.ContainsKey("IncludeDetails")),
-                null, 
-                customTimeout, 
+                null,
+                customTimeout,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(session);
-            
+
             var tool = new StartStoredProcedureTool(mockSessionManager.Object, mockLogger.Object, mockConfiguration.Object);
-            
+
             // Act
             var result = await tool.StartStoredProcedure(procedureName, parametersJson, null, customTimeout);
-            
+
             // Assert
             result.Should().NotBeNull();
-            
+
             // Verify it's valid JSON
             var jsonDoc = JsonDocument.Parse(result);
             jsonDoc.RootElement.GetProperty("sessionId").GetInt32().Should().Be(sessionId);
             jsonDoc.RootElement.GetProperty("procedureName").GetString().Should().Be(procedureName);
             jsonDoc.RootElement.GetProperty("timeoutSeconds").GetInt32().Should().Be(customTimeout);
             jsonDoc.RootElement.GetProperty("status").GetString().Should().Be("running");
-            
+
             mockSessionManager.Verify(x => x.StartStoredProcedureAsync(
-                procedureName, 
+                procedureName,
                 It.IsAny<Dictionary<string, object?>>(),
-                null, 
-                customTimeout, 
-                It.IsAny<CancellationToken>()), 
+                null,
+                customTimeout,
+                It.IsAny<QueryStatisticsOptions?>(),
+                It.IsAny<CancellationToken>()),
                 Times.Once);
         }
         
@@ -295,10 +299,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockConfiguration.Setup(x => x.Value).Returns(new DatabaseConfiguration { DefaultCommandTimeoutSeconds = 30 });
             
             mockSessionManager.Setup(x => x.StartStoredProcedureAsync(
-                procedureName, 
+                procedureName,
                 It.IsAny<Dictionary<string, object?>>(),
-                null, 
-                It.IsAny<int>(), 
+                null,
+                It.IsAny<int>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             

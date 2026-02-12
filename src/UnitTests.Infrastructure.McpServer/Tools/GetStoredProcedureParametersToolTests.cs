@@ -86,6 +86,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<string>(), 
                 It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
@@ -154,6 +155,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<string>(), 
                 It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
@@ -186,6 +188,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<string>(), 
                 It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
@@ -231,6 +234,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<string>(), 
                 It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
@@ -256,6 +260,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<string>(), 
                 It.IsAny<ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             

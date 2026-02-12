@@ -125,27 +125,27 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses timeout context or default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
-        public async Task<IAsyncDataReader> ExecuteQueryInDatabaseAsync(string databaseName, string query, ToolCallTimeoutContext? timeoutContext, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteQueryInDatabaseAsync(string databaseName, string query, ToolCallTimeoutContext? timeoutContext, int? timeoutSeconds = null, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(databaseName))
                 throw new ArgumentException("Database name cannot be empty", nameof(databaseName));
-                
+
             if (string.IsNullOrWhiteSpace(query))
                 throw new ArgumentException("Query cannot be empty", nameof(query));
 
             var effectiveTimeout = CalculateEffectiveTimeout(timeoutContext, timeoutSeconds);
             var combinedToken = ToolCallTimeoutFactory.CombineTokens(timeoutContext, cancellationToken);
-            
+
             // Check if timeout already exceeded
             if (timeoutContext?.IsTimeoutExceeded == true)
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
-                
+
             // First verify the database exists and is accessible
             if (!await DoesDatabaseExistAsync(databaseName, timeoutContext, effectiveTimeout, combinedToken))
                 throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not accessible");
-                
+
             // Use the database service with the specified database name to execute the query
-            return await _databaseService.ExecuteQueryAsync(query, databaseName, null, effectiveTimeout, combinedToken);
+            return await _databaseService.ExecuteQueryAsync(query, databaseName, null, effectiveTimeout, statisticsOptions, combinedToken);
         }
         
         /// <summary>
@@ -218,30 +218,30 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses timeout context or default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
-        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string databaseName, string procedureName, Dictionary<string, object?> parameters, ToolCallTimeoutContext? timeoutContext, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string databaseName, string procedureName, Dictionary<string, object?> parameters, ToolCallTimeoutContext? timeoutContext, int? timeoutSeconds = null, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(databaseName))
                 throw new ArgumentException("Database name cannot be empty", nameof(databaseName));
-                
+
             if (string.IsNullOrWhiteSpace(procedureName))
                 throw new ArgumentException("Procedure name cannot be empty", nameof(procedureName));
-                
+
             if (parameters == null)
                 throw new ArgumentNullException(nameof(parameters));
 
             var effectiveTimeout = CalculateEffectiveTimeout(timeoutContext, timeoutSeconds);
             var combinedToken = ToolCallTimeoutFactory.CombineTokens(timeoutContext, cancellationToken);
-            
+
             // Check if timeout already exceeded
             if (timeoutContext?.IsTimeoutExceeded == true)
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
-                
+
             // First verify the database exists and is accessible
             if (!await DoesDatabaseExistAsync(databaseName, timeoutContext, effectiveTimeout, combinedToken))
                 throw new InvalidOperationException($"Database '{databaseName}' does not exist or is not accessible");
-                
+
             // Use the database service with the specified database name to execute the stored procedure
-            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, null, effectiveTimeout, combinedToken);
+            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, databaseName, null, effectiveTimeout, statisticsOptions, combinedToken);
         }
         
         /// <summary>

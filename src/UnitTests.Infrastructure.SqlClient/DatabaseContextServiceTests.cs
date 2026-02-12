@@ -107,15 +107,15 @@ namespace UnitTests.Infrastructure.SqlClient
             var query = "SELECT * FROM TestTable";
             var expectedReader = new Mock<IAsyncDataReader>().Object;
             
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedReader);
-            
+
             // Act
             var result = await _databaseContextService.ExecuteQueryAsync(query, null);
-            
+
             // Assert
             result.Should().Be(expectedReader);
-            _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-006: ExecuteQueryAsync with empty query throws ArgumentException")]
@@ -213,15 +213,15 @@ namespace UnitTests.Infrastructure.SqlClient
             };
             var expectedReader = new Mock<IAsyncDataReader>().Object;
             
-            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedReader);
-            
+
             // Act
             var result = await _databaseContextService.ExecuteStoredProcedureAsync(procedureName, parameters, null);
-            
+
             // Assert
             result.Should().Be(expectedReader);
-            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ExecuteStoredProcedureAsync(procedureName, parameters, null, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "DCS-011: ExecuteStoredProcedureAsync with empty procedure name throws ArgumentException")]
