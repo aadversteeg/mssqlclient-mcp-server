@@ -60,9 +60,15 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Setup reader to return a simple result
             mockReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => false); // No rows to read
+            mockReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
             mockReader.Setup(x => x.FieldCount)
                 .Returns(0);
-            
+            mockReader.Setup(x => x.GetColumnNames())
+                .Returns(Array.Empty<string>());
+            mockReader.Setup(x => x.InfoMessages)
+                .Returns(new List<string>());
+
             mockDatabaseContext.Setup(x => x.ExecuteStoredProcedureAsync(
                 procedureName, 
                 It.Is<Dictionary<string, object?>>(p => 

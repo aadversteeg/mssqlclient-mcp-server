@@ -49,14 +49,17 @@ namespace UnitTests.Application
             var mockDataReader = new Mock<IAsyncDataReader>();
             mockDataReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                           .Returns(Task.FromResult(false)); // No data to read
+            mockDataReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
-            
+            mockDataReader.Setup(x => x.InfoMessages).Returns(new List<string>());
+
             _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
             // Act
             var session = await _sessionManager.StartQueryAsync(query, databaseName, timeoutSeconds);
-            
+
             // Give a small delay to allow background task to start
             await Task.Delay(10);
 
@@ -83,14 +86,17 @@ namespace UnitTests.Application
             var mockDataReader = new Mock<IAsyncDataReader>();
             mockDataReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                           .Returns(Task.FromResult(false));
+            mockDataReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
-            
+            mockDataReader.Setup(x => x.InfoMessages).Returns(new List<string>());
+
             _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
             // Act
             var session = await _sessionManager.StartStoredProcedureAsync(procedureName, parameters, databaseName, timeoutSeconds);
-            
+
             // Give a small delay to allow background task to start
             await Task.Delay(10);
 
@@ -170,8 +176,11 @@ namespace UnitTests.Application
             var mockDataReader = new Mock<IAsyncDataReader>();
             mockDataReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                           .Returns(tcs.Task);
+            mockDataReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
-            
+            mockDataReader.Setup(x => x.InfoMessages).Returns(new List<string>());
+
             _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
@@ -209,17 +218,23 @@ namespace UnitTests.Application
             // Arrange - Set up mocks to keep sessions running longer
             var tcs1 = new TaskCompletionSource<bool>();
             var tcs2 = new TaskCompletionSource<bool>();
-            
+
             var mockDataReader1 = new Mock<IAsyncDataReader>();
             mockDataReader1.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                           .Returns(tcs1.Task); // This will keep the session running
+            mockDataReader1.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
             mockDataReader1.Setup(x => x.FieldCount).Returns(0);
-            
+            mockDataReader1.Setup(x => x.InfoMessages).Returns(new List<string>());
+
             var mockDataReader2 = new Mock<IAsyncDataReader>();
             mockDataReader2.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                           .Returns(tcs2.Task); // This will keep the session running
+            mockDataReader2.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
             mockDataReader2.Setup(x => x.FieldCount).Returns(0);
-            
+            mockDataReader2.Setup(x => x.InfoMessages).Returns(new List<string>());
+
             _mockDatabaseService.SetupSequence(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader1.Object)
                                .ReturnsAsync(mockDataReader2.Object);
@@ -251,14 +266,17 @@ namespace UnitTests.Application
             var mockDataReader = new Mock<IAsyncDataReader>();
             mockDataReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                           .Returns(Task.FromResult(false));
+            mockDataReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
-            
+            mockDataReader.Setup(x => x.InfoMessages).Returns(new List<string>());
+
             _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
             var session1 = await _sessionManager.StartQueryAsync("SELECT 1", "TestDB", 30);
             var session2 = await _sessionManager.StartQueryAsync("SELECT 2", "TestDB", 30);
-            
+
             // Give time for background tasks to complete
             await Task.Delay(100);
 
@@ -279,8 +297,11 @@ namespace UnitTests.Application
             var mockDataReader = new Mock<IAsyncDataReader>();
             mockDataReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                           .Returns(tcs.Task); // This will keep all sessions running
+            mockDataReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
-            
+            mockDataReader.Setup(x => x.InfoMessages).Returns(new List<string>());
+
             _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
             
@@ -325,14 +346,17 @@ namespace UnitTests.Application
             var mockDataReader = new Mock<IAsyncDataReader>();
             mockDataReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                           .Returns(Task.FromResult(false));
+            mockDataReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
-            
+            mockDataReader.Setup(x => x.InfoMessages).Returns(new List<string>());
+
             _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
             var session1 = await _sessionManager.StartQueryAsync("SELECT 1", "TestDB", 30);
             var session2 = await _sessionManager.StartQueryAsync("SELECT 2", "TestDB", 30);
-            
+
             // Give time for background tasks to complete
             await Task.Delay(100);
             
@@ -356,11 +380,14 @@ namespace UnitTests.Application
             var mockDataReader = new Mock<IAsyncDataReader>();
             mockDataReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                           .Returns(Task.FromResult(false));
+            mockDataReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
             mockDataReader.Setup(x => x.FieldCount).Returns(0);
-            
+            mockDataReader.Setup(x => x.InfoMessages).Returns(new List<string>());
+
             _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
-                               
+
             _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                                .ReturnsAsync(mockDataReader.Object);
 
@@ -376,6 +403,66 @@ namespace UnitTests.Application
             // All IDs should be unique
             new[] { session1.SessionId, session2.SessionId, session3.SessionId }
                 .Should().OnlyHaveUniqueItems();
+        }
+
+        [Fact(DisplayName = "QSM-015: ExecuteQueryInBackground stores InfoMessages on session")]
+        public async Task QSM015()
+        {
+            // Arrange
+            var infoMessages = new List<string>
+            {
+                "SQL Server Execution Times:\n   CPU time = 12 ms,  elapsed time = 38 ms."
+            };
+
+            var mockDataReader = new Mock<IAsyncDataReader>();
+            mockDataReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
+            mockDataReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
+            mockDataReader.Setup(x => x.FieldCount).Returns(0);
+            mockDataReader.Setup(x => x.InfoMessages).Returns(infoMessages);
+
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                               .ReturnsAsync(mockDataReader.Object);
+
+            // Act
+            var session = await _sessionManager.StartQueryAsync("SELECT 1", "TestDB", 30);
+            await Task.Delay(200);
+
+            // Assert
+            session.InfoMessages.Should().NotBeNull();
+            session.InfoMessages.Should().HaveCount(1);
+            session.InfoMessages![0].Should().Contain("CPU time = 12 ms");
+        }
+
+        [Fact(DisplayName = "QSM-016: ExecuteStoredProcedureInBackground stores InfoMessages on session")]
+        public async Task QSM016()
+        {
+            // Arrange
+            var infoMessages = new List<string>
+            {
+                "SQL Server Execution Times:\n   CPU time = 5 ms,  elapsed time = 20 ms."
+            };
+
+            var mockDataReader = new Mock<IAsyncDataReader>();
+            mockDataReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
+            mockDataReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(false);
+            mockDataReader.Setup(x => x.FieldCount).Returns(0);
+            mockDataReader.Setup(x => x.InfoMessages).Returns(infoMessages);
+
+            _mockDatabaseService.Setup(x => x.ExecuteStoredProcedureAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, object?>>(), It.IsAny<string>(), It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                               .ReturnsAsync(mockDataReader.Object);
+
+            // Act
+            var session = await _sessionManager.StartStoredProcedureAsync("sp_Test", null, "TestDB", 30);
+            await Task.Delay(200);
+
+            // Assert
+            session.InfoMessages.Should().NotBeNull();
+            session.InfoMessages.Should().HaveCount(1);
+            session.InfoMessages![0].Should().Contain("CPU time = 5 ms");
         }
     }
 }

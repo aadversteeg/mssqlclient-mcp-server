@@ -68,9 +68,15 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             // Setup reader to return a simple result
             mockReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => false); // No rows to read
+            mockReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
             mockReader.Setup(x => x.FieldCount)
                 .Returns(0);
-            
+            mockReader.Setup(x => x.GetColumnNames())
+                .Returns(Array.Empty<string>());
+            mockReader.Setup(x => x.InfoMessages)
+                .Returns(new List<string>());
+
             mockServerDatabase.Setup(x => x.ExecuteStoredProcedureAsync(
                 databaseName,
                 procedureName, 
@@ -158,7 +164,17 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var timeoutSeconds = 300;
             
             var mockReader = new Mock<IAsyncDataReader>();
-            
+            mockReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
+            mockReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
+            mockReader.Setup(x => x.FieldCount)
+                .Returns(0);
+            mockReader.Setup(x => x.GetColumnNames())
+                .Returns(Array.Empty<string>());
+            mockReader.Setup(x => x.InfoMessages)
+                .Returns(new List<string>());
+
             var mockServerDatabase = new Mock<IServerDatabase>();
             mockServerDatabase
                 .Setup(x => x.ExecuteStoredProcedureAsync(

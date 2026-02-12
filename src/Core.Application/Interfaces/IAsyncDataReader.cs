@@ -25,7 +25,10 @@ namespace Core.Application.Interfaces
         // Schema helper methods
         IEnumerable<string> GetColumnNames();
         IEnumerable<(string Name, Type Type, string TypeName)> GetColumnSchema();
-        
+
+        // Informational messages from SQL Server (e.g. SET STATISTICS TIME ON output)
+        IReadOnlyList<string> InfoMessages { get; }
+
         // Close method
         void Close();
     }

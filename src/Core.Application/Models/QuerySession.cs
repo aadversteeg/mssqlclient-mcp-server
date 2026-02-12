@@ -71,5 +71,10 @@ namespace Core.Application.Models
         /// Command timeout for this specific session.
         /// </summary>
         public int TimeoutSeconds { get; set; }
+
+        /// <summary>
+        /// Informational messages from SQL Server (e.g. SET STATISTICS TIME ON output).
+        /// </summary>
+        public IReadOnlyList<string>? InfoMessages { get; set; }
     }
 }

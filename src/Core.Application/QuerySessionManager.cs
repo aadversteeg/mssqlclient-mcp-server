@@ -227,13 +227,17 @@ namespace Core.Application
                     }
                 }
                 
+                // Flush remaining result sets to ensure all InfoMessages are received
+                while (await reader.NextResultAsync(session.CancellationToken?.Token ?? CancellationToken.None)) { }
+
                 // Update final results
                 session.RowCount = rowCount;
                 session.Results = results;
+                session.InfoMessages = reader.InfoMessages;
                 session.IsRunning = false;
                 session.EndTime = DateTime.UtcNow;
-                
-                _logger.LogInformation("Query session {SessionId} completed successfully with {RowCount} rows", 
+
+                _logger.LogInformation("Query session {SessionId} completed successfully with {RowCount} rows",
                     session.SessionId, rowCount);
             }
             catch (OperationCanceledException)
@@ -241,7 +245,7 @@ namespace Core.Application
                 session.IsRunning = false;
                 session.EndTime = DateTime.UtcNow;
                 session.Error = "Query execution was cancelled";
-                
+
                 _logger.LogInformation("Query session {SessionId} was cancelled", session.SessionId);
             }
             catch (Exception ex)
@@ -249,7 +253,7 @@ namespace Core.Application
                 session.IsRunning = false;
                 session.EndTime = DateTime.UtcNow;
                 session.Error = ex.Message;
-                
+
                 _logger.LogError(ex, "Query session {SessionId} failed", session.SessionId);
             }
             finally
@@ -262,7 +266,7 @@ namespace Core.Application
                 }
             }
         }
-        
+
         /// <summary>
         /// Executes a stored procedure in the background and updates the session with results.
         /// </summary>
@@ -311,13 +315,17 @@ namespace Core.Application
                     }
                 }
                 
+                // Flush remaining result sets to ensure all InfoMessages are received
+                while (await reader.NextResultAsync(session.CancellationToken?.Token ?? CancellationToken.None)) { }
+
                 // Update final results
                 session.RowCount = rowCount;
                 session.Results = results;
+                session.InfoMessages = reader.InfoMessages;
                 session.IsRunning = false;
                 session.EndTime = DateTime.UtcNow;
-                
-                _logger.LogInformation("Stored procedure session {SessionId} completed successfully with {RowCount} rows", 
+
+                _logger.LogInformation("Stored procedure session {SessionId} completed successfully with {RowCount} rows",
                     session.SessionId, rowCount);
             }
             catch (OperationCanceledException)
@@ -325,7 +333,7 @@ namespace Core.Application
                 session.IsRunning = false;
                 session.EndTime = DateTime.UtcNow;
                 session.Error = "Stored procedure execution was cancelled";
-                
+
                 _logger.LogInformation("Stored procedure session {SessionId} was cancelled", session.SessionId);
             }
             catch (Exception ex)
@@ -333,7 +341,7 @@ namespace Core.Application
                 session.IsRunning = false;
                 session.EndTime = DateTime.UtcNow;
                 session.Error = ex.Message;
-                
+
                 _logger.LogError(ex, "Stored procedure session {SessionId} failed", session.SessionId);
             }
             finally

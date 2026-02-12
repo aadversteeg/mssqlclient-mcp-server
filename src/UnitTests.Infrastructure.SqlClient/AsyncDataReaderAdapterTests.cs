@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
@@ -19,7 +20,7 @@ namespace UnitTests.Infrastructure.SqlClient
         public AsyncDataReaderAdapterTests()
         {
             _readerMock = new Mock<DbDataReader>();
-            _adapter = new AsyncDataReaderAdapter(_readerMock.Object);
+            _adapter = new AsyncDataReaderAdapter(_readerMock.Object, new List<string>());
         }
 
         [Fact(DisplayName = "ADAR-001: Constructor should throw an exception when reader is null")]
@@ -27,9 +28,9 @@ namespace UnitTests.Infrastructure.SqlClient
         {
             // Arrange
             DbDataReader reader = null!;
-            
+
             // Act
-            Action act = () => new AsyncDataReaderAdapter(reader);
+            Action act = () => new AsyncDataReaderAdapter(reader, new List<string>());
 
             // Assert
             act.Should().Throw<ArgumentNullException>()
@@ -239,7 +240,7 @@ namespace UnitTests.Infrastructure.SqlClient
             // Create a mock that can track whether Dispose was called
             var mockDisposable = new MockDisposable();
             var reader = new TestDbDataReader(mockDisposable);
-            var adapter = new AsyncDataReaderAdapter(reader);
+            var adapter = new AsyncDataReaderAdapter(reader, new List<string>());
             
             // Act
             adapter.Dispose();
@@ -248,6 +249,53 @@ namespace UnitTests.Infrastructure.SqlClient
             mockDisposable.WasDisposed.Should().BeTrue("The underlying reader should be disposed");
         }
         
+        [Fact(DisplayName = "ADAR-016: Constructor should throw an exception when infoMessages is null")]
+        public void ADAR016()
+        {
+            // Arrange
+            var readerMock = new Mock<DbDataReader>();
+
+            // Act
+            Action act = () => new AsyncDataReaderAdapter(readerMock.Object, null!);
+
+            // Assert
+            act.Should().Throw<ArgumentNullException>()
+                .And.ParamName.Should().Be("infoMessages");
+        }
+
+        [Fact(DisplayName = "ADAR-017: InfoMessages should return provided messages")]
+        public void ADAR017()
+        {
+            // Arrange
+            var messages = new List<string> { "message1", "message2" };
+            var readerMock = new Mock<DbDataReader>();
+            var adapter = new AsyncDataReaderAdapter(readerMock.Object, messages);
+
+            // Act
+            var result = adapter.InfoMessages;
+
+            // Assert
+            result.Should().HaveCount(2);
+            result[0].Should().Be("message1");
+            result[1].Should().Be("message2");
+        }
+
+        [Fact(DisplayName = "ADAR-018: InfoMessages should reflect messages added after construction")]
+        public void ADAR018()
+        {
+            // Arrange
+            var messages = new List<string>();
+            var readerMock = new Mock<DbDataReader>();
+            var adapter = new AsyncDataReaderAdapter(readerMock.Object, messages);
+
+            // Act - simulate InfoMessage handler adding messages after construction
+            messages.Add("late message");
+
+            // Assert
+            adapter.InfoMessages.Should().HaveCount(1);
+            adapter.InfoMessages[0].Should().Be("late message");
+        }
+
         // Helper classes for testing dispose behavior
         private class MockDisposable : IDisposable
         {

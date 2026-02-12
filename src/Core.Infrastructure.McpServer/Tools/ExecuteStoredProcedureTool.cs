@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Core.Application.Interfaces;
 using Core.Application.Models;
 using ModelContextProtocol.Server;
@@ -57,6 +58,8 @@ Use 'get_stored_procedure_parameters' tool first to see what parameters are expe
 
             try
             {
+                var stopwatch = Stopwatch.StartNew();
+
                 // Parse the parameters from JSON
                 Dictionary<string, object?> paramDict;
                 try
@@ -76,9 +79,9 @@ Use 'get_stored_procedure_parameters' tool first to see what parameters are expe
                 }
                 
                 var reader = await _databaseContext.ExecuteStoredProcedureAsync(procedureName, paramDict, timeoutContext, timeoutSeconds);
-                
+
                 // Format results into a readable table
-                return await reader.ToToolResult();
+                return await reader.ToToolResult(stopwatch);
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
             {

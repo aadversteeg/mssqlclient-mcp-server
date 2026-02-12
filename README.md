@@ -39,6 +39,7 @@ The MCP client operates in one of two modes:
 - **Two-Mode Architecture**: Optimized for both single-database and multi-database scenarios
 - **Configurable Timeouts**: Default and per-operation timeout control with runtime management tools
 - **Background Session Management**: Execute long-running queries and procedures with session-based monitoring
+- **Execution Timing**: Automatic wall-clock and SQL Server-reported timing on query and stored procedure results
 
 ### Security & Configuration
 - Configurable tool enablement for security
@@ -379,9 +380,13 @@ Example response:
   "isRunning": false,
   "rowCount": 1500000,
   "error": null,
-  "timeoutSeconds": 600
+  "timeoutSeconds": 600,
+  "serverElapsedTimeMs": 323000,
+  "serverCpuTimeMs": 18500
 }
 ```
+
+The `serverElapsedTimeMs` and `serverCpuTimeMs` fields report SQL Server-side timing when available (null otherwise).
 
 ##### get_session_results
 
@@ -410,7 +415,9 @@ Example response:
   "status": "completed",
   "rowCount": 1500000,
   "results": "| CustomerID | CompanyName | ContactName |\n| ---------- | ----------- | ----------- |\n| ALFKI | Alfreds Futterkiste | Maria Anders |\n...\n... (showing first 100 rows of 1500000 total)",
-  "maxRowsApplied": 100
+  "maxRowsApplied": 100,
+  "serverElapsedTimeMs": 323000,
+  "serverCpuTimeMs": 18500
 }
 ```
 
@@ -526,7 +533,18 @@ Example response:
 | BERGS      | Berglunds snabbköp               | Christina Berglund |
 
 Total rows: 5
+Execution time: 42ms (server: 38ms, CPU: 12ms)
 ```
+
+The timing line shows:
+
+- **Total execution time**: Wall-clock time measured client-side (includes network latency and result reading)
+- **Server elapsed time**: Time reported by SQL Server for query execution
+- **CPU time**: CPU time consumed on SQL Server
+
+If SQL Server timing information is unavailable, only the client-side time is shown: `Execution time: 42ms`
+
+Execution timing is also included in the output of `execute_query_in_database`, `execute_stored_procedure`, and `execute_stored_procedure_in_database`.
 
 #### list_tables
 
@@ -1389,6 +1407,7 @@ Does not require .NET 10 SDK.
     "aadversteeg/mssqlclient-mcp-server:latest"
   ]
 }
+```
 
 > **Note for Windows Users with Local SQL Server:** When using Docker Desktop on Windows to connect to a local SQL Server instance, ensure that TCP/IP is enabled in SQL Server Configuration Manager (SQL Server Network Configuration → Protocols for MSSQLSERVER → TCP/IP) and that SQL Server is configured to listen on port 1433 (TCP/IP Properties → IP Addresses → IPAll → TCP Port: 1433). Restart the SQL Server service after making these changes.
 

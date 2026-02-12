@@ -369,5 +369,125 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
+
+        [Fact(DisplayName = "SMT-012: GetSessionStatus includes server timing when InfoMessages contain execution times")]
+        public void SMT012()
+        {
+            // Arrange
+            var sessionId = 123;
+            var mockSessionManager = new Mock<IQuerySessionManager>();
+            var mockLogger = new Mock<ILogger<SessionManagementTools>>();
+
+            var session = new QuerySession
+            {
+                SessionId = sessionId,
+                Type = QuerySessionType.Query,
+                Query = "SELECT * FROM Users",
+                DatabaseName = "TestDB",
+                StartTime = DateTime.UtcNow.AddMinutes(-1),
+                EndTime = DateTime.UtcNow,
+                IsRunning = false,
+                RowCount = 50,
+                Error = null,
+                TimeoutSeconds = 30,
+                Results = new StringBuilder("Results"),
+                InfoMessages = new List<string>
+                {
+                    "SQL Server Execution Times:\n   CPU time = 12 ms,  elapsed time = 38 ms."
+                }
+            };
+
+            mockSessionManager.Setup(x => x.GetSession(sessionId))
+                .Returns(session);
+
+            var tool = new SessionManagementTools(mockSessionManager.Object, mockLogger.Object);
+
+            // Act
+            var result = tool.GetSessionStatus(sessionId);
+
+            // Assert
+            var jsonDoc = JsonDocument.Parse(result);
+            jsonDoc.RootElement.GetProperty("serverElapsedTimeMs").GetInt64().Should().Be(38);
+            jsonDoc.RootElement.GetProperty("serverCpuTimeMs").GetInt64().Should().Be(12);
+        }
+
+        [Fact(DisplayName = "SMT-013: GetSessionStatus returns null server timing when no InfoMessages")]
+        public void SMT013()
+        {
+            // Arrange
+            var sessionId = 123;
+            var mockSessionManager = new Mock<IQuerySessionManager>();
+            var mockLogger = new Mock<ILogger<SessionManagementTools>>();
+
+            var session = new QuerySession
+            {
+                SessionId = sessionId,
+                Type = QuerySessionType.Query,
+                Query = "SELECT * FROM Users",
+                DatabaseName = "TestDB",
+                StartTime = DateTime.UtcNow.AddMinutes(-1),
+                EndTime = DateTime.UtcNow,
+                IsRunning = false,
+                RowCount = 50,
+                Error = null,
+                TimeoutSeconds = 30,
+                Results = new StringBuilder("Results"),
+                InfoMessages = null
+            };
+
+            mockSessionManager.Setup(x => x.GetSession(sessionId))
+                .Returns(session);
+
+            var tool = new SessionManagementTools(mockSessionManager.Object, mockLogger.Object);
+
+            // Act
+            var result = tool.GetSessionStatus(sessionId);
+
+            // Assert
+            var jsonDoc = JsonDocument.Parse(result);
+            jsonDoc.RootElement.GetProperty("serverElapsedTimeMs").ValueKind.Should().Be(JsonValueKind.Null);
+            jsonDoc.RootElement.GetProperty("serverCpuTimeMs").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+
+        [Fact(DisplayName = "SMT-014: GetSessionResults includes server timing when InfoMessages contain execution times")]
+        public void SMT014()
+        {
+            // Arrange
+            var sessionId = 456;
+            var mockSessionManager = new Mock<IQuerySessionManager>();
+            var mockLogger = new Mock<ILogger<SessionManagementTools>>();
+
+            var session = new QuerySession
+            {
+                SessionId = sessionId,
+                Type = QuerySessionType.StoredProcedure,
+                Query = "sp_GetData",
+                DatabaseName = "TestDB",
+                StartTime = DateTime.UtcNow.AddMinutes(-1),
+                EndTime = DateTime.UtcNow,
+                IsRunning = false,
+                RowCount = 10,
+                Error = null,
+                TimeoutSeconds = 30,
+                Results = new StringBuilder("Header\nRow1\nRow2"),
+                InfoMessages = new List<string>
+                {
+                    "SQL Server Execution Times:\n   CPU time = 5 ms,  elapsed time = 20 ms."
+                }
+            };
+
+            mockSessionManager.Setup(x => x.GetSession(sessionId))
+                .Returns(session);
+
+            var tool = new SessionManagementTools(mockSessionManager.Object, mockLogger.Object);
+
+            // Act
+            var result = tool.GetSessionResults(sessionId);
+
+            // Assert
+            var jsonDoc = JsonDocument.Parse(result);
+            jsonDoc.RootElement.GetProperty("serverElapsedTimeMs").GetInt64().Should().Be(20);
+            jsonDoc.RootElement.GetProperty("serverCpuTimeMs").GetInt64().Should().Be(5);
+        }
     }
 }

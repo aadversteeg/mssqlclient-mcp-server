@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Core.Application.Interfaces;
 using Core.Application.Models;
 using ModelContextProtocol.Server;
@@ -51,6 +52,8 @@ namespace Core.Infrastructure.McpServer.Tools
 
             try
             {
+                var stopwatch = Stopwatch.StartNew();
+
                 // Parse the parameters from JSON
                 Dictionary<string, object?> paramDict;
                 try
@@ -71,9 +74,9 @@ namespace Core.Infrastructure.McpServer.Tools
 
                 // Use server database service with timeout context
                 IAsyncDataReader reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutContext, timeoutSeconds);
-                
+
                 // Format results into a readable table
-                return await reader.ToToolResult();
+                return await reader.ToToolResult(stopwatch);
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
             {

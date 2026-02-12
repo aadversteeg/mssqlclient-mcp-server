@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Core.Application.Interfaces;
 using Core.Application.Models;
 using ModelContextProtocol.Server;
@@ -40,10 +41,11 @@ namespace Core.Infrastructure.McpServer.Tools
             
             try
             {
+                var stopwatch = Stopwatch.StartNew();
                 var reader = await _databaseContext.ExecuteQueryAsync(query, timeoutContext, timeoutSeconds);
-                
+
                 // Format results into a readable table
-                return await reader.ToToolResult();
+                return await reader.ToToolResult(stopwatch);
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
             {

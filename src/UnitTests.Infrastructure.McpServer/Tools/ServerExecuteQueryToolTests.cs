@@ -57,9 +57,15 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var mockReader = new Mock<IAsyncDataReader>();
             mockReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => false); // No rows to read
+            mockReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
             mockReader.Setup(x => x.FieldCount)
                 .Returns(0);
-            
+            mockReader.Setup(x => x.GetColumnNames())
+                .Returns(Array.Empty<string>());
+            mockReader.Setup(x => x.InfoMessages)
+                .Returns(new List<string>());
+
             var mockServerDatabase = new Mock<IServerDatabase>();
             mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(
                 databaseName,
@@ -68,12 +74,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
-            
+
             var tool = new ServerExecuteQueryTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
-            
+
             // Act
             var result = await tool.ExecuteQueryInDatabase(databaseName, query, null);
-            
+
             // Assert
             result.Should().NotBeNull();
             mockServerDatabase.Verify(x => x.ExecuteQueryInDatabaseAsync(
@@ -84,7 +90,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         }
-        
+
         [Fact(DisplayName = "SEQT-005: ServerExecuteQueryTool handles exception from server database")]
         public async Task SEQT005()
         {
@@ -92,7 +98,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var databaseName = "TestDb";
             var query = "SELECT * FROM Users";
             var expectedErrorMessage = "Error executing query";
-            
+
             var mockServerDatabase = new Mock<IServerDatabase>();
             mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(
                 databaseName,
@@ -101,16 +107,16 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
-            
+
             var tool = new ServerExecuteQueryTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
-            
+
             // Act
             var result = await tool.ExecuteQueryInDatabase(databaseName, query, null);
-            
+
             // Assert
             result.Should().Be($"Error: SQL error while executing query: {expectedErrorMessage}");
         }
-        
+
         [Fact(DisplayName = "SEQT-006: ServerExecuteQueryTool passes timeout to server database")]
         public async Task SEQT006()
         {
@@ -118,12 +124,18 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var databaseName = "TestDb";
             var query = "SELECT * FROM Users";
             var timeoutSeconds = 300;
-            
+
             var mockReader = new Mock<IAsyncDataReader>();
             mockReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => false); // No rows to read
+            mockReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
             mockReader.Setup(x => x.FieldCount)
                 .Returns(0);
+            mockReader.Setup(x => x.GetColumnNames())
+                .Returns(Array.Empty<string>());
+            mockReader.Setup(x => x.InfoMessages)
+                .Returns(new List<string>());
             
             var mockServerDatabase = new Mock<IServerDatabase>();
             mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(

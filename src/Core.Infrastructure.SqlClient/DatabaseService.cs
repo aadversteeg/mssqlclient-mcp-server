@@ -589,21 +589,32 @@ namespace Core.Infrastructure.SqlClient
                 }
             }
             
+            // Capture SQL Server info messages (e.g. SET STATISTICS TIME ON output)
+            var infoMessages = new List<string>();
+            connection.InfoMessage += (sender, e) => infoMessages.Add(e.Message);
+
+            // Enable statistics time to capture server-side CPU and elapsed time
+            using (var statsCommand = new SqlCommand("SET STATISTICS TIME ON", connection))
+            {
+                statsCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
+                await statsCommand.ExecuteNonQueryAsync(cancellationToken);
+            }
+
             // Execute the query
             var command = new SqlCommand(query, connection)
             {
                 CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds
             };
-            
+
             // Register cancellation to cancel the command if requested
             cancellationToken.Register(() => command.Cancel());
-            
+
             // We're returning the reader which will keep the connection open
             // The caller is responsible for disposing both the reader and the connection when done
             var sqlReader = await command.ExecuteReaderAsync(CommandBehavior.CloseConnection, cancellationToken);
-            
+
             // Wrap the SqlDataReader with an AsyncDataReaderAdapter
-            return new AsyncDataReaderAdapter(sqlReader);
+            return new AsyncDataReaderAdapter(sqlReader, infoMessages);
         }
         
         /// <summary>
@@ -1316,7 +1327,18 @@ namespace Core.Infrastructure.SqlClient
                 
                 // Validate parameters
                 ValidateParameters(procMetadata, normalizedParameters, schemaName, procNameOnly);
-                
+
+                // Capture SQL Server info messages (e.g. SET STATISTICS TIME ON output)
+                var infoMessages = new List<string>();
+                connection.InfoMessage += (sender, e) => infoMessages.Add(e.Message);
+
+                // Enable statistics time to capture server-side CPU and elapsed time
+                using (var statsCommand = new SqlCommand("SET STATISTICS TIME ON", connection))
+                {
+                    statsCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
+                    await statsCommand.ExecuteNonQueryAsync(cancellationToken);
+                }
+
                 // Create and configure command
                 var command = new SqlCommand($"[{schemaName}].[{procNameOnly}]", connection)
                 {
@@ -1359,8 +1381,8 @@ namespace Core.Infrastructure.SqlClient
                 // Execute the stored procedure
                 var sqlReader = await command.ExecuteReaderAsync(
                     CommandBehavior.CloseConnection, cancellationToken);
-                
-                return new AsyncDataReaderAdapter(sqlReader);
+
+                return new AsyncDataReaderAdapter(sqlReader, infoMessages);
             }
             catch (Exception)
             {
