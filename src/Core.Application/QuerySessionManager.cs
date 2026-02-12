@@ -32,7 +32,7 @@ namespace Core.Application
         /// <summary>
         /// Starts a new query execution session in the background.
         /// </summary>
-        public Task<QuerySession> StartQueryAsync(string query, string? databaseName, int timeoutSeconds, CancellationToken cancellationToken = default)
+        public Task<QuerySession> StartQueryAsync(string query, string? databaseName, int timeoutSeconds, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(query))
                 throw new ArgumentException("Query cannot be empty", nameof(query));
@@ -54,23 +54,24 @@ namespace Core.Application
                 IsRunning = true,
                 DatabaseName = databaseName,
                 TimeoutSeconds = timeoutSeconds,
+                StatisticsOptions = statisticsOptions,
                 CancellationToken = new CancellationTokenSource()
             };
-            
+
             _sessions.TryAdd(sessionId, session);
-            
+
             // Start the query execution in the background
             _ = Task.Run(async () => await ExecuteQueryInBackground(session), cancellationToken);
-            
+
             _logger.LogInformation("Started query session {SessionId} for database {DatabaseName}", sessionId, databaseName ?? "default");
-            
+
             return Task.FromResult(session);
         }
-        
+
         /// <summary>
         /// Starts a new stored procedure execution session in the background.
         /// </summary>
-        public Task<QuerySession> StartStoredProcedureAsync(string procedureName, Dictionary<string, object?>? parameters, string? databaseName, int timeoutSeconds, CancellationToken cancellationToken = default)
+        public Task<QuerySession> StartStoredProcedureAsync(string procedureName, Dictionary<string, object?>? parameters, string? databaseName, int timeoutSeconds, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(procedureName))
                 throw new ArgumentException("Procedure name cannot be empty", nameof(procedureName));
@@ -93,6 +94,7 @@ namespace Core.Application
                 DatabaseName = databaseName,
                 Parameters = parameters,
                 TimeoutSeconds = timeoutSeconds,
+                StatisticsOptions = statisticsOptions,
                 CancellationToken = new CancellationTokenSource()
             };
             
@@ -190,10 +192,11 @@ namespace Core.Application
                 _logger.LogDebug("Executing query for session {SessionId}", session.SessionId);
                 
                 using var reader = await _databaseService.ExecuteQueryAsync(
-                    session.Query, 
-                    session.DatabaseName, 
+                    session.Query,
+                    session.DatabaseName,
                     null,
                     session.TimeoutSeconds,
+                    session.StatisticsOptions,
                     session.CancellationToken?.Token ?? CancellationToken.None);
                 
                 var results = new StringBuilder();
@@ -227,13 +230,25 @@ namespace Core.Application
                     }
                 }
                 
-                // Flush remaining result sets to ensure all InfoMessages are received
-                while (await reader.NextResultAsync(session.CancellationToken?.Token ?? CancellationToken.None)) { }
+                // Flush remaining result sets and capture execution plan XML
+                string? executionPlanXml = null;
+                while (await reader.NextResultAsync(session.CancellationToken?.Token ?? CancellationToken.None))
+                {
+                    if (reader.FieldCount == 1 && await reader.ReadAsync(session.CancellationToken?.Token ?? CancellationToken.None))
+                    {
+                        var value = await reader.GetFieldValueAsync<string>(0, session.CancellationToken?.Token ?? CancellationToken.None);
+                        if (value != null && value.TrimStart().StartsWith("<ShowPlanXML"))
+                        {
+                            executionPlanXml = value;
+                        }
+                    }
+                }
 
                 // Update final results
                 session.RowCount = rowCount;
                 session.Results = results;
                 session.InfoMessages = reader.InfoMessages;
+                session.ExecutionPlanXml = executionPlanXml;
                 session.IsRunning = false;
                 session.EndTime = DateTime.UtcNow;
 
@@ -277,11 +292,12 @@ namespace Core.Application
                 _logger.LogDebug("Executing stored procedure for session {SessionId}", session.SessionId);
                 
                 using var reader = await _databaseService.ExecuteStoredProcedureAsync(
-                    session.Query, 
-                    session.Parameters ?? new Dictionary<string, object?>(), 
-                    session.DatabaseName, 
+                    session.Query,
+                    session.Parameters ?? new Dictionary<string, object?>(),
+                    session.DatabaseName,
                     null,
                     session.TimeoutSeconds,
+                    session.StatisticsOptions,
                     session.CancellationToken?.Token ?? CancellationToken.None);
                 
                 var results = new StringBuilder();
@@ -315,13 +331,25 @@ namespace Core.Application
                     }
                 }
                 
-                // Flush remaining result sets to ensure all InfoMessages are received
-                while (await reader.NextResultAsync(session.CancellationToken?.Token ?? CancellationToken.None)) { }
+                // Flush remaining result sets and capture execution plan XML
+                string? executionPlanXml = null;
+                while (await reader.NextResultAsync(session.CancellationToken?.Token ?? CancellationToken.None))
+                {
+                    if (reader.FieldCount == 1 && await reader.ReadAsync(session.CancellationToken?.Token ?? CancellationToken.None))
+                    {
+                        var value = await reader.GetFieldValueAsync<string>(0, session.CancellationToken?.Token ?? CancellationToken.None);
+                        if (value != null && value.TrimStart().StartsWith("<ShowPlanXML"))
+                        {
+                            executionPlanXml = value;
+                        }
+                    }
+                }
 
                 // Update final results
                 session.RowCount = rowCount;
                 session.Results = results;
                 session.InfoMessages = reader.InfoMessages;
+                session.ExecutionPlanXml = executionPlanXml;
                 session.IsRunning = false;
                 session.EndTime = DateTime.UtcNow;
 

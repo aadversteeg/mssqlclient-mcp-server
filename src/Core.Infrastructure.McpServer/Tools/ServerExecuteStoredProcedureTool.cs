@@ -33,7 +33,11 @@ namespace Core.Infrastructure.McpServer.Tools
             [Description("JSON object containing the parameters for the stored procedure")]
             string parameters,
             [Description("Optional timeout in seconds. If not specified, uses the default timeout")]
-            int? timeoutSeconds = null)
+            int? timeoutSeconds = null,
+            [Description("Include per-table IO statistics (logical reads, physical reads, read-ahead reads). Default is false")]
+            bool includeIoStats = false,
+            [Description("Include the actual XML execution plan. Default is false")]
+            bool includeExecutionPlan = false)
         {
             Console.Error.WriteLine($"ExecuteStoredProcedureInDatabase called with databaseName: {databaseName}, stored procedure: {procedureName}");
 
@@ -73,7 +77,8 @@ namespace Core.Infrastructure.McpServer.Tools
                 }
 
                 // Use server database service with timeout context
-                IAsyncDataReader reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutContext, timeoutSeconds);
+                var statisticsOptions = new QueryStatisticsOptions(includeIoStats, includeExecutionPlan);
+                IAsyncDataReader reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutContext, timeoutSeconds, statisticsOptions);
 
                 // Format results into a readable table
                 return await reader.ToToolResult(stopwatch);

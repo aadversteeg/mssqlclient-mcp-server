@@ -38,7 +38,11 @@ namespace Core.Infrastructure.McpServer.Tools
             [Description("JSON object containing the parameters for the stored procedure (e.g., {\"param1\": \"value1\", \"param2\": 123})")]
             string parameters = "{}",
             [Description("Optional timeout in seconds. If not specified, uses the default timeout")]
-            int? timeoutSeconds = null)
+            int? timeoutSeconds = null,
+            [Description("Include per-table IO statistics (logical reads, physical reads, read-ahead reads). Default is false")]
+            bool includeIoStats = false,
+            [Description("Include the actual XML execution plan. Default is false")]
+            bool includeExecutionPlan = false)
         {
             try
             {
@@ -68,7 +72,8 @@ namespace Core.Infrastructure.McpServer.Tools
                 _logger.LogInformation("Starting stored procedure session for database: {DatabaseName}, procedure: {ProcedureName}, timeout: {TimeoutSeconds}s", 
                     databaseName, procedureName, effectiveTimeout);
 
-                var session = await _sessionManager.StartStoredProcedureAsync(procedureName, parsedParameters, databaseName, effectiveTimeout);
+                var statisticsOptions = new QueryStatisticsOptions(includeIoStats, includeExecutionPlan);
+                var session = await _sessionManager.StartStoredProcedureAsync(procedureName, parsedParameters, databaseName, effectiveTimeout, statisticsOptions);
 
                 var result = new
                 {

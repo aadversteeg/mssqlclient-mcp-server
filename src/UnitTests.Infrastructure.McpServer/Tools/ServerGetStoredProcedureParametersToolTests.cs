@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.McpServer.Tools;
 using FluentAssertions;
 using Moq;
@@ -80,7 +81,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockReader.SetupSequence(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
             
-            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
             var tool = new ServerGetStoredProcedureParametersTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
@@ -92,7 +93,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Be($"Stored procedure '{procedureName}' has no parameters or does not exist in database '{databaseName}'.");
             
             // Verify database query was executed
-            mockServerDatabase.Verify(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SGSPTPT-006: GetStoredProcedureParameters returns table format by default")]
@@ -139,7 +140,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockReader.Setup(x => x.IsDBNullAsync(8, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             
-            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
             var tool = new ServerGetStoredProcedureParametersTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
@@ -202,7 +203,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockReader.Setup(x => x.IsDBNullAsync(8, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             
-            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
             var tool = new ServerGetStoredProcedureParametersTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
@@ -250,7 +251,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockReader.Setup(x => x.IsDBNullAsync(0, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             
-            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
             var tool = new ServerGetStoredProcedureParametersTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
@@ -276,7 +277,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockReader.SetupSequence(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
             
-            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
             var tool = new ServerGetStoredProcedureParametersTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
@@ -289,11 +290,12 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             // Verify the query was executed with the schema-qualified name in the WHERE clause
             mockServerDatabase.Verify(x => x.ExecuteQueryInDatabaseAsync(
-                databaseName, 
-                It.Is<string>(query => query.Contains("WHERE s.name = 'custom' AND sp.name = 'TestProcedure'")), 
+                databaseName,
+                It.Is<string>(query => query.Contains("WHERE s.name = 'custom' AND sp.name = 'TestProcedure'")),
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
-                It.IsAny<CancellationToken>()), 
+                It.IsAny<QueryStatisticsOptions?>(),
+                It.IsAny<CancellationToken>()),
                 Times.Once);
         }
         
@@ -306,7 +308,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             var expectedErrorMessage = "Database connection failed";
             
             var mockServerDatabase = new Mock<IServerDatabase>();
-            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             
             var tool = new ServerGetStoredProcedureParametersTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
@@ -331,7 +333,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockReader.SetupSequence(x => x.ReadAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(false);
             
-            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync("master", It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync("master", It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
             var tool = new ServerGetStoredProcedureParametersTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
@@ -343,7 +345,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             result.Should().Contain("Stored procedure 'TestProcedure' has no parameters or does not exist in database 'current'");
             
             // Verify master database was used when no database was specified
-            mockServerDatabase.Verify(x => x.ExecuteQueryInDatabaseAsync("master", It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            mockServerDatabase.Verify(x => x.ExecuteQueryInDatabaseAsync("master", It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SGSPTPT-012: GetStoredProcedureParameters skips return value parameter")]
@@ -397,7 +399,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockReader.Setup(x => x.IsDBNullAsync(8, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             
-            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            mockServerDatabase.Setup(x => x.ExecuteQueryInDatabaseAsync(databaseName, It.IsAny<string>(), It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
             var tool = new ServerGetStoredProcedureParametersTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());

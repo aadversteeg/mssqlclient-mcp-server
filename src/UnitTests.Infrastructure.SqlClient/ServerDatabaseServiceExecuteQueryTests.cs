@@ -33,15 +33,15 @@ namespace UnitTests.Infrastructure.SqlClient
             _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
                 
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockDataReader.Object);
-            
+
             // Act
             var result = await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query, null);
-            
+
             // Assert
             result.Should().Be(mockDataReader.Object);
-            _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), null, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), null, It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
         
         [Fact(DisplayName = "SDSEQ-002: ExecuteQueryInDatabaseAsync with empty database name throws ArgumentException")]
@@ -102,15 +102,15 @@ namespace UnitTests.Infrastructure.SqlClient
             _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), cancellationToken))
                 .ReturnsAsync(true);
                 
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), cancellationToken))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<QueryStatisticsOptions?>(), cancellationToken))
                 .ReturnsAsync(mockDataReader.Object);
-            
+
             // Act
-            await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query, null, null, cancellationToken);
-            
+            await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query, null, null, null, cancellationToken);
+
             // Assert
             _mockDatabaseService.Verify(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), cancellationToken), Times.Once);
-            _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), null, cancellationToken), Times.Once);
+            _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), null, It.IsAny<QueryStatisticsOptions?>(), cancellationToken), Times.Once);
         }
         
         [Fact(DisplayName = "SDSEQ-006: ExecuteQueryInDatabaseAsync with timeout passes timeout to database service")]
@@ -125,15 +125,15 @@ namespace UnitTests.Infrastructure.SqlClient
             _mockDatabaseService.Setup(x => x.DoesDatabaseExistAsync(databaseName, It.IsAny<ToolCallTimeoutContext?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
                 
-            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), timeoutSeconds, It.IsAny<CancellationToken>()))
+            _mockDatabaseService.Setup(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), timeoutSeconds, It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockDataReader.Object);
-            
+
             // Act
             var result = await _serverDatabaseService.ExecuteQueryInDatabaseAsync(databaseName, query, null, timeoutSeconds);
-            
+
             // Assert
             result.Should().Be(mockDataReader.Object);
-            _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), timeoutSeconds, It.IsAny<CancellationToken>()), Times.Once);
+            _mockDatabaseService.Verify(x => x.ExecuteQueryAsync(query, databaseName, It.IsAny<ToolCallTimeoutContext?>(), timeoutSeconds, It.IsAny<QueryStatisticsOptions?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }

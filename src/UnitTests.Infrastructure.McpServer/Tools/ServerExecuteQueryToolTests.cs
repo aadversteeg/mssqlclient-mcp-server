@@ -1,4 +1,5 @@
 using Core.Application.Interfaces;
+using Core.Application.Models;
 using Core.Infrastructure.McpServer.Tools;
 using FluentAssertions;
 using Moq;
@@ -72,6 +73,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
 
@@ -87,6 +89,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 null,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         }
@@ -105,6 +108,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
 
@@ -143,14 +147,15 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeoutSeconds,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
-            
+
             var tool = new ServerExecuteQueryTool(mockServerDatabase.Object, TestHelpers.CreateConfiguration());
-            
+
             // Act
             var result = await tool.ExecuteQueryInDatabase(databaseName, query, timeoutSeconds);
-            
+
             // Assert
             result.Should().NotBeNull();
             mockServerDatabase.Verify(x => x.ExecuteQueryInDatabaseAsync(
@@ -158,6 +163,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeoutSeconds,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         }

@@ -27,7 +27,11 @@ namespace Core.Infrastructure.McpServer.Tools
             [Description("The SQL query to execute")]
             string query,
             [Description("Optional timeout in seconds. If not specified, uses the default timeout")]
-            int? timeoutSeconds = null)
+            int? timeoutSeconds = null,
+            [Description("Include per-table IO statistics (logical reads, physical reads, read-ahead reads). Default is false")]
+            bool includeIoStats = false,
+            [Description("Include the actual XML execution plan. Default is false")]
+            bool includeExecutionPlan = false)
         {
             Console.Error.WriteLine($"ExecuteQuery called with query: {query}");
             
@@ -41,8 +45,9 @@ namespace Core.Infrastructure.McpServer.Tools
             
             try
             {
+                var statisticsOptions = new QueryStatisticsOptions(includeIoStats, includeExecutionPlan);
                 var stopwatch = Stopwatch.StartNew();
-                var reader = await _databaseContext.ExecuteQueryAsync(query, timeoutContext, timeoutSeconds);
+                var reader = await _databaseContext.ExecuteQueryAsync(query, timeoutContext, timeoutSeconds, statisticsOptions);
 
                 // Format results into a readable table
                 return await reader.ToToolResult(stopwatch);

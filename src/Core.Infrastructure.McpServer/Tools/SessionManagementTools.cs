@@ -53,6 +53,12 @@ namespace Core.Infrastructure.McpServer.Tools
                 var serverTiming = session.InfoMessages != null
                     ? StatisticsTimeParser.Parse(session.InfoMessages)
                     : null;
+                var ioStats = session.InfoMessages != null
+                    ? StatisticsIoParser.Parse(session.InfoMessages)
+                    : null;
+                var rowsAffected = session.InfoMessages != null
+                    ? RowsAffectedParser.Parse(session.InfoMessages)
+                    : null;
 
                 var result = new
                 {
@@ -69,7 +75,16 @@ namespace Core.Infrastructure.McpServer.Tools
                     error = session.Error,
                     timeoutSeconds = session.TimeoutSeconds,
                     serverElapsedTimeMs = serverTiming?.ElapsedMs,
-                    serverCpuTimeMs = serverTiming?.CpuMs
+                    serverCpuTimeMs = serverTiming?.CpuMs,
+                    rowsAffected = rowsAffected,
+                    ioStats = ioStats?.Select(io => new
+                    {
+                        table = io.TableName,
+                        logicalReads = io.LogicalReads,
+                        physicalReads = io.PhysicalReads,
+                        readAheadReads = io.ReadAheadReads
+                    }),
+                    executionPlanXml = session.ExecutionPlanXml
                 };
 
                 return JsonSerializer.Serialize(result, new JsonSerializerOptions
@@ -137,6 +152,12 @@ namespace Core.Infrastructure.McpServer.Tools
                 var serverTiming = session.InfoMessages != null
                     ? StatisticsTimeParser.Parse(session.InfoMessages)
                     : null;
+                var ioStats = session.InfoMessages != null
+                    ? StatisticsIoParser.Parse(session.InfoMessages)
+                    : null;
+                var rowsAffected = session.InfoMessages != null
+                    ? RowsAffectedParser.Parse(session.InfoMessages)
+                    : null;
 
                 var result = new
                 {
@@ -154,7 +175,16 @@ namespace Core.Infrastructure.McpServer.Tools
                     results = resultsText,
                     maxRowsApplied = maxRows,
                     serverElapsedTimeMs = serverTiming?.ElapsedMs,
-                    serverCpuTimeMs = serverTiming?.CpuMs
+                    serverCpuTimeMs = serverTiming?.CpuMs,
+                    rowsAffected = rowsAffected,
+                    ioStats = ioStats?.Select(io => new
+                    {
+                        table = io.TableName,
+                        logicalReads = io.LogicalReads,
+                        physicalReads = io.PhysicalReads,
+                        readAheadReads = io.ReadAheadReads
+                    }),
+                    executionPlanXml = session.ExecutionPlanXml
                 };
 
                 return JsonSerializer.Serialize(result, new JsonSerializerOptions

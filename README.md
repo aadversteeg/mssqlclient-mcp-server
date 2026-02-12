@@ -40,6 +40,8 @@ The MCP client operates in one of two modes:
 - **Configurable Timeouts**: Default and per-operation timeout control with runtime management tools
 - **Background Session Management**: Execute long-running queries and procedures with session-based monitoring
 - **Execution Timing**: Automatic wall-clock and SQL Server-reported timing on query and stored procedure results
+- **Query Profiling**: Optional per-table IO statistics and actual XML execution plans for performance analysis
+- **Rows Affected**: Automatic reporting of rows affected by DML operations
 
 ### Security & Configuration
 - Configurable tool enablement for security
@@ -382,11 +384,21 @@ Example response:
   "error": null,
   "timeoutSeconds": 600,
   "serverElapsedTimeMs": 323000,
-  "serverCpuTimeMs": 18500
+  "serverCpuTimeMs": 18500,
+  "rowsAffected": null,
+  "ioStats": [
+    { "table": "LargeTable", "logicalReads": 45230, "physicalReads": 120, "readAheadReads": 44800 }
+  ],
+  "executionPlanXml": null
 }
 ```
 
-The `serverElapsedTimeMs` and `serverCpuTimeMs` fields report SQL Server-side timing when available (null otherwise).
+The following fields are included when available (null otherwise):
+
+- `serverElapsedTimeMs` / `serverCpuTimeMs`: SQL Server-side timing (always captured)
+- `rowsAffected`: Total rows affected by DML operations (always captured)
+- `ioStats`: Per-table IO statistics (only when `includeIoStats` was `true` on the start tool)
+- `executionPlanXml`: Actual XML execution plan (only when `includeExecutionPlan` was `true` on the start tool)
 
 ##### get_session_results
 
@@ -417,7 +429,12 @@ Example response:
   "results": "| CustomerID | CompanyName | ContactName |\n| ---------- | ----------- | ----------- |\n| ALFKI | Alfreds Futterkiste | Maria Anders |\n...\n... (showing first 100 rows of 1500000 total)",
   "maxRowsApplied": 100,
   "serverElapsedTimeMs": 323000,
-  "serverCpuTimeMs": 18500
+  "serverCpuTimeMs": 18500,
+  "rowsAffected": null,
+  "ioStats": [
+    { "table": "Customers", "logicalReads": 42, "physicalReads": 0, "readAheadReads": 0 }
+  ],
+  "executionPlanXml": null
 }
 ```
 
@@ -511,13 +528,16 @@ Executes a SQL query on the connected SQL Server database.
 Parameters:
 - `query` (required): The SQL query to execute.
 - `timeoutSeconds` (optional): Command timeout in seconds. Overrides the default timeout.
+- `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
+- `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
 
 Example request:
 ```json
 {
   "name": "execute_query",
   "parameters": {
-    "query": "SELECT TOP 5 * FROM Customers"
+    "query": "SELECT TOP 5 * FROM Customers",
+    "includeIoStats": true
   }
 }
 ```
@@ -534,7 +554,10 @@ Example response:
 
 Total rows: 5
 Execution time: 42ms (server: 38ms, CPU: 12ms)
+IO stats: Customers (logical: 12, physical: 0, read-ahead: 0)
 ```
+
+#### Execution Timing
 
 The timing line shows:
 
@@ -544,7 +567,48 @@ The timing line shows:
 
 If SQL Server timing information is unavailable, only the client-side time is shown: `Execution time: 42ms`
 
-Execution timing is also included in the output of `execute_query_in_database`, `execute_stored_procedure`, and `execute_stored_procedure_in_database`.
+Execution timing is always included in the output of all execute tools.
+
+#### IO Statistics
+
+When `includeIoStats` is set to `true`, per-table IO statistics are appended to the output:
+
+```
+IO stats: Customers (logical: 12, physical: 0, read-ahead: 0), Orders (logical: 42, physical: 3, read-ahead: 40)
+```
+
+This shows for each table accessed:
+
+- **Logical reads**: Pages read from the buffer cache
+- **Physical reads**: Pages read from disk
+- **Read-ahead reads**: Pages placed into the cache for the query
+
+IO statistics are useful for identifying missing indexes and inefficient query plans.
+
+#### Execution Plan
+
+When `includeExecutionPlan` is set to `true`, the actual XML execution plan is included at the end of the output:
+
+```
+Execution plan:
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" ...>...</ShowPlanXML>
+```
+
+The XML plan can be saved to a `.sqlplan` file and opened in SQL Server Management Studio or Azure Data Studio for visual analysis.
+
+#### Rows Affected
+
+For DML operations (INSERT, UPDATE, DELETE) that don't return result rows, the output includes:
+
+```
+Query executed successfully. No results returned.
+Rows affected: 5
+Execution time: 12ms (server: 8ms, CPU: 2ms)
+```
+
+Rows affected reporting is always on and has no overhead.
+
+These profiling features (`includeIoStats`, `includeExecutionPlan`) are also available on `execute_query_in_database`, `execute_stored_procedure`, `execute_stored_procedure_in_database`, and all session start tools.
 
 #### list_tables
 
@@ -756,6 +820,9 @@ Executes a stored procedure with automatic parameter type conversion.
 Parameters:
 - `procedureName` (required): The name of the stored procedure.
 - `parameters` (required): JSON string containing parameter values.
+- `timeoutSeconds` (optional): Command timeout in seconds. Overrides the default timeout.
+- `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
+- `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
 
 Example request:
 ```json
@@ -782,6 +849,8 @@ Start a SQL query in the background on the connected database. Returns a session
 Parameters:
 - `query` (required): The SQL query to execute
 - `timeoutSeconds` (optional): Optional timeout in seconds. If not specified, uses the default timeout
+- `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
+- `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
 
 Example request:
 ```json
@@ -815,6 +884,8 @@ Parameters:
 - `procedureName` (required): The name of the stored procedure to execute
 - `parameters` (optional): JSON object containing the parameters for the stored procedure (default: "{}")
 - `timeoutSeconds` (optional): Optional timeout in seconds. If not specified, uses the default timeout
+- `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
+- `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
 
 Example request:
 ```json
@@ -878,6 +949,9 @@ Executes a SQL query in a specific database.
 Parameters:
 - `databaseName` (required): The name of the database to execute the query in.
 - `query` (required): The SQL query to execute.
+- `timeoutSeconds` (optional): Command timeout in seconds. Overrides the default timeout.
+- `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
+- `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
 
 Example request:
 ```json
@@ -991,6 +1065,9 @@ Parameters:
 - `databaseName` (required): The name of the database containing the stored procedure.
 - `procedureName` (required): The name of the stored procedure.
 - `parameters` (required): JSON string containing parameter values.
+- `timeoutSeconds` (optional): Command timeout in seconds. Overrides the default timeout.
+- `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
+- `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
 
 Example request:
 ```json
@@ -1012,6 +1089,8 @@ Parameters:
 - `databaseName` (required): The name of the database to execute the query in
 - `query` (required): The SQL query to execute
 - `timeoutSeconds` (optional): Optional timeout in seconds. If not specified, uses the default timeout
+- `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
+- `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
 
 Example request:
 ```json
@@ -1047,6 +1126,8 @@ Parameters:
 - `procedureName` (required): The name of the stored procedure to execute
 - `parameters` (optional): JSON object containing the parameters for the stored procedure (default: "{}")
 - `timeoutSeconds` (optional): Optional timeout in seconds. If not specified, uses the default timeout
+- `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
+- `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
 
 Example request:
 ```json

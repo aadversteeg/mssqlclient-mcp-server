@@ -43,8 +43,19 @@ namespace Core.Infrastructure.McpServer.Extensions
                 rows.Add(rowValues);
             }
 
-            // Flush remaining result sets to ensure all InfoMessages are received
-            while (await reader.NextResultAsync()) { }
+            // Flush remaining result sets and capture execution plan XML
+            string? executionPlanXml = null;
+            while (await reader.NextResultAsync())
+            {
+                if (reader.FieldCount == 1 && await reader.ReadAsync())
+                {
+                    var value = await reader.GetFieldValueAsync<string>(0);
+                    if (value != null && value.TrimStart().StartsWith("<ShowPlanXML"))
+                    {
+                        executionPlanXml = value;
+                    }
+                }
+            }
 
             // Stop the stopwatch now that all data has been read
             stopwatch.Stop();
@@ -52,7 +63,7 @@ namespace Core.Infrastructure.McpServer.Extensions
             // Check if no rows were returned
             if (rows.Count == 0)
             {
-                return "Query executed successfully. No results returned.\n" + FormatTimingLine(stopwatch, reader.InfoMessages);
+                return "Query executed successfully. No results returned.\n" + FormatStatsLines(stopwatch, reader.InfoMessages, 0, executionPlanXml);
             }
 
             // Limit column width to a reasonable size
@@ -99,25 +110,59 @@ namespace Core.Infrastructure.McpServer.Extensions
                 result.AppendLine("|");
             }
 
-            // Add row count and timing
+            // Add row count and stats
             result.AppendLine();
             result.AppendLine($"Total rows: {rows.Count}");
-            result.AppendLine(FormatTimingLine(stopwatch, reader.InfoMessages));
+            result.AppendLine(FormatStatsLines(stopwatch, reader.InfoMessages, rows.Count, executionPlanXml));
 
             return result.ToString();
         }
 
-        private static string FormatTimingLine(Stopwatch stopwatch, IReadOnlyList<string> infoMessages)
+        private static string FormatStatsLines(Stopwatch stopwatch, IReadOnlyList<string> infoMessages, int rowCount, string? executionPlanXml)
         {
+            var lines = new List<string>();
+
+            // Rows affected (only for DML operations where no result rows were returned)
+            if (rowCount == 0)
+            {
+                var rowsAffected = RowsAffectedParser.Parse(infoMessages);
+                if (rowsAffected != null)
+                {
+                    lines.Add($"Rows affected: {rowsAffected}");
+                }
+            }
+
+            // Execution timing
             var elapsed = stopwatch.ElapsedMilliseconds;
             var serverTiming = StatisticsTimeParser.Parse(infoMessages);
 
             if (serverTiming != null)
             {
-                return $"Execution time: {elapsed}ms (server: {serverTiming.ElapsedMs}ms, CPU: {serverTiming.CpuMs}ms)";
+                lines.Add($"Execution time: {elapsed}ms (server: {serverTiming.ElapsedMs}ms, CPU: {serverTiming.CpuMs}ms)");
+            }
+            else
+            {
+                lines.Add($"Execution time: {elapsed}ms");
             }
 
-            return $"Execution time: {elapsed}ms";
+            // IO stats
+            var ioStats = StatisticsIoParser.Parse(infoMessages);
+            if (ioStats != null)
+            {
+                var tableEntries = ioStats.Select(io =>
+                    $"{io.TableName} (logical: {io.LogicalReads}, physical: {io.PhysicalReads}, read-ahead: {io.ReadAheadReads})");
+                lines.Add($"IO stats: {string.Join(", ", tableEntries)}");
+            }
+
+            // Execution plan
+            if (executionPlanXml != null)
+            {
+                lines.Add("");
+                lines.Add("Execution plan:");
+                lines.Add(executionPlanXml);
+            }
+
+            return string.Join("\n", lines);
         }
     }
 }

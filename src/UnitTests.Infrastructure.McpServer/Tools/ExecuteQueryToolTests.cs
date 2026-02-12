@@ -117,6 +117,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
 
@@ -133,6 +134,7 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         }
@@ -158,9 +160,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 .Returns(new List<string>());
             
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
-                query, 
+                query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeout,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
@@ -177,7 +180,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 timeout,
-                It.IsAny<CancellationToken>()), 
+                It.IsAny<QueryStatisticsOptions?>(),
+                It.IsAny<CancellationToken>()),
                 Times.Once);
         }
         
@@ -190,9 +194,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.ExecuteQueryAsync(
-                query, 
+                query,
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             

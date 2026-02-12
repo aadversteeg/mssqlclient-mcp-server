@@ -540,7 +540,7 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
-        public async Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -593,8 +593,14 @@ namespace Core.Infrastructure.SqlClient
             var infoMessages = new List<string>();
             connection.InfoMessage += (sender, e) => infoMessages.Add(e.Message);
 
-            // Enable statistics time to capture server-side CPU and elapsed time
-            using (var statsCommand = new SqlCommand("SET STATISTICS TIME ON", connection))
+            // Enable statistics to capture server-side metrics
+            var statsCommands = new List<string> { "SET STATISTICS TIME ON" };
+            if (statisticsOptions?.IncludeIoStats == true)
+                statsCommands.Add("SET STATISTICS IO ON");
+            if (statisticsOptions?.IncludeExecutionPlan == true)
+                statsCommands.Add("SET STATISTICS XML ON");
+
+            using (var statsCommand = new SqlCommand(string.Join("; ", statsCommands), connection))
             {
                 statsCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                 await statsCommand.ExecuteNonQueryAsync(cancellationToken);
@@ -1273,7 +1279,7 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
-        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(procedureName))
             {
@@ -1332,8 +1338,14 @@ namespace Core.Infrastructure.SqlClient
                 var infoMessages = new List<string>();
                 connection.InfoMessage += (sender, e) => infoMessages.Add(e.Message);
 
-                // Enable statistics time to capture server-side CPU and elapsed time
-                using (var statsCommand = new SqlCommand("SET STATISTICS TIME ON", connection))
+                // Enable statistics to capture server-side metrics
+                var statsCommands = new List<string> { "SET STATISTICS TIME ON" };
+                if (statisticsOptions?.IncludeIoStats == true)
+                    statsCommands.Add("SET STATISTICS IO ON");
+                if (statisticsOptions?.IncludeExecutionPlan == true)
+                    statsCommands.Add("SET STATISTICS XML ON");
+
+                using (var statsCommand = new SqlCommand(string.Join("; ", statsCommands), connection))
                 {
                     statsCommand.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
                     await statsCommand.ExecuteNonQueryAsync(cancellationToken);

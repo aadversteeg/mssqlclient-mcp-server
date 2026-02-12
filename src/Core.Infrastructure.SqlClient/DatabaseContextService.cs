@@ -92,20 +92,20 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses timeout context or default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the query</returns>
-        public async Task<IAsyncDataReader> ExecuteQueryAsync(string query, ToolCallTimeoutContext? timeoutContext, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteQueryAsync(string query, ToolCallTimeoutContext? timeoutContext, int? timeoutSeconds = null, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(query))
                 throw new ArgumentException("Query cannot be empty", nameof(query));
 
             var effectiveTimeout = CalculateEffectiveTimeout(timeoutContext, timeoutSeconds);
             var combinedToken = ToolCallTimeoutFactory.CombineTokens(timeoutContext, cancellationToken);
-            
+
             // Check if timeout already exceeded
             if (timeoutContext?.IsTimeoutExceeded == true)
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
-                
+
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.ExecuteQueryAsync(query, null, null, effectiveTimeout, combinedToken);
+            return await _databaseService.ExecuteQueryAsync(query, null, null, effectiveTimeout, statisticsOptions, combinedToken);
         }
         
         /// <summary>
@@ -161,20 +161,20 @@ namespace Core.Infrastructure.SqlClient
         /// <param name="timeoutSeconds">Optional timeout in seconds. If null, uses timeout context or default timeout.</param>
         /// <param name="cancellationToken">Optional cancellation token</param>
         /// <returns>An IAsyncDataReader with the results of the stored procedure</returns>
-        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, ToolCallTimeoutContext? timeoutContext, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public async Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, ToolCallTimeoutContext? timeoutContext, int? timeoutSeconds = null, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(procedureName))
                 throw new ArgumentException("Procedure name cannot be empty", nameof(procedureName));
 
             var effectiveTimeout = CalculateEffectiveTimeout(timeoutContext, timeoutSeconds);
             var combinedToken = ToolCallTimeoutFactory.CombineTokens(timeoutContext, cancellationToken);
-            
+
             // Check if timeout already exceeded
             if (timeoutContext?.IsTimeoutExceeded == true)
                 throw new OperationCanceledException(timeoutContext.CreateTimeoutExceededMessage());
-                
+
             // Call the database service without specifying a database name to use the current context
-            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, null, null, effectiveTimeout, combinedToken);
+            return await _databaseService.ExecuteStoredProcedureAsync(procedureName, parameters, null, null, effectiveTimeout, statisticsOptions, combinedToken);
         }
 
         /// <summary>

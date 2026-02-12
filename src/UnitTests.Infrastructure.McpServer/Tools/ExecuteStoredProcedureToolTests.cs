@@ -70,14 +70,15 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 .Returns(new List<string>());
 
             mockDatabaseContext.Setup(x => x.ExecuteStoredProcedureAsync(
-                procedureName, 
-                It.Is<Dictionary<string, object?>>(p => 
-                    p.Count == parameters.Count && 
-                    p.ContainsKey("Param1") && 
+                procedureName,
+                It.Is<Dictionary<string, object?>>(p =>
+                    p.Count == parameters.Count &&
+                    p.ContainsKey("Param1") &&
                     p.ContainsKey("Param2")
-                ), 
+                ),
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(mockReader.Object);
             
@@ -95,7 +96,8 @@ namespace UnitTests.Infrastructure.McpServer.Tools
                 It.IsAny<Dictionary<string, object?>>(),
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
-                It.IsAny<CancellationToken>()), 
+                It.IsAny<QueryStatisticsOptions?>(),
+                It.IsAny<CancellationToken>()),
                 Times.Once);
         }
         
@@ -109,10 +111,11 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             
             var mockDatabaseContext = new Mock<IDatabaseContext>();
             mockDatabaseContext.Setup(x => x.ExecuteStoredProcedureAsync(
-                procedureName, 
-                It.IsAny<Dictionary<string, object?>>(), 
+                procedureName,
+                It.IsAny<Dictionary<string, object?>>(),
                 It.IsAny<Core.Application.Models.ToolCallTimeoutContext?>(),
                 It.IsAny<int?>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             

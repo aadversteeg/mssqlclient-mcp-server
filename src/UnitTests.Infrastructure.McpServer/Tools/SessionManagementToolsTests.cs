@@ -489,5 +489,256 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             jsonDoc.RootElement.GetProperty("serverElapsedTimeMs").GetInt64().Should().Be(20);
             jsonDoc.RootElement.GetProperty("serverCpuTimeMs").GetInt64().Should().Be(5);
         }
+
+        [Fact(DisplayName = "SMT-015: GetSessionStatus includes ioStats when InfoMessages contain IO data")]
+        public void SMT015()
+        {
+            // Arrange
+            var sessionId = 123;
+            var mockSessionManager = new Mock<IQuerySessionManager>();
+            var mockLogger = new Mock<ILogger<SessionManagementTools>>();
+
+            var session = new QuerySession
+            {
+                SessionId = sessionId,
+                Type = QuerySessionType.Query,
+                Query = "SELECT * FROM Orders",
+                DatabaseName = "TestDB",
+                StartTime = DateTime.UtcNow.AddMinutes(-1),
+                EndTime = DateTime.UtcNow,
+                IsRunning = false,
+                RowCount = 25,
+                Error = null,
+                TimeoutSeconds = 30,
+                Results = new StringBuilder("Results"),
+                InfoMessages = new List<string>
+                {
+                    "Table 'Orders'. Scan count 1, logical reads 42, physical reads 3, page server reads 0, read-ahead reads 10, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0."
+                }
+            };
+
+            mockSessionManager.Setup(x => x.GetSession(sessionId))
+                .Returns(session);
+
+            var tool = new SessionManagementTools(mockSessionManager.Object, mockLogger.Object);
+
+            // Act
+            var result = tool.GetSessionStatus(sessionId);
+
+            // Assert
+            var jsonDoc = JsonDocument.Parse(result);
+            var ioStats = jsonDoc.RootElement.GetProperty("ioStats");
+            ioStats.ValueKind.Should().Be(JsonValueKind.Array);
+            ioStats.GetArrayLength().Should().Be(1);
+
+            var firstEntry = ioStats[0];
+            firstEntry.GetProperty("table").GetString().Should().Be("Orders");
+            firstEntry.GetProperty("logicalReads").GetInt64().Should().Be(42);
+            firstEntry.GetProperty("physicalReads").GetInt64().Should().Be(3);
+            firstEntry.GetProperty("readAheadReads").GetInt64().Should().Be(10);
+        }
+
+        [Fact(DisplayName = "SMT-016: GetSessionStatus null ioStats when no IO data in InfoMessages")]
+        public void SMT016()
+        {
+            // Arrange
+            var sessionId = 123;
+            var mockSessionManager = new Mock<IQuerySessionManager>();
+            var mockLogger = new Mock<ILogger<SessionManagementTools>>();
+
+            var session = new QuerySession
+            {
+                SessionId = sessionId,
+                Type = QuerySessionType.Query,
+                Query = "SELECT * FROM Users",
+                DatabaseName = "TestDB",
+                StartTime = DateTime.UtcNow.AddMinutes(-1),
+                EndTime = DateTime.UtcNow,
+                IsRunning = false,
+                RowCount = 50,
+                Error = null,
+                TimeoutSeconds = 30,
+                Results = new StringBuilder("Results"),
+                InfoMessages = new List<string>
+                {
+                    "SQL Server Execution Times:\n   CPU time = 12 ms,  elapsed time = 38 ms."
+                }
+            };
+
+            mockSessionManager.Setup(x => x.GetSession(sessionId))
+                .Returns(session);
+
+            var tool = new SessionManagementTools(mockSessionManager.Object, mockLogger.Object);
+
+            // Act
+            var result = tool.GetSessionStatus(sessionId);
+
+            // Assert
+            var jsonDoc = JsonDocument.Parse(result);
+            jsonDoc.RootElement.GetProperty("ioStats").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+
+        [Fact(DisplayName = "SMT-017: GetSessionResults includes ioStats when InfoMessages contain IO data")]
+        public void SMT017()
+        {
+            // Arrange
+            var sessionId = 456;
+            var mockSessionManager = new Mock<IQuerySessionManager>();
+            var mockLogger = new Mock<ILogger<SessionManagementTools>>();
+
+            var session = new QuerySession
+            {
+                SessionId = sessionId,
+                Type = QuerySessionType.Query,
+                Query = "SELECT * FROM Products",
+                DatabaseName = "TestDB",
+                StartTime = DateTime.UtcNow.AddMinutes(-1),
+                EndTime = DateTime.UtcNow,
+                IsRunning = false,
+                RowCount = 15,
+                Error = null,
+                TimeoutSeconds = 30,
+                Results = new StringBuilder("Header\nRow1\nRow2"),
+                InfoMessages = new List<string>
+                {
+                    "Table 'Products'. Scan count 1, logical reads 20, physical reads 1, page server reads 0, read-ahead reads 5, page server read-ahead reads 0, lob logical reads 0, lob physical reads 0, lob page server reads 0, lob read-ahead reads 0, lob page server read-ahead reads 0."
+                }
+            };
+
+            mockSessionManager.Setup(x => x.GetSession(sessionId))
+                .Returns(session);
+
+            var tool = new SessionManagementTools(mockSessionManager.Object, mockLogger.Object);
+
+            // Act
+            var result = tool.GetSessionResults(sessionId);
+
+            // Assert
+            var jsonDoc = JsonDocument.Parse(result);
+            var ioStats = jsonDoc.RootElement.GetProperty("ioStats");
+            ioStats.ValueKind.Should().Be(JsonValueKind.Array);
+            ioStats.GetArrayLength().Should().Be(1);
+
+            var firstEntry = ioStats[0];
+            firstEntry.GetProperty("table").GetString().Should().Be("Products");
+            firstEntry.GetProperty("logicalReads").GetInt64().Should().Be(20);
+            firstEntry.GetProperty("physicalReads").GetInt64().Should().Be(1);
+            firstEntry.GetProperty("readAheadReads").GetInt64().Should().Be(5);
+        }
+
+        [Fact(DisplayName = "SMT-018: GetSessionResults includes rowsAffected when InfoMessages contain rows affected")]
+        public void SMT018()
+        {
+            // Arrange
+            var sessionId = 456;
+            var mockSessionManager = new Mock<IQuerySessionManager>();
+            var mockLogger = new Mock<ILogger<SessionManagementTools>>();
+
+            var session = new QuerySession
+            {
+                SessionId = sessionId,
+                Type = QuerySessionType.Query,
+                Query = "UPDATE Users SET Active = 1",
+                DatabaseName = "TestDB",
+                StartTime = DateTime.UtcNow.AddMinutes(-1),
+                EndTime = DateTime.UtcNow,
+                IsRunning = false,
+                RowCount = 0,
+                Error = null,
+                TimeoutSeconds = 30,
+                Results = new StringBuilder(""),
+                InfoMessages = new List<string>
+                {
+                    "(5 rows affected)"
+                }
+            };
+
+            mockSessionManager.Setup(x => x.GetSession(sessionId))
+                .Returns(session);
+
+            var tool = new SessionManagementTools(mockSessionManager.Object, mockLogger.Object);
+
+            // Act
+            var result = tool.GetSessionResults(sessionId);
+
+            // Assert
+            var jsonDoc = JsonDocument.Parse(result);
+            jsonDoc.RootElement.GetProperty("rowsAffected").GetInt64().Should().Be(5);
+        }
+
+        [Fact(DisplayName = "SMT-019: GetSessionResults includes executionPlanXml when session has plan")]
+        public void SMT019()
+        {
+            // Arrange
+            var sessionId = 456;
+            var mockSessionManager = new Mock<IQuerySessionManager>();
+            var mockLogger = new Mock<ILogger<SessionManagementTools>>();
+
+            var executionPlan = "<ShowPlanXML>test plan</ShowPlanXML>";
+            var session = new QuerySession
+            {
+                SessionId = sessionId,
+                Type = QuerySessionType.Query,
+                Query = "SELECT * FROM Users",
+                DatabaseName = "TestDB",
+                StartTime = DateTime.UtcNow.AddMinutes(-1),
+                EndTime = DateTime.UtcNow,
+                IsRunning = false,
+                RowCount = 10,
+                Error = null,
+                TimeoutSeconds = 30,
+                Results = new StringBuilder("Header\nRow1\nRow2"),
+                ExecutionPlanXml = executionPlan
+            };
+
+            mockSessionManager.Setup(x => x.GetSession(sessionId))
+                .Returns(session);
+
+            var tool = new SessionManagementTools(mockSessionManager.Object, mockLogger.Object);
+
+            // Act
+            var result = tool.GetSessionResults(sessionId);
+
+            // Assert
+            var jsonDoc = JsonDocument.Parse(result);
+            jsonDoc.RootElement.GetProperty("executionPlanXml").GetString().Should().Be(executionPlan);
+        }
+
+        [Fact(DisplayName = "SMT-020: GetSessionStatus null executionPlanXml when session has no plan")]
+        public void SMT020()
+        {
+            // Arrange
+            var sessionId = 123;
+            var mockSessionManager = new Mock<IQuerySessionManager>();
+            var mockLogger = new Mock<ILogger<SessionManagementTools>>();
+
+            var session = new QuerySession
+            {
+                SessionId = sessionId,
+                Type = QuerySessionType.Query,
+                Query = "SELECT * FROM Users",
+                DatabaseName = "TestDB",
+                StartTime = DateTime.UtcNow.AddMinutes(-1),
+                EndTime = DateTime.UtcNow,
+                IsRunning = false,
+                RowCount = 50,
+                Error = null,
+                TimeoutSeconds = 30,
+                Results = new StringBuilder("Results"),
+                ExecutionPlanXml = null
+            };
+
+            mockSessionManager.Setup(x => x.GetSession(sessionId))
+                .Returns(session);
+
+            var tool = new SessionManagementTools(mockSessionManager.Object, mockLogger.Object);
+
+            // Act
+            var result = tool.GetSessionStatus(sessionId);
+
+            // Assert
+            var jsonDoc = JsonDocument.Parse(result);
+            jsonDoc.RootElement.GetProperty("executionPlanXml").ValueKind.Should().Be(JsonValueKind.Null);
+        }
     }
 }

@@ -161,32 +161,34 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             mockSessionManager.Setup(x => x.StartQueryAsync(
-                query, 
-                null, 
-                defaultTimeout, 
+                query,
+                null,
+                defaultTimeout,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(session);
-            
+
             var tool = new StartQueryTool(mockSessionManager.Object, mockLogger.Object, mockConfiguration.Object);
-            
+
             // Act
             var result = await tool.StartQuery(query);
-            
+
             // Assert
             result.Should().NotBeNull();
-            
+
             // Verify it's valid JSON
             var jsonDoc = JsonDocument.Parse(result);
             jsonDoc.RootElement.GetProperty("sessionId").GetInt32().Should().Be(sessionId);
             jsonDoc.RootElement.GetProperty("query").GetString().Should().Be(query);
             jsonDoc.RootElement.GetProperty("timeoutSeconds").GetInt32().Should().Be(defaultTimeout);
             jsonDoc.RootElement.GetProperty("status").GetString().Should().Be("running");
-            
+
             mockSessionManager.Verify(x => x.StartQueryAsync(
-                query, 
-                null, 
-                defaultTimeout, 
-                It.IsAny<CancellationToken>()), 
+                query,
+                null,
+                defaultTimeout,
+                It.IsAny<QueryStatisticsOptions?>(),
+                It.IsAny<CancellationToken>()),
                 Times.Once);
         }
         
@@ -220,32 +222,34 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             };
             
             mockSessionManager.Setup(x => x.StartQueryAsync(
-                query, 
-                null, 
-                customTimeout, 
+                query,
+                null,
+                customTimeout,
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ReturnsAsync(session);
-            
+
             var tool = new StartQueryTool(mockSessionManager.Object, mockLogger.Object, mockConfiguration.Object);
-            
+
             // Act
             var result = await tool.StartQuery(query, customTimeout);
-            
+
             // Assert
             result.Should().NotBeNull();
-            
+
             // Verify it's valid JSON
             var jsonDoc = JsonDocument.Parse(result);
             jsonDoc.RootElement.GetProperty("sessionId").GetInt32().Should().Be(sessionId);
             jsonDoc.RootElement.GetProperty("query").GetString().Should().Be(query);
             jsonDoc.RootElement.GetProperty("timeoutSeconds").GetInt32().Should().Be(customTimeout);
             jsonDoc.RootElement.GetProperty("status").GetString().Should().Be("running");
-            
+
             mockSessionManager.Verify(x => x.StartQueryAsync(
-                query, 
-                null, 
-                customTimeout, 
-                It.IsAny<CancellationToken>()), 
+                query,
+                null,
+                customTimeout,
+                It.IsAny<QueryStatisticsOptions?>(),
+                It.IsAny<CancellationToken>()),
                 Times.Once);
         }
         
@@ -262,9 +266,10 @@ namespace UnitTests.Infrastructure.McpServer.Tools
             mockConfiguration.Setup(x => x.Value).Returns(new DatabaseConfiguration { DefaultCommandTimeoutSeconds = 30 });
             
             mockSessionManager.Setup(x => x.StartQueryAsync(
-                query, 
-                null, 
-                It.IsAny<int>(), 
+                query,
+                null,
+                It.IsAny<int>(),
+                It.IsAny<QueryStatisticsOptions?>(),
                 It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new InvalidOperationException(expectedErrorMessage));
             

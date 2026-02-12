@@ -150,7 +150,7 @@ namespace UnitTests.Infrastructure.SqlClient
             return Task.FromResult(TableSchemaResponse);
         }
         
-        public Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public Task<IAsyncDataReader> ExecuteQueryAsync(string query, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default)
         {
             ExecuteQueryAsyncCalled = true;
             QueryPassedToExecuteQuery = query;
@@ -177,7 +177,7 @@ namespace UnitTests.Infrastructure.SqlClient
             return Task.FromResult(StoredProcedureDefinitionResponse);
         }
         
-        public Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, CancellationToken cancellationToken = default)
+        public Task<IAsyncDataReader> ExecuteStoredProcedureAsync(string procedureName, Dictionary<string, object?> parameters, string? databaseName = null, ToolCallTimeoutContext? timeoutContext = null, int? timeoutSeconds = null, QueryStatisticsOptions? statisticsOptions = null, CancellationToken cancellationToken = default)
         {
             ExecuteStoredProcedureAsyncCalled = true;
             ProcedureNamePassedToExecuteStoredProcedure = procedureName;
