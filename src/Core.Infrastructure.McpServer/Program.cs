@@ -77,14 +77,16 @@ namespace Core.Infrastructure.McpServer
                     }
                 }
 
-                Console.Error.WriteLine($"Database name from connection string: {databaseName ?? "(not specified)"}");
-                
+                // Log mode determination without exposing connection string details
+                Console.Error.WriteLine($"Database specified in connection string: {!string.IsNullOrWhiteSpace(databaseName)}");
+
                 // In Server mode if no database is specified or the database is empty
                 return string.IsNullOrWhiteSpace(databaseName);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.Error.WriteLine($"Error checking database name in connection string: {ex.Message}");
+                // Don't log exception details as they may contain connection string fragments
+                Console.Error.WriteLine("Warning: Could not parse connection string for mode detection. Using database mode.");
                 return false; // Default to Database mode if there's an error
             }
         }
