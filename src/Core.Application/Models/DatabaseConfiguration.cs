@@ -63,5 +63,12 @@
         /// disable total timeout (preserves backward compatibility).
         /// </summary>
         public int? TotalToolCallTimeoutSeconds { get; set; } = 120;
+
+        /// <summary>
+        /// Gets or sets the maximum number of characters displayed per cell in query results.
+        /// Values longer than this are truncated with "...". Set to 0 to disable truncation.
+        /// Default is 40.
+        /// </summary>
+        public int MaxCellOutputLength { get; set; } = 40;
     }
 }

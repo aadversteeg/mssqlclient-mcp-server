@@ -180,6 +180,7 @@ By default, only read-only tools are enabled (listing tables, viewing schemas, l
 | `DatabaseConfiguration__EnableExecuteStoredProcedure` | Enable `execute_stored_procedure` / `execute_stored_procedure_in_database` tools | `false` |
 | `DatabaseConfiguration__EnableStartQuery` | Enable `start_query` / `start_query_in_database` session tools | `false` |
 | `DatabaseConfiguration__EnableStartStoredProcedure` | Enable `start_stored_procedure` / `start_stored_procedure_in_database` session tools | `false` |
+| `DatabaseConfiguration__MaxCellOutputLength` | Maximum characters displayed per cell in query results. Values longer than this are truncated with `...`. Set to `0` to disable truncation. | `40` |
 
 #### Using .NET Tool
 
@@ -530,6 +531,7 @@ Parameters:
 - `timeoutSeconds` (optional): Command timeout in seconds. Overrides the default timeout.
 - `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
 - `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
+- `maxCellOutputLength` (optional): Maximum characters displayed per cell. Values longer than this are truncated with `...`. Set to `0` to disable truncation. If not specified, uses the server default (`MaxCellOutputLength`, default `40`).
 
 Example request:
 ```json
@@ -823,6 +825,7 @@ Parameters:
 - `timeoutSeconds` (optional): Command timeout in seconds. Overrides the default timeout.
 - `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
 - `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
+- `maxCellOutputLength` (optional): Maximum characters displayed per cell. Values longer than this are truncated with `...`. Set to `0` to disable truncation. If not specified, uses the server default (`MaxCellOutputLength`, default `40`).
 
 Example request:
 ```json
@@ -952,6 +955,7 @@ Parameters:
 - `timeoutSeconds` (optional): Command timeout in seconds. Overrides the default timeout.
 - `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
 - `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
+- `maxCellOutputLength` (optional): Maximum characters displayed per cell. Values longer than this are truncated with `...`. Set to `0` to disable truncation. If not specified, uses the server default (`MaxCellOutputLength`, default `40`).
 
 Example request:
 ```json
@@ -1068,6 +1072,7 @@ Parameters:
 - `timeoutSeconds` (optional): Command timeout in seconds. Overrides the default timeout.
 - `includeIoStats` (optional): Include per-table IO statistics. Default is `false`.
 - `includeExecutionPlan` (optional): Include the actual XML execution plan. Default is `false`.
+- `maxCellOutputLength` (optional): Maximum characters displayed per cell. Values longer than this are truncated with `...`. Set to `0` to disable truncation. If not specified, uses the server default (`MaxCellOutputLength`, default `40`).
 
 Example request:
 ```json
@@ -1235,7 +1240,8 @@ Configure default timeouts in `appsettings.json`:
     "ConnectionTimeoutSeconds": 15,
     "MaxConcurrentSessions": 10,
     "SessionCleanupIntervalMinutes": 60,
-    "TotalToolCallTimeoutSeconds": 120
+    "TotalToolCallTimeoutSeconds": 120,
+    "MaxCellOutputLength": 40
   }
 }
 ```
@@ -1246,6 +1252,7 @@ Configure default timeouts in `appsettings.json`:
 - `MaxConcurrentSessions`: Maximum number of concurrent query sessions (default: 10)
 - `SessionCleanupIntervalMinutes`: Interval for cleaning up completed sessions (default: 60 minutes)
 - `TotalToolCallTimeoutSeconds`: Maximum time allowed for any tool call to complete (default: 120 seconds, set to null to disable)
+- `MaxCellOutputLength`: Maximum characters displayed per cell in query results. Values longer than this are truncated with `...`. Set to `0` to disable truncation (default: 40)
 
 These can also be set via environment variables:
 

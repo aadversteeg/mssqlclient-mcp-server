@@ -24,7 +24,7 @@ namespace Core.Infrastructure.McpServer.Tools
             Console.Error.WriteLine("ServerExecuteStoredProcedureTool constructed with server database service");
         }
 
-        [McpServerTool(Name = "execute_stored_procedure_in_database"), Description("Execute a stored procedure in the specified database (requires server mode).")]
+        [McpServerTool(Name = "execute_stored_procedure_in_database"), Description("Execute a stored procedure in the specified database (requires server mode). Cell output is limited to {MaxCellOutputLength} characters per cell (0 = no limit).")]
         public async Task<string> ExecuteStoredProcedureInDatabase(
             [Description("The name of the database to execute the stored procedure in")]
             string databaseName, 
@@ -37,7 +37,9 @@ namespace Core.Infrastructure.McpServer.Tools
             [Description("Include per-table IO statistics (logical reads, physical reads, read-ahead reads). Default is false")]
             bool includeIoStats = false,
             [Description("Include the actual XML execution plan. Default is false")]
-            bool includeExecutionPlan = false)
+            bool includeExecutionPlan = false,
+            [Description("Maximum number of characters to display per cell in the output. Values longer than this are truncated with '...'. Set to 0 to disable truncation. If not specified, uses the configured default (see tool description).")]
+            int? maxCellOutputLength = null)
         {
             Console.Error.WriteLine($"ExecuteStoredProcedureInDatabase called with databaseName: {databaseName}, stored procedure: {procedureName}");
 
@@ -81,7 +83,7 @@ namespace Core.Infrastructure.McpServer.Tools
                 IAsyncDataReader reader = await _serverDatabase.ExecuteStoredProcedureAsync(databaseName, procedureName, paramDict, timeoutContext, timeoutSeconds, statisticsOptions);
 
                 // Format results into a readable table
-                return await reader.ToToolResult(stopwatch);
+                return await reader.ToToolResult(stopwatch, maxCellOutputLength ?? _configuration.MaxCellOutputLength);
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
             {

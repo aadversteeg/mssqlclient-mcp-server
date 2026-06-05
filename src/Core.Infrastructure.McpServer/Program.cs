@@ -1,6 +1,7 @@
 using Core.Application;
 using Core.Application.Interfaces;
 using Core.Application.Models;
+using Core.Infrastructure.McpServer.Extensions;
 using Core.Infrastructure.McpServer.Tools;
 using Core.Infrastructure.SqlClient;
 using Core.Infrastructure.SqlClient.Interfaces;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.Server;
 using System.Reflection;
 
 namespace Core.Infrastructure.McpServer
@@ -281,7 +283,7 @@ namespace Core.Infrastructure.McpServer
                 // Only register execute query tool if it's enabled in configuration
                 if (dbConfig.EnableExecuteQuery)
                 {
-                    mcpServerBuilder.WithTools<ServerExecuteQueryTool>();
+                    mcpServerBuilder.WithTools<ServerExecuteQueryTool>(dbConfig);
                     Console.Error.WriteLine("Registered ServerExecuteQueryTool");
                 }
                 else
@@ -303,7 +305,7 @@ namespace Core.Infrastructure.McpServer
                 // Only register execute stored procedure tool if it's enabled in configuration
                 if (dbConfig.EnableExecuteStoredProcedure)
                 {
-                    mcpServerBuilder.WithTools<ServerExecuteStoredProcedureTool>();
+                    mcpServerBuilder.WithTools<ServerExecuteStoredProcedureTool>(dbConfig);
                     Console.Error.WriteLine("Registered ServerExecuteStoredProcedureTool");
                 }
                 else
@@ -361,7 +363,7 @@ namespace Core.Infrastructure.McpServer
                 // Only register execute query tool if it's enabled in configuration
                 if (dbConfig.EnableExecuteQuery)
                 {
-                    mcpServerBuilder.WithTools<ExecuteQueryTool>();
+                    mcpServerBuilder.WithTools<ExecuteQueryTool>(dbConfig);
                     Console.Error.WriteLine("Registered ExecuteQueryTool");
                 }
                 else
@@ -383,7 +385,7 @@ namespace Core.Infrastructure.McpServer
                 // Only register execute stored procedure tool if it's enabled in configuration
                 if (dbConfig.EnableExecuteStoredProcedure)
                 {
-                    mcpServerBuilder.WithTools<ExecuteStoredProcedureTool>();
+                    mcpServerBuilder.WithTools<ExecuteStoredProcedureTool>(dbConfig);
                     Console.Error.WriteLine("Registered ExecuteStoredProcedureTool");
                 }
                 else

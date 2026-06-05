@@ -15,7 +15,7 @@ namespace Core.Infrastructure.McpServer.Extensions
         /// <param name="reader">The IAsyncDataReader to format</param>
         /// <param name="stopwatch">Stopwatch started before query execution to measure wall-clock time</param>
         /// <returns>A formatted string for tool output</returns>
-        public static async Task<string> ToToolResult(this IAsyncDataReader reader, Stopwatch stopwatch)
+        public static async Task<string> ToToolResult(this IAsyncDataReader reader, Stopwatch stopwatch, int maxCellOutputLength = 40)
         {
             StringBuilder result = new StringBuilder();
 
@@ -66,10 +66,13 @@ namespace Core.Infrastructure.McpServer.Extensions
                 return "Query executed successfully. No results returned.\n" + FormatStatsLines(stopwatch, reader.InfoMessages, 0, executionPlanXml);
             }
 
-            // Limit column width to a reasonable size
-            for (int i = 0; i < columnWidths.Count; i++)
+            // Cap column width when a limit is set (0 means no limit)
+            if (maxCellOutputLength > 0)
             {
-                columnWidths[i] = Math.Min(columnWidths[i], 40);
+                for (int i = 0; i < columnWidths.Count; i++)
+                {
+                    columnWidths[i] = Math.Min(columnWidths[i], maxCellOutputLength);
+                }
             }
 
             // Build header row

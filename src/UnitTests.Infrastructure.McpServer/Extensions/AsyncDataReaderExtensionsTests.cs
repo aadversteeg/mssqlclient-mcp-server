@@ -220,6 +220,91 @@ namespace UnitTests.Infrastructure.McpServer.Extensions
             result.Should().Contain("Execution plan:");
         }
 
+        [Fact(DisplayName = "ADRE-011: Cell value within default limit is not truncated")]
+        public async Task ADRE011()
+        {
+            // Arrange
+            IAsyncDataReader reader = CreateMockReaderWithValue("ShortValue").Object;
+            var stopwatch = Stopwatch.StartNew();
+
+            // Act
+            var result = await reader.ToToolResult(stopwatch);
+
+            // Assert
+            result.Should().Contain("ShortValue");
+            result.Should().NotContain("...");
+        }
+
+        [Fact(DisplayName = "ADRE-012: Cell value exceeding default limit of 40 is truncated")]
+        public async Task ADRE012()
+        {
+            // Arrange
+            var longValue = new string('A', 50);
+            IAsyncDataReader reader = CreateMockReaderWithValue(longValue).Object;
+            var stopwatch = Stopwatch.StartNew();
+
+            // Act
+            var result = await reader.ToToolResult(stopwatch);
+
+            // Assert
+            result.Should().Contain("...");
+            result.Should().NotContain(longValue);
+        }
+
+        [Fact(DisplayName = "ADRE-013: Cell value exceeding custom limit is truncated at that limit")]
+        public async Task ADRE013()
+        {
+            // Arrange
+            var longValue = new string('B', 100);
+            IAsyncDataReader reader = CreateMockReaderWithValue(longValue).Object;
+            var stopwatch = Stopwatch.StartNew();
+
+            // Act
+            var result = await reader.ToToolResult(stopwatch, maxCellOutputLength: 20);
+
+            // Assert
+            result.Should().Contain(new string('B', 17) + "...");
+            result.Should().NotContain(longValue);
+        }
+
+        [Fact(DisplayName = "ADRE-014: maxCellOutputLength of 0 returns full cell content without truncation")]
+        public async Task ADRE014()
+        {
+            // Arrange
+            var longValue = new string('C', 200);
+            IAsyncDataReader reader = CreateMockReaderWithValue(longValue).Object;
+            var stopwatch = Stopwatch.StartNew();
+
+            // Act
+            var result = await reader.ToToolResult(stopwatch, maxCellOutputLength: 0);
+
+            // Assert
+            result.Should().Contain(longValue);
+            result.Should().NotContain("...");
+        }
+
+        private static Mock<IAsyncDataReader> CreateMockReaderWithValue(string cellValue, List<string>? infoMessages = null)
+        {
+            var mockReader = new Mock<IAsyncDataReader>();
+            var readCalled = false;
+
+            mockReader.Setup(x => x.ReadAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() =>
+                {
+                    if (!readCalled) { readCalled = true; return true; }
+                    return false;
+                });
+
+            mockReader.Setup(x => x.NextResultAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            mockReader.Setup(x => x.FieldCount).Returns(1);
+            mockReader.Setup(x => x.GetColumnNames()).Returns(new[] { "Value" });
+            mockReader.Setup(x => x.IsDBNullAsync(0, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+            mockReader.Setup(x => x.GetFieldValueAsync<object>(0, It.IsAny<CancellationToken>())).ReturnsAsync(cellValue);
+            mockReader.Setup(x => x.InfoMessages).Returns(infoMessages ?? new List<string>());
+
+            return mockReader;
+        }
+
         private static Mock<IAsyncDataReader> CreateMockReaderWithNoRows(List<string>? infoMessages = null)
         {
             var mockReader = new Mock<IAsyncDataReader>();
