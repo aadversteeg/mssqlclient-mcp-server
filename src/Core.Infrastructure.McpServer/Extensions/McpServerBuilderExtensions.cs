@@ -22,10 +22,13 @@ namespace Core.Infrastructure.McpServer.Extensions
                 {
                     var description = method.GetCustomAttribute<DescriptionAttribute>()?.Description ?? string.Empty;
                     description = DescriptionPlaceholderResolver.Resolve(description, config);
-                    return McpServerTool.Create(method, options: new McpServerToolCreateOptions
-                    {
-                        Description = description
-                    });
+                    return McpServerTool.Create(
+                        method,
+                        createTargetFunc: ctx => ctx.Server.Services!.GetRequiredService<T>(),
+                        options: new McpServerToolCreateOptions
+                        {
+                            Description = description
+                        });
                 });
 
             return builder.WithTools(tools);
