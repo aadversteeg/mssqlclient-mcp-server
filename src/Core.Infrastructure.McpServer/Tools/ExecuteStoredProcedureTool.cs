@@ -50,7 +50,7 @@ Cell output is limited to {MaxCellOutputLength} characters per cell (0 = no limi
             bool includeIoStats = false,
             [Description("Include the actual XML execution plan. Default is false")]
             bool includeExecutionPlan = false,
-            [Description("Maximum number of characters to display per cell in the output. Values longer than this are truncated with '...'. Set to 0 to disable truncation. If not specified, uses the server default.")]
+            [Description("Maximum number of characters to display per cell in the output. Values longer than this are truncated with '...'. Set to 0 to disable truncation. If not specified, uses the configured default (see tool description).")]
             int? maxCellOutputLength = null)
         {
             Console.Error.WriteLine($"ExecuteStoredProcedure called with stored procedure: {procedureName}");
