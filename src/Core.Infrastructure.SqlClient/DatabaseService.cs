@@ -258,34 +258,53 @@ namespace Core.Infrastructure.SqlClient
                 
             try
             {
-                // Get row counts if supported
+                // Get row counts if supported — use DMV batch query instead of per-table COUNT(*)
+                // sys.partitions stores pre-computed row counts, avoiding full table scans
                 if (capabilities.SupportsExactRowCount)
                 {
-                    foreach (var table in tables.ToList())
+                    try
                     {
-                        try
+                        const string rowCountQuery = @"
+                            SELECT
+                                s.name AS SchemaName,
+                                t.name AS TableName,
+                                SUM(p.rows) AS RowCount
+                            FROM sys.partitions p
+                            INNER JOIN sys.tables t ON p.object_id = t.object_id
+                            INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+                            WHERE p.index_id IN (0, 1)
+                            GROUP BY s.name, t.name";
+
+                        using (var command = new SqlCommand(rowCountQuery, connection))
                         {
-                            string countQuery = $"SELECT COUNT(*) FROM [{table.Schema}].[{table.Name}]";
-                            using (var command = new SqlCommand(countQuery, connection))
+                            command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
+                            using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                             {
-                                command.CommandTimeout = timeoutSeconds ?? _configuration.DefaultCommandTimeoutSeconds;
-                                var count = await command.ExecuteScalarAsync(cancellationToken);
-                                if (count != null && count != DBNull.Value)
+                                while (await reader.ReadAsync(cancellationToken))
                                 {
-                                    // This creates a new TableInfo with updated row count but preserves other properties
-                                    var index = tables.IndexOf(table);
-                                    if (index >= 0)
+                                    string schema = reader["SchemaName"].ToString() ?? string.Empty;
+                                    string name = reader["TableName"].ToString() ?? string.Empty;
+                                    long rowCount = Convert.ToInt64(reader["RowCount"]);
+
+                                    var table = tables.FirstOrDefault(t =>
+                                        t.Schema.Equals(schema, StringComparison.OrdinalIgnoreCase) &&
+                                        t.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+                                    if (table != null)
                                     {
-                                        tables[index] = table with { RowCount = Convert.ToInt64(count) };
+                                        var index = tables.IndexOf(table);
+                                        if (index >= 0)
+                                        {
+                                            tables[index] = table with { RowCount = rowCount };
+                                        }
                                     }
                                 }
                             }
                         }
-                        catch (Exception ex)
-                        {
-                            // If counting rows fails for a table, just continue with the next one
-                            Console.Error.WriteLine($"Failed to get row count for table {table.Schema}.{table.Name}: {ex.Message}");
-                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"Failed to get row counts from DMV: {ex.Message}");
                     }
                 }
 
