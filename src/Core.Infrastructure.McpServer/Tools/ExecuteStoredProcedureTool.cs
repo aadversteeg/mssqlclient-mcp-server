@@ -37,7 +37,8 @@ Examples:
 - Null values: {""CustomerID"": 123, ""Notes"": null}
 
 The tool will automatically convert JSON values to the appropriate SQL types based on the stored procedure's parameter definitions.
-Use 'get_stored_procedure_parameters' tool first to see what parameters are expected.")]
+Use 'get_stored_procedure_parameters' tool first to see what parameters are expected.
+Cell output is limited to {MaxCellOutputLength} characters per cell (0 = no limit).")]
         public async Task<string> ExecuteStoredProcedure(
             [Description("The name of the stored procedure to execute")]
             string procedureName, 
@@ -48,7 +49,9 @@ Use 'get_stored_procedure_parameters' tool first to see what parameters are expe
             [Description("Include per-table IO statistics (logical reads, physical reads, read-ahead reads). Default is false")]
             bool includeIoStats = false,
             [Description("Include the actual XML execution plan. Default is false")]
-            bool includeExecutionPlan = false)
+            bool includeExecutionPlan = false,
+            [Description("Maximum number of characters to display per cell in the output. Values longer than this are truncated with '...'. Set to 0 to disable truncation. If not specified, uses the server default.")]
+            int? maxCellOutputLength = null)
         {
             Console.Error.WriteLine($"ExecuteStoredProcedure called with stored procedure: {procedureName}");
             
@@ -86,7 +89,7 @@ Use 'get_stored_procedure_parameters' tool first to see what parameters are expe
                 var reader = await _databaseContext.ExecuteStoredProcedureAsync(procedureName, paramDict, timeoutContext, timeoutSeconds, statisticsOptions);
 
                 // Format results into a readable table
-                return await reader.ToToolResult(stopwatch);
+                return await reader.ToToolResult(stopwatch, maxCellOutputLength ?? _configuration.MaxCellOutputLength);
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
             {

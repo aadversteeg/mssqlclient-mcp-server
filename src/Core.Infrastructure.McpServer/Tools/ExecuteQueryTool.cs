@@ -22,7 +22,7 @@ namespace Core.Infrastructure.McpServer.Tools
             Console.Error.WriteLine("ExecuteQueryTool constructed with database context service");
         }
 
-        [McpServerTool(Name = "execute_query"), Description("Execute a SQL query on the connected SQL Server database and wait for results. Best for queries that complete quickly.")]
+        [McpServerTool(Name = "execute_query"), Description("Execute a SQL query on the connected SQL Server database and wait for results. Best for queries that complete quickly. Cell output is limited to {MaxCellOutputLength} characters per cell (0 = no limit).")]
         public async Task<string> ExecuteQuery(
             [Description("The SQL query to execute")]
             string query,
@@ -31,7 +31,9 @@ namespace Core.Infrastructure.McpServer.Tools
             [Description("Include per-table IO statistics (logical reads, physical reads, read-ahead reads). Default is false")]
             bool includeIoStats = false,
             [Description("Include the actual XML execution plan. Default is false")]
-            bool includeExecutionPlan = false)
+            bool includeExecutionPlan = false,
+            [Description("Maximum number of characters to display per cell in the output. Values longer than this are truncated with '...'. Set to 0 to disable truncation. If not specified, uses the server default.")]
+            int? maxCellOutputLength = null)
         {
             Console.Error.WriteLine($"ExecuteQuery called with query: {query}");
             
@@ -50,7 +52,7 @@ namespace Core.Infrastructure.McpServer.Tools
                 var reader = await _databaseContext.ExecuteQueryAsync(query, timeoutContext, timeoutSeconds, statisticsOptions);
 
                 // Format results into a readable table
-                return await reader.ToToolResult(stopwatch);
+                return await reader.ToToolResult(stopwatch, maxCellOutputLength ?? _configuration.MaxCellOutputLength);
             }
             catch (OperationCanceledException ex) when (timeoutContext != null && timeoutContext.IsTimeoutExceeded)
             {
