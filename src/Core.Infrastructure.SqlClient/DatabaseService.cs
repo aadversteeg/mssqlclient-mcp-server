@@ -268,7 +268,7 @@ namespace Core.Infrastructure.SqlClient
                             SELECT
                                 s.name AS SchemaName,
                                 t.name AS TableName,
-                                SUM(p.rows) AS RowCount
+                                SUM(p.rows) AS [RowCount]
                             FROM sys.partitions p
                             INNER JOIN sys.tables t ON p.object_id = t.object_id
                             INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
