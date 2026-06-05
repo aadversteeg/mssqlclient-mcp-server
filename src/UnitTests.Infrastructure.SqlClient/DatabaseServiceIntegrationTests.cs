@@ -249,12 +249,9 @@ namespace UnitTests.Infrastructure.SqlClient
             // Verify table properties
             var testTable1 = tables.First(t => t.Name.Equals("TestTable1", StringComparison.OrdinalIgnoreCase));
             testTable1.Schema.Should().Be("dbo");
-            // testTable1.RowCount.Should().Be(2);  this information is not available in LocalDb
-            
+
             var testTable2 = tables.First(t => t.Name.Equals("TestTable2", StringComparison.OrdinalIgnoreCase));
             testTable2.Schema.Should().Be("dbo");
-            // testTable2.RowCount.Should().Be(1);  this information is not available in LocalDb
-            // testTable2.ForeignKeyCount.Should().Be(1);
         }
         
         [SkippableFact(DisplayName = "DBS-005: ListTablesAsync with database name parameter switches context")]
@@ -274,8 +271,21 @@ namespace UnitTests.Infrastructure.SqlClient
             tables.Should().Contain(t => t.Name.Equals("TestTable2", StringComparison.OrdinalIgnoreCase));
         }
         
-        [SkippableFact(DisplayName = "DBS-006: GetCurrentDatabaseName returns correct database name")]
-        public void DBS006()
+        [SkippableFact(DisplayName = "DBS-006: ListTablesAsync populates row counts via DMV")]
+        public async Task DBS006()
+        {
+            Skip.If(_skipTests, "LocalDB is only available on Windows");
+
+            // Act
+            var tables = await _databaseService.ListTablesAsync();
+
+            // Assert — DMV-based counts must be populated for all tables
+            tables.Should().NotBeNull();
+            tables.Should().OnlyContain(t => t.RowCount.HasValue);
+        }
+
+        [SkippableFact(DisplayName = "DBS-007: GetCurrentDatabaseName returns correct database name")]
+        public void DBS007()
         {
             Skip.If(_skipTests, "LocalDB is only available on Windows");
             
