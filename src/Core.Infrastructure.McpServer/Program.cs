@@ -92,28 +92,7 @@ namespace Core.Infrastructure.McpServer
         static async Task Main(string[] args)
         {
             Console.Error.WriteLine("Starting MCP MSSQLClient Server...");
-            var builder = Host.CreateApplicationBuilder(args);
-
-            // Add appsettings.json configuration, use full path in case working folder is different
-            string? basePath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            basePath ??= Directory.GetCurrentDirectory();
-
-            builder.Configuration.AddJsonFile(
-                Path.Combine(basePath, "appsettings.json"), 
-                optional: true, 
-                reloadOnChange: true);
-
-            builder.Configuration.AddJsonFile(
-                Path.Combine(basePath, $"appsettings.{builder.Environment.EnvironmentName}.json"), 
-                optional: true, 
-                reloadOnChange: true);
-
-            builder.Configuration.AddUserSecrets(
-                Assembly.GetExecutingAssembly(),
-                optional: true,
-                reloadOnChange: true);
-
-            builder.Configuration.AddEnvironmentVariables();
+            var builder = McpHostBuilder.Create(args);
 
             // Configure logging
             builder.Logging.AddConsole(consoleLogOptions =>
